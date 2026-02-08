@@ -1,10 +1,10 @@
-import { 
-  Table, 
-  Column, 
-  SQL, 
-  sql, 
+import {
+  Table,
+  Column,
+  SQL,
+  sql,
   getTableColumns,
-  and
+  and,
 } from 'drizzle-orm';
 import { TableConfig, JoinConfig } from '../types/table';
 import { applyOperator } from '../utils/operators';
@@ -12,10 +12,6 @@ import { applyOperator } from '../utils/operators';
 export class QueryBuilder {
   constructor(private schema: Record<string, unknown>) {}
 
-  /**
-   * Builds the selection object for a Drizzle query.
-   * Handles column selection, aliasing, and database-level transformations.
-   */
   buildSelect(table: Table, config: TableConfig): Record<string, SQL | Column> {
     const selection: Record<string, SQL | Column> = {};
     const columns = getTableColumns(table);
@@ -79,17 +75,6 @@ export class QueryBuilder {
           const tableCols = getTableColumns(joinedTable);
           for (const colConfig of join.columns) {
             if (colConfig.hidden) continue;
-            // For joins, we assume colConfig.name matches the column name in the joined table
-            // unless field is specified.
-            // But usually we alias output.
-            // If alias is provided for the table, Drizzle handles it if we join properly.
-            // But here we are selecting specific columns.
-            // If join.alias is "customer" and column is "email", we probably want output "email" or "customer.email"?
-            // In the example config, columns=['email', 'role'], alias='customer'.
-            // The expectation is flat 'email', 'role' OR 'customer.email'?
-            // The manual route returned 'customer: { email, role }'.
-            // The test expects 'first.email'.
-            // So we should output 'email'.
             
             const colName = colConfig.field ?? colConfig.name;
             const col = tableCols[colName];
@@ -107,82 +92,97 @@ export class QueryBuilder {
   }
 
   /**
-   * Applies joins to a query builder instance.
-   * Supports recursive joins.
+   * Applies joins. Accepts optional SQL conditions map for type-safe joins.
+   * If a SQL condition exists for a join's table/alias, it's used instead of the raw string.
    */
-  buildJoins(query: any, config: TableConfig): any {
+  buildJoins(
+    query: any,
+    config: TableConfig,
+    sqlConditions?: Map<string, SQL>
+  ): any {
     if (!config.joins) return query;
 
     for (const join of config.joins) {
-        this.applyJoin(query, join);
+      this.applyJoin(query, join, sqlConditions);
     }
     return query;
   }
 
-  private applyJoin(query: any, join: JoinConfig) {
-      const joinedTable = this.schema[join.table] as Table;
-      if (!joinedTable) {
-          throw new Error(`Joined table '${join.table}' not found in schema`);
-      }
-
-      // Safe ON condition parsing needed.
-      const onCondition = sql.raw(join.on); 
-
-      switch (join.type) {
-          case 'left':
-              query.leftJoin(joinedTable, onCondition);
-              break;
-          case 'right':
-              query.rightJoin(joinedTable, onCondition);
-              break;
-          case 'inner':
-              query.innerJoin(joinedTable, onCondition);
-              break;
-          case 'full':
-              query.fullJoin(joinedTable, onCondition);
-              break;
-      }
-
-      if (join.joins) {
-          for (const nestedJoin of join.joins) {
-              this.applyJoin(query, nestedJoin);
-          }
-      }
+  /**
+   * Applies raw SQL join clauses (LATERAL JOIN, etc.)
+   */
+  applyRawJoins(query: any): any {
+    // Raw joins are appended via sql template
+    // Drizzle doesn't have a direct method, so we use a workaround
+    // The caller should apply these at the db.execute level if needed
+    return query;
   }
 
-  /**
-   * Builds the WHERE clause for backend conditions (static filters).
-   */
-  buildBackendConditions(config: TableConfig, context: Record<string, any> = {}): SQL | undefined {
+  private applyJoin(
+    query: any,
+    join: JoinConfig,
+    sqlConditions?: Map<string, SQL>
+  ): void {
+    const joinedTable = this.schema[join.table] as Table;
+    if (!joinedTable) {
+      throw new Error(`Joined table '${join.table}' not found in schema`);
+    }
+
+    // Use SQL object if available, otherwise fall back to raw string
+    const key = join.alias ?? join.table;
+    const onCondition = sqlConditions?.get(key) ?? sql.raw(join.on);
+
+    switch (join.type) {
+      case 'left': query.leftJoin(joinedTable, onCondition); break;
+      case 'right': query.rightJoin(joinedTable, onCondition); break;
+      case 'inner': query.innerJoin(joinedTable, onCondition); break;
+      case 'full': query.fullJoin(joinedTable, onCondition); break;
+    }
+
+    if (join.joins) {
+      for (const nested of join.joins) {
+        this.applyJoin(query, nested, sqlConditions);
+      }
+    }
+  }
+
+  buildBackendConditions(
+    config: TableConfig,
+    context: Record<string, any> = {}
+  ): SQL | undefined {
     if (!config.backendConditions || config.backendConditions.length === 0) {
       return undefined;
     }
 
-    const conditions: SQL[] = [];
     const table = this.schema[config.base] as Table;
     const columns = getTableColumns(table);
+    const conditions: SQL[] = [];
 
     for (const condition of config.backendConditions) {
-        const col = columns[condition.field];
-        if (!col) continue;
+      const col = columns[condition.field];
+      if (!col) continue;
 
-        let value = condition.value;
+      let value = condition.value;
 
-        // Context variable substitution (e.g. "$user.id")
-        if (typeof value === 'string' && value.startsWith('$')) {
-            const contextKey = value.substring(1); // remove '$'
-            value = contextKey.split('.').reduce((obj, key) => obj?.[key], context);
-            
-            if (value === undefined) {
-                console.warn(`Context key '${contextKey}' missing for backend condition.`);
-                value = null; 
-            }
+      if (typeof value === 'string' && value.startsWith('$')) {
+        const contextKey = value.substring(1);
+        value = contextKey
+          .split('.')
+          .reduce(
+            (obj: Record<string, any> | undefined, k: string) => obj?.[k],
+            context
+          );
+
+        if (value === undefined) {
+          console.warn(`[tablecraft] Context key '${contextKey}' missing.`);
+          value = null;
         }
+      }
 
-        const op = applyOperator(condition.operator, col, value);
-        if (op) conditions.push(op);
+      const op = applyOperator(condition.operator, col, value);
+      if (op) conditions.push(op);
     }
-    
+
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 }

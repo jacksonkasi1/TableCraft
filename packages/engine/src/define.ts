@@ -9,6 +9,8 @@ import {
   JoinConfig,
   Operator,
   SortConfig,
+  FilterExpression,
+  IncludeConfig,
 } from './types/table';
 import {
   introspectTable,
@@ -16,13 +18,11 @@ import {
   detectSensitiveColumns,
 } from './utils/introspect';
 
-// ── Type-safe column names ──
-
 type InferColumns<T> = T extends { _: { columns: infer C } }
   ? keyof C & string
   : string;
 
-// ── Quick Options (Level 1) ──
+// ── Quick Options ──
 
 export interface QuickOptions<T extends Table = Table> {
   hide?: InferColumns<T>[];
@@ -34,21 +34,44 @@ export interface QuickOptions<T extends Table = Table> {
   labels?: Partial<Record<InferColumns<T>, string>>;
 }
 
-// ── Builder (Level 2) ──
+// ── Runtime Extensions ──
+// These hold SQL objects and functions that can't be serialized into TableConfig.
+
+export interface RuntimeExtensions {
+  computedExpressions: Map<string, SQL>;
+  transforms: Map<string, (value: unknown) => unknown>;
+  rawSelects: Map<string, SQL>;
+  rawWheres: SQL[];
+  rawJoins: SQL[];
+  rawOrderBys: SQL[];
+  ctes: Map<string, SQL>;
+  sqlJoinConditions: Map<string, SQL>;
+}
+
+function emptyExtensions(): RuntimeExtensions {
+  return {
+    computedExpressions: new Map(),
+    transforms: new Map(),
+    rawSelects: new Map(),
+    rawWheres: [],
+    rawJoins: [],
+    rawOrderBys: [],
+    ctes: new Map(),
+    sqlJoinConditions: new Map(),
+  };
+}
+
+// ── Builder ──
 
 export class TableDefinitionBuilder<T extends Table = Table> {
-  /** @internal */
   _config: TableConfig;
-  /** @internal */
   _table: T;
-  /** @internal */
-  _transforms: Map<string, (value: unknown) => unknown> = new Map();
-  /** @internal */
-  _computedExpressions: Map<string, SQL> = new Map();
+  _ext: RuntimeExtensions;
 
   constructor(table: T, config: TableConfig) {
     this._table = table;
     this._config = config;
+    this._ext = emptyExtensions();
   }
 
   // ──── Column Visibility ────
@@ -77,43 +100,29 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     return this;
   }
 
-  /**
-   * Auto-hides columns that look sensitive (password, token, salt, etc.)
-   * This is OPT-IN. Nothing is hidden unless you call this.
-   *
-   * @returns The list of column names that were hidden, so you know exactly what happened.
-   */
   autoHide(): this {
     const sensitive = getSensitiveColumnNames();
     for (const col of this._config.columns) {
-      // Cast to string to satisfy type checker (though it is string at runtime)
-      const nameStr = String(col.name);
-      if (sensitive.has(nameStr)) {
-        col.hidden = true;
-      }
+      if (sensitive.has(col.name)) col.hidden = true;
     }
     return this;
   }
 
-  /**
-   * Returns a list of columns detected as potentially sensitive.
-   * Does NOT hide anything — just tells you so you can decide.
-   */
   inspectSensitive(): string[] {
     return detectSensitiveColumns(this._table);
   }
 
   // ──── Labels ────
 
-  label(column: InferColumns<T>, label: string): this {
+  label(column: InferColumns<T>, lbl: string): this {
     const col = this._config.columns.find((c) => c.name === column);
-    if (col) col.label = label;
+    if (col) col.label = lbl;
     return this;
   }
 
   labels(map: Partial<Record<InferColumns<T>, string>>): this {
     for (const [name, lbl] of Object.entries(map)) {
-      if (lbl) this.label(name as any, lbl as string);
+      if (lbl) this.label(name as InferColumns<T>, lbl as string);
     }
     return this;
   }
@@ -121,11 +130,11 @@ export class TableDefinitionBuilder<T extends Table = Table> {
   // ──── Search ────
 
   search(...columns: InferColumns<T>[]): this {
-    this._config.search = { fields: columns as string[], enabled: true };
+    // Cast to unknown first to avoid tuple/array type mismatch in strict mode
+    this._config.search = { fields: columns as unknown as string[], enabled: true };
     return this;
   }
 
-  /** Make ALL columns searchable (every text column) */
   searchAll(): this {
     const textCols = this._config.columns
       .filter((c) => c.type === 'string' && !c.hidden)
@@ -151,19 +160,52 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   staticFilter(field: InferColumns<T>, operator: Operator, value: unknown): this {
     if (!this._config.filters) this._config.filters = [];
-    this._config.filters.push({
-      field: field as string,
-      operator,
-      value,
-      type: 'static',
-    });
+    this._config.filters.push({ field: field as string, operator, value, type: 'static' });
     return this;
   }
 
   noFilter(): this {
-    for (const col of this._config.columns) {
-      col.filterable = false;
-    }
+    for (const col of this._config.columns) col.filterable = false;
+    return this;
+  }
+
+  // ──── OR Logic / Filter Groups ────
+
+  /**
+   * Add an OR group of conditions.
+   * @example .whereOr(
+   *   { field: 'status', op: 'eq', value: 'active' },
+   *   { field: 'priority', op: 'eq', value: 'high' },
+   * )
+   * → WHERE ... AND (status = 'active' OR priority = 'high')
+   */
+  whereOr(...conditions: { field: string; op: Operator; value: unknown }[]): this {
+    if (!this._config.filterGroups) this._config.filterGroups = [];
+    this._config.filterGroups.push({
+      type: 'or',
+      conditions: conditions.map((c) => ({
+        field: c.field,
+        operator: c.op,
+        value: c.value,
+      })),
+    });
+    return this;
+  }
+
+  /**
+   * Add a filter group with explicit AND/OR type.
+   * Supports nested groups for complex logic.
+   * @example .whereGroup('or', [
+   *   { field: 'status', operator: 'eq', value: 'active' },
+   *   { type: 'and', conditions: [
+   *     { field: 'priority', operator: 'eq', value: 'high' },
+   *     { field: 'total', operator: 'gt', value: 1000 },
+   *   ]},
+   * ])
+   */
+  whereGroup(type: 'and' | 'or', conditions: FilterExpression[]): this {
+    if (!this._config.filterGroups) this._config.filterGroups = [];
+    this._config.filterGroups.push({ type, conditions });
     return this;
   }
 
@@ -183,9 +225,7 @@ export class TableDefinitionBuilder<T extends Table = Table> {
   }
 
   noSort(): this {
-    for (const col of this._config.columns) {
-      col.sortable = false;
-    }
+    for (const col of this._config.columns) col.sortable = false;
     this._config.defaultSort = undefined;
     return this;
   }
@@ -203,20 +243,16 @@ export class TableDefinitionBuilder<T extends Table = Table> {
   }
 
   noPagination(): this {
-    this._config.pagination = {
-      defaultPageSize: 10,
-      maxPageSize: 100,
-      enabled: false,
-    };
+    this._config.pagination = { defaultPageSize: 10, maxPageSize: 100, enabled: false };
     return this;
   }
 
-  // ──── Joins ────
+  // ──── Joins (accepts string OR SQL) ────
 
   join(
     table: Table,
     options?: {
-      on?: string;
+      on?: string | SQL;
       type?: 'left' | 'right' | 'inner' | 'full';
       alias?: string;
       columns?: string[];
@@ -226,16 +262,33 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
     const joinedName = getTableName(table);
     const baseName = this._config.base;
+    const key = options?.alias ?? joinedName;
 
-    let onCondition = options?.on ?? '';
-    if (onCondition && !onCondition.includes('=') && !onCondition.includes('.')) {
-      onCondition = `${baseName}.${onCondition} = ${joinedName}.id`;
+    let onString = '';
+
+    if (options?.on) {
+      if (typeof options.on === 'string') {
+        // Shorthand: "customerId" → "base.customerId = joined.id"
+        if (!options.on.includes('=') && !options.on.includes('.')) {
+          onString = `${baseName}.${options.on} = ${joinedName}.id`;
+        } else {
+          onString = options.on;
+        }
+      } else {
+        // It's a SQL object. Store it in extensions map.
+        // We use a placeholder string for the config.
+        onString = `__SQL__:${key}`;
+        this._ext.sqlJoinConditions.set(key, options.on);
+      }
+    } else {
+      // Default guess
+      onString = `${baseName}.${joinedName}Id = ${joinedName}.id`;
     }
 
     const joinConfig: JoinConfig = {
       table: joinedName,
       type: options?.type ?? 'left',
-      on: onCondition,
+      on: onString,
       ...(options?.alias && { alias: options.alias }),
       ...(options?.columns && {
         columns: options.columns.map((name) => ({
@@ -255,18 +308,16 @@ export class TableDefinitionBuilder<T extends Table = Table> {
   // ──── Computed Columns ────
 
   computed(name: string, expression: SQL, options?: { type?: ColumnConfig['type']; label?: string }): this {
-    // Add as a column in config metadata
     this._config.columns.push({
       name,
       type: options?.type ?? 'string',
       label: options?.label ?? name,
       hidden: false,
       sortable: true,
-      filterable: false, // Computed columns usually need specific handling for filtering
+      filterable: false,
       computed: true,
     });
-    // Store the SQL expression for the engine to use in SELECT
-    this._computedExpressions.set(name, expression);
+    this._ext.computedExpressions.set(name, expression);
     return this;
   }
 
@@ -296,9 +347,150 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     return this;
   }
 
-  /** Apply an inline JS transform function to a column (runs after fetch) */
   transform(column: InferColumns<T>, fn: (value: unknown) => unknown): this {
-    this._transforms.set(column as string, fn);
+    this._ext.transforms.set(column as string, fn);
+    return this;
+  }
+
+  // ──── GROUP BY & HAVING ────
+
+  groupBy(...fields: InferColumns<T>[]): this {
+    if (!this._config.groupBy) this._config.groupBy = { fields: [] };
+    this._config.groupBy.fields = fields as string[];
+    return this;
+  }
+
+  having(alias: string, operator: Operator, value: unknown): this {
+    if (!this._config.groupBy) this._config.groupBy = { fields: [] };
+    if (!this._config.groupBy.having) this._config.groupBy.having = [];
+    this._config.groupBy.having.push({ alias, operator, value });
+    return this;
+  }
+
+  // ──── Aggregations ────
+
+  aggregate(
+    alias: string,
+    type: 'count' | 'sum' | 'avg' | 'min' | 'max',
+    field: InferColumns<T>
+  ): this {
+    if (!this._config.aggregations) this._config.aggregations = [];
+    this._config.aggregations.push({ alias, type, field: field as string });
+    return this;
+  }
+
+  // ──── Nested Relations (Includes) ────
+
+  include(
+    table: Table,
+    options: {
+      foreignKey: string;
+      localKey?: string;
+      as: string;
+      columns?: string[];
+      limit?: number;
+      where?: { field: string; op: Operator; value: unknown }[];
+      orderBy?: string[];
+      // Nested includes would go here (recursive definition needed in types)
+    }
+  ): this {
+    if (!this._config.include) this._config.include = [];
+
+    const includeConfig: IncludeConfig = {
+      table: getTableName(table),
+      foreignKey: options.foreignKey,
+      localKey: options.localKey ?? 'id',
+      as: options.as,
+      columns: options.columns,
+      limit: options.limit,
+      where: options.where?.map((w) => ({
+        field: w.field,
+        operator: w.op,
+        value: w.value,
+      })),
+      orderBy: options.orderBy?.map(parseSortSpec),
+    };
+
+    this._config.include.push(includeConfig);
+    return this;
+  }
+
+  // ──── Recursive Queries (CTE) ────
+
+  recursive(options: {
+    parentKey: string;
+    childKey?: string;
+    maxDepth?: number;
+    startWith?: { field: string; op: Operator; value: unknown };
+    depthAlias?: string;
+    pathAlias?: string;
+  }): this {
+    this._config.recursive = {
+      parentKey: options.parentKey,
+      childKey: options.childKey ?? 'id',
+      maxDepth: options.maxDepth ?? 10,
+      depthAlias: options.depthAlias ?? 'depth',
+      pathAlias: options.pathAlias,
+      startWith: options.startWith
+        ? {
+            field: options.startWith.field,
+            operator: options.startWith.op,
+            value: options.startWith.value,
+          }
+        : undefined,
+    };
+    return this;
+  }
+
+  // ──── Raw SQL Escape Hatches ────
+
+  rawSelect(alias: string, sqlExpr: SQL): this {
+    this._ext.rawSelects.set(alias, sqlExpr);
+    // Also register as a computed column so it passes validation
+    this._config.columns.push({
+      name: alias,
+      type: 'string', // Default assume string, user can cast
+      hidden: false,
+      computed: true,
+    });
+    return this;
+  }
+
+  rawWhere(sqlExpr: SQL): this {
+    this._ext.rawWheres.push(sqlExpr);
+    return this;
+  }
+
+  rawJoin(sqlExpr: SQL): this {
+    this._ext.rawJoins.push(sqlExpr);
+    return this;
+  }
+
+  rawOrderBy(sqlExpr: SQL): this {
+    this._ext.rawOrderBys.push(sqlExpr);
+    return this;
+  }
+
+  cte(name: string, sqlExpr: SQL): this {
+    this._ext.ctes.set(name, sqlExpr);
+    return this;
+  }
+
+  // ──── Subqueries ────
+
+  subquery(
+    alias: string,
+    table: Table,
+    type: 'count' | 'exists' | 'first',
+    filter?: string
+  ): this {
+    if (!this._config.subqueries) this._config.subqueries = [];
+    this._config.subqueries.push({
+      alias,
+      table: getTableName(table),
+      type,
+      filter,
+    });
     return this;
   }
 
@@ -330,36 +522,6 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   access(options: { roles?: string[]; permissions?: string[] }): this {
     this._config.access = options;
-    return this;
-  }
-
-  // ──── Subqueries ────
-
-  subquery(
-    alias: string,
-    table: Table,
-    type: 'count' | 'exists' | 'first',
-    filter?: string
-  ): this {
-    if (!this._config.subqueries) this._config.subqueries = [];
-    this._config.subqueries.push({
-      alias,
-      table: getTableName(table),
-      type,
-      filter,
-    });
-    return this;
-  }
-
-  // ──── Aggregations ────
-
-  aggregate(
-    alias: string,
-    type: 'count' | 'sum' | 'avg' | 'min' | 'max',
-    field: InferColumns<T>
-  ): this {
-    if (!this._config.aggregations) this._config.aggregations = [];
-    this._config.aggregations.push({ alias, type, field: field as string });
     return this;
   }
 
