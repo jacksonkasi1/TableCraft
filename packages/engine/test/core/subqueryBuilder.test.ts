@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pgTable, integer, text } from 'drizzle-orm/pg-core';
+import { pgTable, integer } from 'drizzle-orm/pg-core';
 import { SubqueryBuilder } from '../../src/core/subqueryBuilder';
 import { TableConfig } from '../../src/types/table';
 

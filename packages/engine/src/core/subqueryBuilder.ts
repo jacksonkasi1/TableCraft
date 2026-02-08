@@ -2,7 +2,6 @@ import {
   Table,
   SQL,
   sql,
-  getTableColumns,
 } from 'drizzle-orm';
 import { TableConfig, SubqueryConfig } from '../types/table';
 
