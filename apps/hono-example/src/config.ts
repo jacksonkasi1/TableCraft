@@ -22,10 +22,7 @@ export const productConfig: TableDefinition = {
     enabled: true,
     fields: ['name', 'description', 'category']
   },
-  sort: {
-    enabled: true,
-    defaultSort: [{ field: 'name', order: 'asc' }]
-  },
+  defaultSort: [{ field: 'name', order: 'asc' }],
   pagination: {
     enabled: true,
     defaultPageSize: 10
