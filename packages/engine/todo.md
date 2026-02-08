@@ -118,3 +118,24 @@
 - [x] **OpenAPI Spec**
     - [x] Implement `generateOpenApiSpec(config)`
     - [x] Output JSON schema for API documentation
+
+## Phase 4: Monorepo Restructuring (Planned)
+
+### Package Split
+The engine will be split into multiple scoped packages to reduce dependencies and improve modularity.
+
+- [ ] **Core Engine** (`packages/engine`)
+    - [ ] Contains core logic, builders, and types
+    - [ ] Zero framework dependencies
+- [ ] **Next.js Adapter** (`packages/adapter-next`)
+    - [ ] Dependencies: `@tablecraft/engine`, `next`
+    - [ ] Wraps engine for App Router route handlers
+- [ ] **Express Adapter** (`packages/adapter-express`)
+    - [ ] Dependencies: `@tablecraft/engine`, `express`
+    - [ ] Express middleware implementation
+- [ ] **Hono Adapter** (`packages/adapter-hono`)
+    - [ ] Dependencies: `@tablecraft/engine`, `hono`
+    - [ ] Hono middleware implementation
+- [ ] **Elysia Adapter** (`packages/adapter-elysia`)
+    - [ ] Dependencies: `@tablecraft/engine`, `elysia`
+    - [ ] Elysia plugin implementation
