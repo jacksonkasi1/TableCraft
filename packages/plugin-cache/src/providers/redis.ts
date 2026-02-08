@@ -3,7 +3,7 @@ import type { CacheProvider } from '../types';
 /**
  * Redis cache provider using ioredis.
  *
- * Install: `npm install ioredis`
+ * Install: `bun add ioredis`
  *
  * @example
  * ```ts

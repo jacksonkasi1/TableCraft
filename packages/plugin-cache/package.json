@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/plugin-cache",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "description": "Caching plugin for TableCraft — memory, Redis, or bring your own",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -36,7 +36,7 @@
     "@upstash/redis": { "optional": true }
   },
   "devDependencies": {
-    "@tablecraft/engine": "workspace:*",
+    "@tablecraft/engine": "^0.1.0-beta.1",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
   }

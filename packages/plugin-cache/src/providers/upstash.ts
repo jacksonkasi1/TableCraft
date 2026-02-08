@@ -3,7 +3,7 @@ import type { CacheProvider } from '../types';
 /**
  * Upstash Redis provider for serverless environments.
  *
- * Install: `npm install @upstash/redis`
+ * Install: `bun add @upstash/redis`
  *
  * @example
  * ```ts
