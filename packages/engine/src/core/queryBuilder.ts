@@ -6,8 +6,8 @@ import {
   getTableColumns,
   and
 } from 'drizzle-orm';
-import { TableConfig, JoinConfig, Operator } from '../types/table';
-import { mapOperator } from './operators';
+import { TableConfig, JoinConfig } from '../types/table';
+import { applyOperator } from '../utils/operators';
 
 export class QueryBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -106,13 +106,12 @@ export class QueryBuilder {
             value = contextKey.split('.').reduce((obj, key) => obj?.[key], context);
             
             if (value === undefined) {
-                // @ts-ignore
                 console.warn(`Context key '${contextKey}' missing for backend condition.`);
                 value = null; 
             }
         }
 
-        const op = mapOperator(condition.operator, col, value);
+        const op = applyOperator(condition.operator, col, value);
         if (op) conditions.push(op);
     }
     

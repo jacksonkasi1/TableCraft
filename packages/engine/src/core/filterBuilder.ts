@@ -1,38 +1,125 @@
-import { Table, SQL, and, getTableColumns } from 'drizzle-orm';
+import {
+  Table,
+  Column,
+  SQL,
+  getTableColumns,
+  and,
+} from 'drizzle-orm';
 import { TableConfig } from '../types/table';
-import { mapOperator } from './operators';
+import { FilterParam } from '../types/engine';
+import { applyOperator } from '../utils/operators';
 
 export class FilterBuilder {
   constructor(private schema: Record<string, unknown>) {}
 
   /**
-   * Builds dynamic filters based on URL parameters and config.
-   * @param config The table configuration
-   * @param params The parsed query parameters (e.g., { filters: { status: 'active' } })
+   * Builds dynamic WHERE conditions from user-provided filter params.
+   * Only allows filtering on columns explicitly marked as filterable.
    */
-  buildFilters(config: TableConfig, params: Record<string, any>): SQL | undefined {
-    const filters = params.filters || {};
-    const conditions: SQL[] = [];
+  buildFilters(
+    config: TableConfig,
+    params: Record<string, FilterParam>
+  ): SQL | undefined {
+    if (!params || Object.keys(params).length === 0) {
+      return undefined;
+    }
+
     const table = this.schema[config.base] as Table;
+    if (!table) return undefined;
+
     const columns = getTableColumns(table);
 
-    // 1. Map URL params to Configured Filters
+    // Build a whitelist of filterable field names
+    const filterableFields = new Set<string>();
+
+    // From explicit dynamic filter definitions
     if (config.filters) {
-      for (const filterConfig of config.filters) {
-        const value = filters[filterConfig.field];
-        
-        // Skip if value is not provided
-        if (value === undefined || value === null || value === '') continue;
-
-        const col = columns[filterConfig.field];
-        if (!col) continue;
-
-        // Apply operator
-        const op = mapOperator(filterConfig.operator, col, value);
-        if (op) conditions.push(op);
+      for (const f of config.filters) {
+        if (f.type !== 'static') {
+          filterableFields.add(f.field);
+        }
       }
     }
 
+    // From columns marked filterable (default true)
+    for (const col of config.columns) {
+      if (col.filterable !== false) {
+        filterableFields.add(col.name);
+      }
+    }
+
+    const conditions: SQL[] = [];
+
+    for (const [field, param] of Object.entries(params)) {
+      // Security: reject fields not in the whitelist
+      if (!filterableFields.has(field)) continue;
+
+      // Resolve the column — could be on the base table or a joined table
+      const col = this.resolveColumn(config, columns, field);
+      if (!col) continue;
+
+      const condition = applyOperator(param.operator, col, param.value);
+      if (condition) conditions.push(condition);
+    }
+
     return conditions.length > 0 ? and(...conditions) : undefined;
+  }
+
+  /**
+   * Builds conditions for filters with type='static' (preset values in config).
+   */
+  buildStaticFilters(config: TableConfig): SQL | undefined {
+    if (!config.filters) return undefined;
+
+    const table = this.schema[config.base] as Table;
+    if (!table) return undefined;
+
+    const columns = getTableColumns(table);
+    const conditions: SQL[] = [];
+
+    for (const filter of config.filters) {
+      if (filter.type !== 'static' || filter.value === undefined) continue;
+
+      const col = columns[filter.field];
+      if (!col) continue;
+
+      const condition = applyOperator(filter.operator, col, filter.value);
+      if (condition) conditions.push(condition);
+    }
+
+    return conditions.length > 0 ? and(...conditions) : undefined;
+  }
+
+  /**
+   * Resolves a column reference. Supports "joinedTable.column" dot-syntax
+   * for columns on joined tables.
+   */
+  private resolveColumn(
+    config: TableConfig,
+    baseColumns: Record<string, Column>,
+    field: string
+  ): Column | undefined {
+    // Direct column on the base table
+    if (baseColumns[field]) {
+      return baseColumns[field];
+    }
+
+    // Dot-syntax for joined tables: "orders.total"
+    if (field.includes('.')) {
+      const [tableName, colName] = field.split('.');
+      const joinedTable = this.schema[tableName] as Table | undefined;
+      if (!joinedTable) return undefined;
+
+      // Verify this table is actually joined
+      const isJoined = config.joins?.some(
+        (j) => j.table === tableName || j.alias === tableName
+      );
+      if (!isJoined) return undefined;
+
+      const joinedCols = getTableColumns(joinedTable);
+      return joinedCols[colName];
+    }
+
+    return undefined;
   }
 }

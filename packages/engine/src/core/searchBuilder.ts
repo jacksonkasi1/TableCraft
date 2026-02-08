@@ -3,8 +3,7 @@ import {
   SQL, 
   ilike, 
   or, 
-  getTableColumns,
-  sql
+  getTableColumns
 } from 'drizzle-orm';
 import { TableConfig } from '../types/table';
 

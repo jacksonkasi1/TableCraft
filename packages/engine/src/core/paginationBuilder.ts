@@ -5,7 +5,7 @@ import {
   desc, 
   getTableColumns
 } from 'drizzle-orm';
-import { TableConfig, SortConfig } from '../types/table';
+import { TableConfig } from '../types/table';
 
 export class PaginationBuilder {
   constructor(private schema: Record<string, unknown>) {}
