@@ -1,22 +1,31 @@
 import {
   createEngines,
   parseRequest,
-  checkAccess,
+  checkAccess as defaultCheckAccess,
   getExportMeta,
   TableConfig,
-  TableDefinition,
+  ConfigInput,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface NextHandlerOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableDefinition[] | Record<string, TableDefinition>;
+  configs: ConfigInput[] | Record<string, ConfigInput>;
   /**
    * Extract context (tenantId, user, etc.) from the incoming request.
    * Called on every request before the query runs.
    */
   getContext?: (request: Request) => EngineContext | Promise<EngineContext>;
+  /**
+   * Override built-in access check with your own logic.
+   * Return true to allow, false to deny.
+   */
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    request: Request
+  ) => boolean | Promise<boolean>;
 }
 
 /**
@@ -66,7 +75,11 @@ export function createNextHandler(options: NextHandlerOptions) {
         : {};
 
       // --- Access control ---
-      if (!checkAccess(config, context)) {
+      const hasAccess = options.checkAccess
+        ? await options.checkAccess(config, context, request)
+        : defaultCheckAccess(config, context);
+
+      if (!hasAccess) {
         return Response.json({ error: 'Forbidden' }, { status: 403 });
       }
 
@@ -128,10 +141,15 @@ export function createNextHandler(options: NextHandlerOptions) {
 export function createNextRouteHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableDefinition;
+  config: ConfigInput;
   getContext?: (request: Request) => EngineContext | Promise<EngineContext>;
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    request: Request
+  ) => boolean | Promise<boolean>;
 }) {
-  const { db, schema, config, getContext } = options;
+  const { db, schema, config, getContext, checkAccess } = options;
 
   // Reuse the multi-table handler with a single config
   const handler = createNextHandler({
@@ -139,10 +157,15 @@ export function createNextRouteHandler(options: {
     schema,
     configs: [config],
     getContext,
+    checkAccess,
   });
 
   return async function GET(request: Request): Promise<Response> {
     // Simulate the dynamic route param
-    return handler(request, { params: { table: config.name } });
+    // We resolve the name from the config input
+    const resolvedConfig = 'toConfig' in config 
+      ? (config as any).toConfig() 
+      : (config as TableConfig);
+    return handler(request, { params: { table: resolvedConfig.name } });
   };
 }

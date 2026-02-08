@@ -3,22 +3,30 @@ import {
   createEngines,
   createTableEngine,
   parseRequest,
-  checkAccess,
+  checkAccess as defaultCheckAccess,
   getExportMeta,
   TableConfig,
-  TableDefinition,
+  ConfigInput,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface ExpressAdapterOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableDefinition[] | Record<string, TableDefinition>;
+  configs: ConfigInput[] | Record<string, ConfigInput>;
   /**
    * Extract context from the Express request.
    * Typically reads from `req.user`, `req.headers`, etc.
    */
   getContext?: (req: Request) => EngineContext | Promise<EngineContext>;
+  /**
+   * Override built-in access check with your own logic.
+   */
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    req: Request
+  ) => boolean | Promise<boolean>;
 }
 
 /**
@@ -55,12 +63,16 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
         ? await options.getContext(req)
         : {};
 
-      if (!checkAccess(config, context)) {
+      const hasAccess = options.checkAccess
+        ? await options.checkAccess(config, context, req)
+        : defaultCheckAccess(config, context);
+
+      if (!hasAccess) {
         res.status(403).json({ error: 'Forbidden' });
         return;
       }
 
-      const params = parseRequest(req.query as unknown as Record<string, string | string[] | undefined>);
+      const params = parseRequest(req.query as Record<string, string | string[] | undefined>);
 
       if (params.export) {
         const allowed = config.export?.formats ?? ['csv', 'json'];
@@ -95,10 +107,15 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
 export function createExpressHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableDefinition;
+  config: ConfigInput;
   getContext?: (req: Request) => EngineContext | Promise<EngineContext>;
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    req: Request
+  ) => boolean | Promise<boolean>;
 }) {
-  const { db, schema, config, getContext } = options;
+  const { db, schema, config, getContext, checkAccess } = options;
   const engine = createTableEngine({ db, schema, config });
 
   return async function handler(
@@ -110,12 +127,16 @@ export function createExpressHandler(options: {
       const context = getContext ? await getContext(req) : {};
       const actualConfig = engine.getConfig();
 
-      if (!checkAccess(actualConfig, context)) {
+      const hasAccess = checkAccess
+        ? await checkAccess(actualConfig, context, req)
+        : defaultCheckAccess(actualConfig, context);
+
+      if (!hasAccess) {
         res.status(403).json({ error: 'Forbidden' });
         return;
       }
 
-      const params = parseRequest(req.query as unknown as Record<string, string | string[] | undefined>);
+      const params = parseRequest(req.query as Record<string, string | string[] | undefined>);
 
       if (params.export) {
         const allowed = actualConfig.export?.formats ?? ['csv', 'json'];

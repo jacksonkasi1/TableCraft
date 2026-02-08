@@ -3,36 +3,34 @@ import {
   createEngines,
   createTableEngine,
   parseRequest,
-  checkAccess,
+  checkAccess as defaultCheckAccess,
   getExportMeta,
   TableConfig,
-  TableDefinition,
+  ConfigInput,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface ElysiaAdapterOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableDefinition[] | Record<string, TableDefinition>;
+  configs: ConfigInput[] | Record<string, ConfigInput>;
   /**
    * Extract context from the Elysia context.
    * Access headers, store, etc.
    */
   getContext?: (ctx: { request: Request; store: Record<string, unknown> }) => EngineContext | Promise<EngineContext>;
+  /**
+   * Override built-in access check with your own logic.
+   */
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    request: Request
+  ) => boolean | Promise<boolean>;
 }
 
 /**
  * Creates an Elysia plugin with a `/:table` route.
- *
- * @example
- * ```ts
- * import { Elysia } from 'elysia';
- * import { createElysiaPlugin } from '@tablecraft/adapter-elysia';
- *
- * const app = new Elysia()
- *   .use(createElysiaPlugin({ db, schema, configs }))
- *   .listen(3000);
- * ```
  */
 export function createElysiaPlugin(options: ElysiaAdapterOptions) {
   const engines = createEngines({
@@ -58,7 +56,11 @@ export function createElysiaPlugin(options: ElysiaAdapterOptions) {
         ? await options.getContext({ request, store: store as Record<string, unknown> })
         : {};
 
-      if (!checkAccess(config, context)) {
+      const hasAccess = options.checkAccess
+        ? await options.checkAccess(config, context, request)
+        : defaultCheckAccess(config, context);
+
+      if (!hasAccess) {
         set.status = 403;
         return { error: 'Forbidden' };
       }
@@ -98,10 +100,15 @@ export function createElysiaPlugin(options: ElysiaAdapterOptions) {
 export function createElysiaHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableDefinition;
+  config: ConfigInput;
   getContext?: (ctx: { request: Request; store: Record<string, unknown> }) => EngineContext | Promise<EngineContext>;
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    request: Request
+  ) => boolean | Promise<boolean>;
 }) {
-  const { db, schema, config, getContext } = options;
+  const { db, schema, config, getContext, checkAccess } = options;
   const engine = createTableEngine({ db, schema, config });
 
   return async ({ request, store, set }: { request: Request; store: Record<string, unknown>; set: any }) => {
@@ -109,7 +116,13 @@ export function createElysiaHandler(options: {
       ? await getContext({ request, store })
       : {};
 
-    if (!checkAccess(config, context)) {
+    const actualConfig = engine.getConfig();
+
+    const hasAccess = checkAccess
+      ? await checkAccess(actualConfig, context, request)
+      : defaultCheckAccess(actualConfig, context);
+
+    if (!hasAccess) {
       set.status = 403;
       return { error: 'Forbidden' };
     }
@@ -118,14 +131,14 @@ export function createElysiaHandler(options: {
     const params = parseRequest(url.searchParams);
 
     if (params.export) {
-      const allowed = config.export?.formats ?? ['csv', 'json'];
-      if (!(config.export?.enabled ?? true) || !allowed.includes(params.export)) {
+      const allowed = actualConfig.export?.formats ?? ['csv', 'json'];
+      if (!(actualConfig.export?.enabled ?? true) || !allowed.includes(params.export)) {
         set.status = 400;
         return { error: `Export format '${params.export}' not allowed` };
       }
 
       const body = await engine.exportData(params, context);
-      const { contentType, filename } = getExportMeta(config.name, params.export);
+      const { contentType, filename } = getExportMeta(actualConfig.name, params.export);
       set.headers['Content-Type'] = contentType;
       set.headers['Content-Disposition'] = `attachment; filename="${filename}"`;
       return body;
