@@ -2,9 +2,10 @@
   "name": "@tablecraft/engine",
   "version": "0.1.0",
   "description": "The backend query engine for TableCraft",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "module": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

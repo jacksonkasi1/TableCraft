@@ -1,21 +1,14 @@
 {
   "name": "tablecraft",
   "version": "1.0.0",
+  "private": true,
   "description": "Drizzle table query builder engine + Shadcn + Airtable = Complex table setup in 5 minutes instead of 1 hour.",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "typecheck": "bun run --filter '*' typecheck"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/jacksonkasi1/TableCraft.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/jacksonkasi1/TableCraft/issues"
-  },
-  "homepage": "https://github.com/jacksonkasi1/TableCraft#readme"
+  "workspaces": [
+    "packages/*"
+  ]
 }
