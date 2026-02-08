@@ -139,3 +139,74 @@ The engine will be split into multiple scoped packages to reduce dependencies an
 - [x] **Elysia Adapter** (`packages/adapter-elysia`)
     - [x] Dependencies: `@tablecraft/engine`, `elysia`
     - [x] Elysia plugin implementation
+
+
+## Phase 5: Major Refactor (Current)
+
+### Core Engine Refactor (@tablecraft/engine)
+- [x] **Remove Adapters**
+    - [x] Remove `src/adapters/` directory
+    - [x] Update `package.json` to remove framework dependencies if any remain
+- [x] **Remove Cache**
+    - [x] Remove `src/core/cache.ts`
+    - [x] Remove cache logic from `src/engine.ts`
+    - [x] Remove cache types from `src/types/table.ts`
+- [ ] **Developer Experience Improvements**
+    - [ ] Update `src/utils/introspect.ts`: `autoHide`, `detectSensitiveColumns`, defaults to "show all"
+    - [ ] Update `src/define.ts`:
+        - [ ] Add `autoHide()`, `hide()`, `only()`, `show()`
+        - [ ] Add `searchAll()`, `noSearch()`
+        - [ ] Add `sort()`, `sortable()`, `noSort()`
+        - [ ] Add `computed()` (store SQL expressions in builder)
+        - [ ] Add `transform()` (store JS transforms in builder)
+    - [ ] Update `src/engine.ts`:
+        - [ ] Handle computed SQL expressions from builder
+        - [ ] Handle JS transforms from builder
+- [ ] **Shared Adapter Utilities**
+    - [ ] Create `src/utils/adapterUtils.ts` (checkAccess, getExportMeta)
+    - [ ] Export from `src/index.ts`
+
+### Plugin Cache (@tablecraft/plugin-cache)
+- [ ] **Initialize Package**
+    - [ ] Create `packages/plugin-cache/package.json`
+    - [ ] Create `packages/plugin-cache/tsconfig.json`
+- [ ] **Implement Core**
+    - [ ] Define `CacheProvider` interface in `src/types.ts`
+    - [ ] Implement `memoryProvider` in `src/providers/memory.ts`
+    - [ ] Implement `withCache`, `withCacheAll`, `withCacheMap` in `src/withCache.ts`
+- [ ] **Implement Providers**
+    - [ ] Redis provider (`src/providers/redis.ts`)
+    - [ ] Upstash provider (`src/providers/upstash.ts`)
+- [ ] **Tests**
+    - [ ] Unit tests for `withCache` and memory provider
+
+### Adapter Updates (All Adapters)
+- [ ] **Structure Update**
+    - [ ] Ensure all adapters use `createEngines`
+    - [ ] Implement `checkAccess` callback option
+    - [ ] Use shared utilities from engine
+- [ ] **@tablecraft/adapter-next**
+    - [ ] Update `createNextHandler`
+    - [ ] Update `createNextRouteHandler`
+- [ ] **@tablecraft/adapter-express**
+    - [ ] Update `createExpressMiddleware`
+    - [ ] Update `createExpressHandler`
+- [ ] **@tablecraft/adapter-hono**
+    - [ ] Update `createHonoApp`
+    - [ ] Update `createHonoHandler`
+- [ ] **@tablecraft/adapter-elysia**
+    - [ ] Update `createElysiaPlugin`
+    - [ ] Update `createElysiaHandler`
+
+### Demo App Update (apps/hono-example)
+- [ ] **Reflect Changes**
+    - [ ] Update `package.json` to include `@tablecraft/plugin-cache` (if used)
+    - [ ] Update `src/tablecraft.config.ts` (or equivalent) to use new `defineTable` API
+- [ ] **Developer Experience Examples**
+    - [ ] Implement examples for `hide`, `search`, `sort`, `computed`, `join`, `tenant`
+    - [ ] Add tests for these examples in `test/dev-experience.test.ts`
+
+### Verification
+- [ ] **Build All**: `bun run build` (root)
+- [ ] **Typecheck**: `bun run typecheck`
+- [ ] **Test**: `bun test`

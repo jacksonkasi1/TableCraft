@@ -22,6 +22,8 @@ export class QueryBuilder {
 
     for (const colConfig of config.columns) {
       if (colConfig.hidden) continue;
+      // Skip computed columns (they are added by the engine)
+      if (colConfig.computed) continue;
 
       const dbField = colConfig.field ?? colConfig.name;
       let col: Column | SQL | undefined;
@@ -52,10 +54,6 @@ export class QueryBuilder {
         // TODO: This might break if col is already SQL or alias, but for now we assume Column
         if (colName) {
            let expressionStr = colConfig.dbTransform.reduce((acc, func) => `${func}(${acc})`, '?');
-           // If it's a joined column, we might need table prefix? 
-           // Drizzle's getTableColumns returns columns that auto-prefix in queries usually.
-           // But for sql.raw replacement, we might need manual injection.
-           // Let's stick to simple replacement for now.
            selection[colConfig.name] = sql.raw(expressionStr.replace('?', colName));
         } else {
            selection[colConfig.name] = col;
@@ -65,7 +63,47 @@ export class QueryBuilder {
       }
     }
 
+    // Collect columns from joins
+    if (config.joins) {
+      this.collectJoinColumns(config.joins, selection);
+    }
+
     return selection;
+  }
+
+  private collectJoinColumns(joins: JoinConfig[], selection: Record<string, SQL | Column>) {
+    for (const join of joins) {
+      if (join.columns) {
+        const joinedTable = this.schema[join.table] as Table;
+        if (joinedTable) {
+          const tableCols = getTableColumns(joinedTable);
+          for (const colConfig of join.columns) {
+            if (colConfig.hidden) continue;
+            // For joins, we assume colConfig.name matches the column name in the joined table
+            // unless field is specified.
+            // But usually we alias output.
+            // If alias is provided for the table, Drizzle handles it if we join properly.
+            // But here we are selecting specific columns.
+            // If join.alias is "customer" and column is "email", we probably want output "email" or "customer.email"?
+            // In the example config, columns=['email', 'role'], alias='customer'.
+            // The expectation is flat 'email', 'role' OR 'customer.email'?
+            // The manual route returned 'customer: { email, role }'.
+            // The test expects 'first.email'.
+            // So we should output 'email'.
+            
+            const colName = colConfig.field ?? colConfig.name;
+            const col = tableCols[colName];
+            if (col) {
+               // TODO: Handle name collisions?
+               selection[colConfig.name] = col;
+            }
+          }
+        }
+      }
+      if (join.joins) {
+        this.collectJoinColumns(join.joins, selection);
+      }
+    }
   }
 
   /**

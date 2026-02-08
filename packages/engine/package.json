@@ -14,11 +14,11 @@
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
-    "zod": "^4.3.6"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^25.2.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   }
 }

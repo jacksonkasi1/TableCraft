@@ -30,6 +30,8 @@ export const ColumnConfigSchema = z.object({
   dbTransform: z.array(z.string()).optional(),
   // JavaScript-level transform applied after fetching
   jsTransform: z.array(z.string()).optional(),
+  // Computed column (not in database)
+  computed: z.boolean().default(false).optional(),
 });
 export type ColumnConfig = z.infer<typeof ColumnConfigSchema>;
 export type ColumnDefinition = z.input<typeof ColumnConfigSchema>;
@@ -113,13 +115,6 @@ export const SoftDeleteConfigSchema = z.object({
 });
 export type SoftDeleteConfig = z.infer<typeof SoftDeleteConfigSchema>;
 
-export const CacheConfigSchema = z.object({
-  ttl: z.number().default(60).optional(), // Seconds
-  enabled: z.boolean().default(false).optional(),
-  staleWhileRevalidate: z.number().optional(),
-});
-export type CacheConfig = z.infer<typeof CacheConfigSchema>;
-
 export const ExportConfigSchema = z.object({
   formats: z.array(z.enum(['csv', 'json'])).default(['csv', 'json']).optional(),
   enabled: z.boolean().default(true).optional(),
@@ -152,7 +147,6 @@ export const TableConfigSchema = z.object({
   
   tenant: TenantConfigSchema.optional(),
   softDelete: SoftDeleteConfigSchema.optional(),
-  cache: CacheConfigSchema.optional(),
   export: ExportConfigSchema.optional(),
   
   access: AccessControlSchema.optional(),
