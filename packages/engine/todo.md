@@ -124,18 +124,18 @@
 ### Package Split
 The engine will be split into multiple scoped packages to reduce dependencies and improve modularity.
 
-- [ ] **Core Engine** (`packages/engine`)
-    - [ ] Contains core logic, builders, and types
-    - [ ] Zero framework dependencies
-- [ ] **Next.js Adapter** (`packages/adapter-next`)
-    - [ ] Dependencies: `@tablecraft/engine`, `next`
-    - [ ] Wraps engine for App Router route handlers
-- [ ] **Express Adapter** (`packages/adapter-express`)
-    - [ ] Dependencies: `@tablecraft/engine`, `express`
-    - [ ] Express middleware implementation
-- [ ] **Hono Adapter** (`packages/adapter-hono`)
-    - [ ] Dependencies: `@tablecraft/engine`, `hono`
-    - [ ] Hono middleware implementation
-- [ ] **Elysia Adapter** (`packages/adapter-elysia`)
-    - [ ] Dependencies: `@tablecraft/engine`, `elysia`
-    - [ ] Elysia plugin implementation
+- [x] **Core Engine** (`packages/engine`)
+    - [x] Contains core logic, builders, and types
+    - [x] Zero framework dependencies
+- [x] **Next.js Adapter** (`packages/adapter-next`)
+    - [x] Dependencies: `@tablecraft/engine`, `next`
+    - [x] Wraps engine for App Router route handlers
+- [x] **Express Adapter** (`packages/adapter-express`)
+    - [x] Dependencies: `@tablecraft/engine`, `express`
+    - [x] Express middleware implementation
+- [x] **Hono Adapter** (`packages/adapter-hono`)
+    - [x] Dependencies: `@tablecraft/engine`, `hono`
+    - [x] Hono middleware implementation
+- [x] **Elysia Adapter** (`packages/adapter-elysia`)
+    - [x] Dependencies: `@tablecraft/engine`, `elysia`
+    - [x] Elysia plugin implementation
