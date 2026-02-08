@@ -10,6 +10,14 @@ const app = new Hono();
 
 app.use('*', logger());
 
+// Timing Middleware
+app.use('*', async (c, next) => {
+  const start = performance.now();
+  await next();
+  const end = performance.now();
+  c.header('X-Response-Time', `${(end - start).toFixed(2)}ms`);
+});
+
 // --- 1. Manual Route (Hardcoded Drizzle) ---
 app.get('/manual/products', async (c) => {
   const search = c.req.query('search');

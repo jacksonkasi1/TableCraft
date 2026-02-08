@@ -19,7 +19,8 @@ export type AggregationType = z.infer<typeof AggregationTypeSchema>;
 
 // --- Column Config ---
 export const ColumnConfigSchema = z.object({
-  name: z.string(),
+  name: z.string(), // Output key / Identifier
+  field: z.string().optional(), // Database column name (defaults to name). Can be "table.column"
   type: z.enum(['string', 'number', 'boolean', 'date', 'json', 'uuid']),
   label: z.string().optional(),
   hidden: z.boolean().optional().default(false),
@@ -41,7 +42,7 @@ export const JoinConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
   on: z.string(), // SQL condition or simple "localKey=foreignKey"
   columns: z.array(ColumnConfigSchema).optional(),
   // Recursive joins
-  joins: z.array(JoinConfigSchema).optional(),
+  joins: z.array(z.lazy(() => JoinConfigSchema)).optional(),
 }));
 export type JoinConfig = z.infer<typeof JoinConfigSchema>;
 

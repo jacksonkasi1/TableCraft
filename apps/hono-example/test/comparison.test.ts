@@ -43,6 +43,12 @@ describe('API Comparison', () => {
     const res = await fetch(`${BASE_URL}/engine/orders`);
     expect(res.status).toBe(200);
     const json = await res.json() as any;
+    
+    // Log for debugging
+    if (json.data.length > 0) {
+        console.log('Engine Order Sample:', JSON.stringify(json.data[0], null, 2));
+    }
+
     expect(json.data).toBeDefined();
     if (json.data.length > 0) {
       const first = json.data[0];

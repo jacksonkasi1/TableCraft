@@ -23,13 +23,43 @@ export class QueryBuilder {
     for (const colConfig of config.columns) {
       if (colConfig.hidden) continue;
 
-      const col = columns[colConfig.name];
+      const dbField = colConfig.field ?? colConfig.name;
+      let col: Column | SQL | undefined;
+
+      if (dbField.includes('.')) {
+        // Joined column: "table.column"
+        const [tableName, colName] = dbField.split('.');
+        const joinedTable = this.schema[tableName] as Table;
+        if (joinedTable) {
+          const joinedCols = getTableColumns(joinedTable);
+          col = joinedCols[colName];
+          if (!col) {
+             // console.warn(`[QueryBuilder] Column '${colName}' not found in joined table '${tableName}'`);
+          }
+        } else {
+             // console.warn(`[QueryBuilder] Joined table '${tableName}' not found in schema`);
+        }
+      } else {
+        // Base table column
+        col = columns[dbField];
+      }
+
       if (!col) continue;
 
       if (colConfig.dbTransform && colConfig.dbTransform.length > 0) {
-        // Apply SQL transforms
-        let expressionStr = colConfig.dbTransform.reduce((acc, func) => `${func}(${acc})`, '?');
-        selection[colConfig.name] = sql.raw(expressionStr.replace('?', col.name)); 
+        // Apply SQL transforms (only works if col is a Column object with name)
+        const colName = (col as Column).name; 
+        // TODO: This might break if col is already SQL or alias, but for now we assume Column
+        if (colName) {
+           let expressionStr = colConfig.dbTransform.reduce((acc, func) => `${func}(${acc})`, '?');
+           // If it's a joined column, we might need table prefix? 
+           // Drizzle's getTableColumns returns columns that auto-prefix in queries usually.
+           // But for sql.raw replacement, we might need manual injection.
+           // Let's stick to simple replacement for now.
+           selection[colConfig.name] = sql.raw(expressionStr.replace('?', colName));
+        } else {
+           selection[colConfig.name] = col;
+        }
       } else {
         selection[colConfig.name] = col;
       }

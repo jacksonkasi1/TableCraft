@@ -4,6 +4,7 @@ import {
   getTableColumns,
   asc,
   desc,
+  Column,
 } from 'drizzle-orm';
 import { TableConfig } from '../types/table';
 import { SortParam } from '../types/engine';
@@ -39,7 +40,21 @@ export class SortBuilder {
     for (const sp of sortParams) {
       if (!sortableFields.has(sp.field)) continue;
 
-      const col = columns[sp.field];
+      const colConfig = config.columns.find(c => c.name === sp.field);
+      const dbFieldName = colConfig?.field ?? sp.field;
+
+      let col: Column | undefined;
+
+      if (dbFieldName.includes('.')) {
+         const [tableName, colName] = dbFieldName.split('.');
+         const joinedTable = this.schema[tableName] as Table;
+         if (joinedTable) {
+             col = getTableColumns(joinedTable)[colName];
+         }
+      } else {
+         col = columns[dbFieldName];
+      }
+
       if (!col) continue;
 
       clauses.push(sp.order === 'desc' ? desc(col) : asc(col));

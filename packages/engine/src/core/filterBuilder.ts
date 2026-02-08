@@ -54,8 +54,12 @@ export class FilterBuilder {
       // Security: reject fields not in the whitelist
       if (!filterableFields.has(field)) continue;
 
+      // Find the config for this field to resolve "field" property
+      const colConfig = config.columns.find(c => c.name === field);
+      const dbFieldName = colConfig?.field ?? field;
+
       // Resolve the column — could be on the base table or a joined table
-      const col = this.resolveColumn(config, columns, field);
+      const col = this.resolveColumn(config, columns, dbFieldName);
       if (!col) continue;
 
       const condition = applyOperator(param.operator, col, param.value);

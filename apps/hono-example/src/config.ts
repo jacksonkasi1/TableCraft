@@ -40,23 +40,22 @@ export const orderConfig: TableConfig = {
     { name: 'status', type: 'string', hidden: false, filterable: true },
     { name: 'total', type: 'number', hidden: false, sortable: true },
     { name: 'createdAt', type: 'date', hidden: false, sortable: true },
-    // Joined columns are not in base table columns
+    // Joined columns
+    { name: 'userEmail', field: 'users.email', type: 'string', hidden: false, label: 'Customer' },
+    { name: 'itemCount', type: 'number', hidden: false, label: 'Items' }
   ],
   joins: [
     {
       table: 'users',
       alias: 'u',
       type: 'left',
-  on: 'orders.user_id = users.id',
-  columns: [
-    { name: 'email', type: 'string', label: 'Customer' } // Projects users.email to userEmail
-  ]
+      on: 'orders.user_id = users.id'
     }
   ],
   subqueries: [
     {
       alias: 'itemCount',
-      table: 'order_items',
+      table: 'orderItems',
       type: 'count',
       filter: 'order_items.order_id = orders.id'
     }

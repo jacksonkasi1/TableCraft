@@ -44,11 +44,38 @@ export function validateAgainstSchema(
       const tableColumnNames = new Set(Object.keys(tableColumns));
 
       for (const col of config.columns) {
-        // Skip computed columns or those not mapping directly if we had a flag, 
-        // but for now assume all columns in config must exist in DB unless marked otherwise.
-        // If your design allows virtual columns, check a 'virtual' flag here.
-        if (!tableColumnNames.has(col.name)) {
-          throw new Error(`Column '${col.name}' configured in '${config.name}' does not exist in table '${config.base}'.`);
+        // Resolve database field name (default to col.name)
+        const dbField = col.field ?? col.name;
+
+        // Handle joined columns "table.column"
+        if (dbField.includes('.')) {
+          const [tableName, colName] = dbField.split('.');
+          const joinedTable = drizzleSchema[tableName] as Table;
+          
+          if (!joinedTable) {
+             throw new Error(`Table '${tableName}' referenced in column '${col.name}' not found in schema.`);
+          }
+          
+          const joinedColumns = getTableColumns(joinedTable);
+          if (!joinedColumns[colName]) {
+             throw new Error(`Column '${colName}' referenced in '${col.name}' does not exist in table '${tableName}'.`);
+          }
+          continue; // Validated
+        }
+
+        // Check if column is a subquery alias
+        if (config.subqueries?.some(s => s.alias === col.name)) {
+          continue;
+        }
+
+        // Check if column is an aggregation alias
+        if (config.aggregations?.some(a => a.alias === col.name)) {
+          continue;
+        }
+
+        // Validate against base table
+        if (!tableColumnNames.has(dbField)) {
+          throw new Error(`Column '${dbField}' configured in '${config.name}' does not exist in table '${config.base}'.`);
         }
       }
 
