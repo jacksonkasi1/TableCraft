@@ -1,0 +1,23 @@
+{
+  "name": "hono-example",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.5",
+    "dotenv": "^16.4.7",
+    "@tablecraft/engine": "workspace:*",
+    "@tablecraft/adapter-hono": "workspace:*"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.4",
+    "bun-types": "latest"
+  }
+}
