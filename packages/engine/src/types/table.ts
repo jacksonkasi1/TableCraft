@@ -102,6 +102,66 @@ export const BackendConditionSchema = z.object({
 });
 export type BackendCondition = z.infer<typeof BackendConditionSchema>;
 
+// --- Filter Groups (OR logic) ---
+export const FilterConditionSchema = z.object({
+  field: z.string(),
+  operator: OperatorSchema,
+  value: z.any(),
+});
+export type FilterCondition = z.infer<typeof FilterConditionSchema>;
+
+export const FilterExpressionSchema: z.ZodType<any> = z.lazy(() =>
+  z.union([
+    z.object({
+      type: z.enum(['and', 'or']),
+      conditions: z.array(FilterExpressionSchema),
+    }),
+    FilterConditionSchema,
+  ])
+);
+export type FilterExpression = 
+  | { type: 'and' | 'or'; conditions: FilterExpression[] }
+  | FilterCondition;
+
+// --- GROUP BY ---
+export const HavingConditionSchema = z.object({
+  alias: z.string(),
+  operator: OperatorSchema,
+  value: z.any(),
+});
+export type HavingCondition = z.infer<typeof HavingConditionSchema>;
+
+export const GroupByConfigSchema = z.object({
+  fields: z.array(z.string()),
+  having: z.array(HavingConditionSchema).optional(),
+});
+export type GroupByConfig = z.infer<typeof GroupByConfigSchema>;
+
+// --- Include (Nested Relations) ---
+export const IncludeConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
+  table: z.string(),
+  foreignKey: z.string(),
+  localKey: z.string().optional().default('id'),
+  as: z.string(),
+  columns: z.array(z.string()).optional(),
+  where: z.array(BackendConditionSchema).optional(),
+  orderBy: z.array(SortConfigSchema).optional(),
+  limit: z.number().optional(),
+  include: z.array(IncludeConfigSchema).optional(),
+}));
+export type IncludeConfig = z.infer<typeof IncludeConfigSchema>;
+
+// --- Recursive (CTE) ---
+export const RecursiveConfigSchema = z.object({
+  parentKey: z.string(),
+  childKey: z.string().default('id'),
+  startWith: BackendConditionSchema.optional(),
+  maxDepth: z.number().default(10),
+  depthAlias: z.string().default('depth'),
+  pathAlias: z.string().optional(),
+});
+export type RecursiveConfig = z.infer<typeof RecursiveConfigSchema>;
+
 // --- Platform Features ---
 export const TenantConfigSchema = z.object({
   field: z.string().default('tenantId').optional(),
@@ -144,6 +204,15 @@ export const TableConfigSchema = z.object({
   backendConditions: z.array(BackendConditionSchema).optional(),
   aggregations: z.array(AggregationConfigSchema).optional(),
   subqueries: z.array(SubqueryConfigSchema).optional(),
+  
+  // NEW: OR logic
+  filterGroups: z.array(FilterExpressionSchema).optional(),
+  // NEW: GROUP BY
+  groupBy: GroupByConfigSchema.optional(),
+  // NEW: Nested relations
+  include: z.array(IncludeConfigSchema).optional(),
+  // NEW: Recursive CTE
+  recursive: RecursiveConfigSchema.optional(),
   
   tenant: TenantConfigSchema.optional(),
   softDelete: SoftDeleteConfigSchema.optional(),

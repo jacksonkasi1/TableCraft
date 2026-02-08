@@ -1,7 +1,5 @@
 import { Operator, TableConfig } from './table';
 
-// --- Request Params ---
-
 export interface FilterParam {
   operator: Operator;
   value: unknown;
@@ -22,8 +20,6 @@ export interface EngineParams {
   includeDeleted?: boolean;
 }
 
-// --- Response ---
-
 export interface EngineMeta {
   total: number;
   page: number;
@@ -37,7 +33,12 @@ export interface EngineResult<T = Record<string, unknown>> {
   aggregations?: Record<string, number>;
 }
 
-// --- Context (injected per-request) ---
+/** Result shape for grouped queries (GROUP BY) */
+export interface GroupedResult {
+  data: Record<string, unknown>[];
+  meta: { total: number };
+  aggregations: Record<string, number>;
+}
 
 export interface EngineContext {
   tenantId?: string | number;
@@ -49,19 +50,17 @@ export interface EngineContext {
   [key: string]: unknown;
 }
 
-// --- Factory Options ---
-
 export interface EngineOptions {
   db: unknown;
   schema: Record<string, unknown>;
   configs: TableConfig[] | Record<string, TableConfig>;
 }
 
-// --- Engine Interface ---
-
 export interface TableEngine {
   query(params?: EngineParams, context?: EngineContext): Promise<EngineResult>;
+  queryGrouped(params?: EngineParams, context?: EngineContext): Promise<GroupedResult>;
+  queryRecursive(params?: EngineParams, context?: EngineContext): Promise<EngineResult>;
   count(params?: EngineParams, context?: EngineContext): Promise<number>;
-  exportData(params: EngineParams, context?: EngineContext): Promise<string>;
+  exportData(params?: EngineParams, context?: EngineContext): Promise<string>;
   getConfig(): TableConfig;
 }
