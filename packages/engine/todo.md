@@ -45,76 +45,76 @@
     - [x] Handle relative date values (e.g., `last 30 days`)
 
 ### Week 3: Interactive Features
-- [ ] **Filter Builder (Dynamic WHERE)**
-    - [ ] Create `src/core/filterBuilder.ts`
-    - [ ] Implement `buildFilters(query, config, params)`
-    - [ ] Support basic operators (`eq`, `neq`, `gt`, `lt`, `contains`)
-    - [ ] Support range filters (`between`)
-    - [ ] Support list filters (`in`, `notIn`)
-- [ ] **Search Builder**
-    - [ ] Create `src/core/searchBuilder.ts`
-    - [ ] Implement `buildSearch(query, config, searchTerm)`
-    - [ ] Support `ILIKE` across multiple columns (`OR` logic)
-    - [ ] Support PostgreSQL Full-Text Search (`tsvector`) if enabled
-- [ ] **Sort & Pagination**
-    - [ ] Implement `buildSort(query, config, sortParams)`
-    - [ ] Implement `buildPagination(query, page, pageSize)`
-    - [ ] Add safety limits (max page size)
+- [x] **Filter Builder (Dynamic WHERE)**
+    - [x] Create `src/core/filterBuilder.ts`
+    - [x] Implement `buildFilters(query, config, params)`
+    - [x] Support basic operators (`eq`, `neq`, `gt`, `lt`, `contains`)
+    - [x] Support range filters (`between`)
+    - [x] Support list filters (`in`, `notIn`)
+- [x] **Search Builder**
+    - [x] Create `src/core/searchBuilder.ts`
+    - [x] Implement `buildSearch(query, config, searchTerm)`
+    - [x] Support `ILIKE` across multiple columns (`OR` logic)
+    - [x] Support PostgreSQL Full-Text Search (`tsvector`) if enabled
+- [x] **Sort & Pagination**
+    - [x] Implement `buildSort(query, config, sortParams)`
+    - [x] Implement `buildPagination(query, page, pageSize)`
+    - [x] Add safety limits (max page size)
 
 ## Phase 2: SDK & Platform Logic
 
 ### Week 4: The SDK
-- [ ] **Engine Factory**
-    - [ ] Create `src/engine.ts`
-    - [ ] Implement `createTableEngine({ schema, config })`
-    - [ ] Expose `buildQuery` and `execute` methods
-- [ ] **Request Parser**
-    - [ ] Create `src/utils/requestParser.ts`
-    - [ ] Implement `parseRequest(urlParams)` -> `EngineParams`
-    - [ ] Handle nested filter syntax (`filter[status]=active`)
-    - [ ] Handle sort syntax (`sort=-createdAt`)
-- [ ] **Response Formatter**
-    - [ ] Create `src/utils/responseFormatter.ts`
-    - [ ] Implement `formatResponse(data, meta, config)`
-    - [ ] Apply `jsTransform` functions (Layer 2 transforms)
-    - [ ] Format dates and currency based on config
+- [x] **Engine Factory**
+    - [x] Create `src/engine.ts`
+    - [x] Implement `createTableEngine({ schema, config })`
+    - [x] Expose `buildQuery` and `execute` methods
+- [x] **Request Parser**
+    - [x] Create `src/utils/requestParser.ts`
+    - [x] Implement `parseRequest(urlParams)` -> `EngineParams`
+    - [x] Handle nested filter syntax (`filter[status]=active`)
+    - [x] Handle sort syntax (`sort=-createdAt`)
+- [x] **Response Formatter**
+    - [x] Create `src/utils/responseFormatter.ts`
+    - [x] Implement `formatResponse(data, meta, config)`
+    - [x] Apply `jsTransform` functions (Layer 2 transforms)
+    - [x] Format dates and currency based on config
 
 ### Week 5: Framework Adapters
-- [ ] **Next.js Adapter**
-    - [ ] Create `src/adapters/next.ts`
-    - [ ] Implement `createNextHandler({ db, schema, configs })`
-    - [ ] Handle Request/Response objects
-- [ ] **Express Adapter**
-    - [ ] Create `src/adapters/express.ts`
-    - [ ] Implement `createExpressMiddleware({ db, schema, configs })`
-- [ ] **Context Injection**
-    - [ ] Implement context middleware for `tenantId` extraction
+- [x] **Next.js Adapter**
+    - [x] Create `src/adapters/next.ts`
+    - [x] Implement `createNextHandler({ db, schema, configs })`
+    - [x] Handle Request/Response objects
+- [x] **Express Adapter**
+    - [x] Create `src/adapters/express.ts`
+    - [x] Implement `createExpressMiddleware({ db, schema, configs })`
+- [x] **Context Injection**
+    - [x] Implement context middleware for `tenantId` extraction
 
 ## Phase 3: Advanced Features
 
 ### Week 6: Complex Data Logic
-- [ ] **Aggregations**
-    - [ ] Implement `buildAggregations(query, config)`
-    - [ ] Support `count`, `sum`, `avg`, `min`, `max`
-- [ ] **Subqueries**
-    - [ ] Implement `buildSubqueries(query, config)`
-    - [ ] Support `count` subqueries (e.g., `ordersCount`)
-    - [ ] Support `exists` subqueries
-- [ ] **Soft Delete**
-    - [ ] Implement global soft-delete filter injection
-    - [ ] Support "include deleted" override for admins
-- [ ] **Caching**
-    - [ ] Implement basic memory cache wrapper
-    - [ ] Add hooks for external cache (Redis/Vercel KV)
+- [x] **Aggregations**
+    - [x] Implement `buildAggregations(query, config)`
+    - [x] Support `count`, `sum`, `avg`, `min`, `max`
+- [x] **Subqueries**
+    - [x] Implement `buildSubqueries(query, config)`
+    - [x] Support `count` subqueries (e.g., `ordersCount`)
+    - [x] Support `exists` subqueries
+- [x] **Soft Delete**
+    - [x] Implement global soft-delete filter injection
+    - [x] Support "include deleted" override for admins
+- [x] **Caching**
+    - [x] Implement basic memory cache wrapper
+    - [x] Add hooks for external cache (Redis/Vercel KV)
 
 ### Week 7: Code Generation & Export
-- [ ] **Export Logic**
-    - [ ] Implement `exportData(query, format)`
-    - [ ] Support CSV generation
-    - [ ] Support JSON generation
-- [ ] **Eject (Code Generation)**
-    - [ ] Implement `generateDrizzleCode(config)`
-    - [ ] Output TypeScript code string for manual use
-- [ ] **OpenAPI Spec**
-    - [ ] Implement `generateOpenApiSpec(config)`
-    - [ ] Output JSON schema for API documentation
+- [x] **Export Logic**
+    - [x] Implement `exportData(query, format)`
+    - [x] Support CSV generation
+    - [x] Support JSON generation
+- [x] **Eject (Code Generation)**
+    - [x] Implement `generateDrizzleCode(config)`
+    - [x] Output TypeScript code string for manual use
+- [x] **OpenAPI Spec**
+    - [x] Implement `generateOpenApiSpec(config)`
+    - [x] Output JSON schema for API documentation
