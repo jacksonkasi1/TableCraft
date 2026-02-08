@@ -6,13 +6,14 @@ import {
   checkAccess,
   getExportMeta,
   TableConfig,
+  TableDefinition,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface ElysiaAdapterOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableConfig[] | Record<string, TableConfig>;
+  configs: TableDefinition[] | Record<string, TableDefinition>;
   /**
    * Extract context from the Elysia context.
    * Access headers, store, etc.
@@ -97,7 +98,7 @@ export function createElysiaPlugin(options: ElysiaAdapterOptions) {
 export function createElysiaHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableConfig;
+  config: TableDefinition;
   getContext?: (ctx: { request: Request; store: Record<string, unknown> }) => EngineContext | Promise<EngineContext>;
 }) {
   const { db, schema, config, getContext } = options;

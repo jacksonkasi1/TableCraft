@@ -9,6 +9,7 @@
     "typecheck": "bun run --filter '*' typecheck"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ]
 }

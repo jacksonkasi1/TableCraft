@@ -7,13 +7,14 @@ import {
   checkAccess,
   getExportMeta,
   TableConfig,
+  TableDefinition,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface HonoAdapterOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableConfig[] | Record<string, TableConfig>;
+  configs: TableDefinition[] | Record<string, TableDefinition>;
   /**
    * Extract context from Hono's Context object.
    * Use `c.get('user')`, `c.req.header(...)`, etc.
@@ -107,7 +108,7 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
 export function createHonoHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableConfig;
+  config: TableDefinition;
   getContext?: (c: Context) => EngineContext | Promise<EngineContext>;
 }) {
   const { db, schema, config, getContext } = options;

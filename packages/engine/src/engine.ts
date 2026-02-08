@@ -6,7 +6,7 @@ import {
   eq,
   count as drizzleCount,
 } from 'drizzle-orm';
-import { TableConfig } from './types/table';
+import { TableConfig, TableDefinition } from './types/table';
 import { EngineParams, EngineContext, EngineResult, TableEngine } from './types/engine';
 import { validateConfig, validateAgainstSchema } from './core/validator';
 import { QueryBuilder } from './core/queryBuilder';
@@ -26,7 +26,7 @@ const globalCache = new MemoryCache();
 export interface CreateEngineOptions {
   db: any; // Drizzle database instance
   schema: Record<string, unknown>;
-  config: TableConfig;
+  config: TableDefinition; // Accept input type (optional fields allowed)
   /** Skip Zod + schema validation (if you pre-validated) */
   skipValidation?: boolean;
 }
@@ -35,12 +35,21 @@ export interface CreateEngineOptions {
  * Creates a TableEngine for a single table configuration.
  */
 export function createTableEngine(options: CreateEngineOptions): TableEngine {
-  const { db, schema, config, skipValidation } = options;
+  const { db, schema, config: rawConfig, skipValidation } = options;
 
-  // Validate at creation time
-  if (!skipValidation) {
-    validateConfig(config);
-    validateAgainstSchema(config, schema);
+  // Validate and parse config to ensure defaults are applied
+  // If skipValidation is true, we assume rawConfig is already a valid TableConfig
+  // but strictly speaking, we should parse it to get defaults.
+  // However, skipValidation usually implies we trust it completely.
+  // For safety, let's always parse unless we are sure.
+  
+  let config: TableConfig;
+  
+  if (skipValidation) {
+      config = rawConfig as TableConfig;
+  } else {
+      config = validateConfig(rawConfig);
+      validateAgainstSchema(config, schema);
   }
 
   const queryBuilder = new QueryBuilder(schema);
@@ -278,7 +287,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 export function createEngines(options: {
   db: any;
   schema: Record<string, unknown>;
-  configs: TableConfig[] | Record<string, TableConfig>;
+  configs: TableDefinition[] | Record<string, TableDefinition>;
 }): Record<string, TableEngine> {
   const { db, schema, configs } = options;
 

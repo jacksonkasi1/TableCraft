@@ -32,6 +32,7 @@ export const ColumnConfigSchema = z.object({
   jsTransform: z.array(z.string()).optional(),
 });
 export type ColumnConfig = z.infer<typeof ColumnConfigSchema>;
+export type ColumnDefinition = z.input<typeof ColumnConfigSchema>;
 
 // --- Join Config (Recursive) ---
 // Using z.lazy for recursive types
@@ -45,6 +46,7 @@ export const JoinConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
   joins: z.array(z.lazy(() => JoinConfigSchema)).optional(),
 }));
 export type JoinConfig = z.infer<typeof JoinConfigSchema>;
+export type JoinDefinition = z.input<typeof JoinConfigSchema>;
 
 // --- Filter & Search Config ---
 export const FilterConfigSchema = z.object({
@@ -156,3 +158,4 @@ export const TableConfigSchema = z.object({
   access: AccessControlSchema.optional(),
 });
 export type TableConfig = z.infer<typeof TableConfigSchema>;
+export type TableDefinition = z.input<typeof TableConfigSchema>;

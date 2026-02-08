@@ -1,6 +1,6 @@
-import { TableConfig } from '@tablecraft/engine';
+import { TableConfig, TableDefinition } from '@tablecraft/engine';
 
-export const productConfig: TableConfig = {
+export const productConfig: TableDefinition = {
   name: 'products',
   base: 'products',
   columns: [
@@ -32,7 +32,7 @@ export const productConfig: TableConfig = {
   }
 };
 
-export const orderConfig: TableConfig = {
+export const orderConfig: TableDefinition = {
   name: 'orders',
   base: 'orders',
   columns: [

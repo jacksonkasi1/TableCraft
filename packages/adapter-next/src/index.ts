@@ -4,13 +4,14 @@ import {
   checkAccess,
   getExportMeta,
   TableConfig,
+  TableDefinition,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface NextHandlerOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableConfig[] | Record<string, TableConfig>;
+  configs: TableDefinition[] | Record<string, TableDefinition>;
   /**
    * Extract context (tenantId, user, etc.) from the incoming request.
    * Called on every request before the query runs.
@@ -127,7 +128,7 @@ export function createNextHandler(options: NextHandlerOptions) {
 export function createNextRouteHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableConfig;
+  config: TableDefinition;
   getContext?: (request: Request) => EngineContext | Promise<EngineContext>;
 }) {
   const { db, schema, config, getContext } = options;
