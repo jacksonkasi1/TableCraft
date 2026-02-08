@@ -1,76 +1,60 @@
-import { 
-  Table, 
-  SQL, 
-  asc, 
-  desc, 
-  getTableColumns
-} from 'drizzle-orm';
 import { TableConfig } from '../types/table';
+import { EngineMeta } from '../types/engine';
+
+export interface PaginationResult {
+  limit: number;
+  offset: number;
+  page: number;
+  pageSize: number;
+}
 
 export class PaginationBuilder {
-  constructor(private schema: Record<string, unknown>) {}
-
   /**
-   * Builds the ORDER BY clause.
+   * Computes LIMIT and OFFSET from page/pageSize params.
+   * Enforces min/max boundaries from the config.
    */
-  buildSort(config: TableConfig, params: Record<string, any>): SQL[] {
-    const sortParams = params.sort as string; // e.g. "-createdAt,name"
-    const sorts: SQL[] = [];
-    const table = this.schema[config.base] as Table;
-    const columns = getTableColumns(table);
+  buildPagination(
+    config: TableConfig,
+    page?: number,
+    pageSize?: number
+  ): PaginationResult {
+    const pCfg = config.pagination;
+    const enabled = pCfg?.enabled ?? true;
 
-    // 1. URL Sort Params take precedence
-    if (sortParams) {
-      const fields = sortParams.split(',');
-      for (const field of fields) {
-        const isDesc = field.startsWith('-');
-        const fieldName = isDesc ? field.substring(1) : field;
-        
-        // Find column config to check sortable flag
-        const colConfig = config.columns.find(c => c.name === fieldName);
-        if (!colConfig || colConfig.sortable === false) continue;
-
-        const col = columns[fieldName];
-        if (col) {
-          sorts.push(isDesc ? desc(col) : asc(col));
-        }
-      }
-    } 
-    
-    // 2. Default Sort if no URL sort provided
-    else if (config.defaultSort) {
-      for (const sortConfig of config.defaultSort) {
-        const col = columns[sortConfig.field];
-        if (col) {
-          sorts.push(sortConfig.order === 'desc' ? desc(col) : asc(col));
-        }
-      }
+    if (!enabled) {
+      return {
+        limit: Number.MAX_SAFE_INTEGER,
+        offset: 0,
+        page: 1,
+        pageSize: Number.MAX_SAFE_INTEGER,
+      };
     }
 
-    return sorts;
+    const defaultSize = pCfg?.defaultPageSize ?? 10;
+    const maxSize = pCfg?.maxPageSize ?? 100;
+
+    const resolvedPage = Math.max(1, Math.floor(page ?? 1));
+    const resolvedSize = Math.min(maxSize, Math.max(1, Math.floor(pageSize ?? defaultSize)));
+
+    return {
+      limit: resolvedSize,
+      offset: (resolvedPage - 1) * resolvedSize,
+      page: resolvedPage,
+      pageSize: resolvedSize,
+    };
   }
 
   /**
-   * Builds limit and offset for pagination.
+   * Produces pagination metadata from the total row count.
    */
-  buildPagination(config: TableConfig, params: Record<string, any>): { limit: number, offset: number } {
-    if (config.pagination?.enabled === false) {
-       return { limit: -1, offset: 0 }; // Handle "no pagination" logic in engine
-    }
-
-    const defaultSize = config.pagination?.defaultPageSize ?? 10;
-    const maxSize = config.pagination?.maxPageSize ?? 100;
-    
-    let page = Number(params.page);
-    let pageSize = Number(params.pageSize);
-
-    if (isNaN(page) || page < 1) page = 1;
-    if (isNaN(pageSize) || pageSize < 1) pageSize = defaultSize;
-    if (pageSize > maxSize) pageSize = maxSize;
-
+  buildMeta(total: number, pagination: PaginationResult): EngineMeta {
     return {
-      limit: pageSize,
-      offset: (page - 1) * pageSize
+      total,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      totalPages: pagination.pageSize > 0
+        ? Math.ceil(total / pagination.pageSize)
+        : 0,
     };
   }
 }
