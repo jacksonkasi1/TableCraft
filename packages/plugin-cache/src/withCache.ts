@@ -1,4 +1,4 @@
-import type { TableEngine, EngineParams, EngineContext, EngineResult } from '@tablecraft/engine';
+import type { TableEngine, EngineParams, EngineContext, EngineResult, GroupedResult } from '@tablecraft/engine';
 import type { CacheOptions, CacheProvider } from './types';
 import { memoryProvider } from './providers/memory';
 
@@ -66,6 +66,50 @@ export function withCache(engine: TableEngine, options?: CacheOptions): TableEng
 
       // Cache miss — execute
       const result = await engine.query(params, context);
+
+      // Store (fire and forget)
+      const totalTtl = ttl + swr;
+      Promise.resolve(provider.set(key, result, totalTtl)).catch(() => {});
+
+      return result;
+    },
+
+    async queryGrouped(
+      params: EngineParams = {},
+      context: EngineContext = {}
+    ): Promise<GroupedResult> {
+      const key = `g:${buildKey(configName, params, context)}`;
+
+      // Try cache
+      const cached = await Promise.resolve(provider.get<GroupedResult>(key));
+      if (cached !== undefined) {
+        return cached;
+      }
+
+      // Cache miss — execute
+      const result = await engine.queryGrouped(params, context);
+
+      // Store (fire and forget)
+      const totalTtl = ttl + swr;
+      Promise.resolve(provider.set(key, result, totalTtl)).catch(() => {});
+
+      return result;
+    },
+
+    async queryRecursive(
+      params: EngineParams = {},
+      context: EngineContext = {}
+    ): Promise<EngineResult> {
+      const key = `r:${buildKey(configName, params, context)}`;
+
+      // Try cache
+      const cached = await Promise.resolve(provider.get<EngineResult>(key));
+      if (cached !== undefined) {
+        return cached;
+      }
+
+      // Cache miss — execute
+      const result = await engine.queryRecursive(params, context);
 
       // Store (fire and forget)
       const totalTtl = ttl + swr;

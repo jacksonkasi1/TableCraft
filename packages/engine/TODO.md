@@ -70,48 +70,57 @@
 - [x] **Typecheck**: `bun run typecheck`
 - [x] **Test**: `bun test`
 
-## Phase 6: Limitations & Features Expansion (Current)
+## Phase 6: Limitations & Features Expansion (Completed)
 
 ### 1. The "OR" Problem (Complex Filtering)
-- [ ] **Config Schema**: Update `TableConfig` to support filter groups (nested AND/OR).
-- [ ] **Builder**: Add `.whereOr()` and `.whereGroup()` to `TableDefinitionBuilder`.
-- [ ] **Engine**: Update `FilterGroupBuilder` to construct recursive SQL conditions.
-- [ ] **Example**: Add demo route/test for complex filtering (e.g., `(A AND B) OR C`).
+- [x] **Config Schema**: Update `TableConfig` to support filter groups (nested AND/OR).
+- [x] **Builder**: Add `.whereOr()` and `.whereGroup()` to `TableDefinitionBuilder`.
+- [x] **Engine**: Update `FilterGroupBuilder` to construct recursive SQL conditions.
+- [x] **Example**: Add demo route/test for complex filtering (e.g., `(A AND B) OR C`).
 
 ### 2. GROUP BY & Aggregation Reports
-- [ ] **Config Schema**: Add `GroupByConfig` (fields, having).
-- [ ] **Builder**: Add `.groupBy()` and `.having()` methods.
-- [ ] **Engine**:
-    - [ ] Create `GroupByBuilder`.
-    - [ ] Implement `queryGrouped()` mode in engine (returns `GroupedResult`).
-- [ ] **Example**: Add "Sales by Month" or similar report endpoint.
+- [x] **Config Schema**: Add `GroupByConfig` (fields, having).
+- [x] **Builder**: Add `.groupBy()` and `.having()` methods.
+- [x] **Engine**:
+    - [x] Create `GroupByBuilder`.
+    - [x] Implement `queryGrouped()` mode in engine (returns `GroupedResult`).
+- [x] **Example**: Add "Sales by Month" or similar report endpoint.
 
 ### 3. Nested Relations (Includes)
-- [ ] **Config Schema**: Add `IncludeConfig` (table, keys, nested includes).
-- [ ] **Builder**: Add `.include()` method for fetching related data.
-- [ ] **Engine**:
-    - [ ] Create `RelationBuilder` to execute secondary queries (batching IDs).
-    - [ ] Merge results in JS (post-processing).
-- [ ] **Example**: Fetch User -> Orders -> Items hierarchy.
+- [x] **Config Schema**: Add `IncludeConfig` (table, keys, nested includes).
+- [x] **Builder**: Add `.include()` method for fetching related data.
+- [x] **Engine**:
+    - [x] Create `RelationBuilder` to execute secondary queries (batching IDs).
+    - [x] Merge results in JS (post-processing).
+- [x] **Example**: Fetch User -> Orders -> Items hierarchy.
 
 ### 4. Recursive Queries (CTEs)
-- [ ] **Config Schema**: Add `RecursiveConfig` (parentKey, childKey, maxDepth).
-- [ ] **Builder**: Add `.recursive()` method.
-- [ ] **Engine**:
-    - [ ] Create `RecursiveBuilder` to generate `WITH RECURSIVE` SQL.
-    - [ ] Implement `queryRecursive()` mode.
-- [ ] **Example**: Fetch Category tree (electronics -> laptops -> gaming).
+- [x] **Config Schema**: Add `RecursiveConfig` (parentKey, childKey, maxDepth).
+- [x] **Builder**: Add `.recursive()` method.
+- [x] **Engine**:
+    - [x] Create `RecursiveBuilder` to generate `WITH RECURSIVE` SQL.
+    - [x] Implement `queryRecursive()` mode.
+- [x] **Example**: Fetch Category tree (electronics -> laptops -> gaming).
 
 ### 5. Advanced Joins & Raw SQL
-- [ ] **Builder**:
-    - [ ] Update `.join()` to accept `sql` template literal for `ON` condition.
-    - [ ] Add `.rawSelect()`, `.rawWhere()`, `.rawJoin()`, `.rawOrderBy()`.
-- [ ] **Engine**:
-    - [ ] Pass runtime SQL objects from builder to engine.
-    - [ ] Inject raw SQL fragments into the query pipeline.
-- [ ] **Example**: Join with complex condition (e.g., email domain match).
+- [x] **Builder**:
+    - [x] Update `.join()` to accept `sql` template literal for `ON` condition.
+    - [x] Add `.rawSelect()`, `.rawWhere()`, `.rawJoin()`, `.rawOrderBy()`.
+- [x] **Engine**:
+    - [x] Pass runtime SQL objects from builder to engine.
+    - [x] Inject raw SQL fragments into the query pipeline.
+- [x] **Example**: Join with complex condition (e.g., email domain match).
 
-### Verification
-- [ ] **Typecheck**: Ensure all new types resolve correctly.
-- [ ] **Build**: Verify all packages build.
-- [ ] **Tests**: Add specific tests for each new feature in `apps/hono-example`.
+## Phase 7: Type Safety Improvements (Current)
+
+### Type-Safe SQL Helpers
+- [x] **Create Helpers**: Add `packages/engine/src/utils/typedSql.ts`
+    - [x] `column()`: Type-safe column reference
+    - [x] `caseWhen()`: Type-safe CASE WHEN builder
+    - [x] `coalesce()`: Type-safe COALESCE
+    - [x] `concat()`: Type-safe CONCAT
+    - [x] `dateTrunc()`: Type-safe DATE_TRUNC
+    - [x] `interval()`: Type-safe INTERVAL
+    - [x] `ago()`: Type-safe NOW() - INTERVAL
+- [x] **Export**: Export helpers from `packages/engine/src/index.ts`
+- [x] **Test**: Add unit tests in `packages/engine/test/typedSql.test.ts`

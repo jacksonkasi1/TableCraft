@@ -29,3 +29,4 @@ export * from './utils/codegen';
 export * from './utils/openapi';
 export * from './utils/adapterUtils';
 export * from './utils/introspect';
+export * from './utils/typedSql';
