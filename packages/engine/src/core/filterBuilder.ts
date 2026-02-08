@@ -87,7 +87,9 @@ export class FilterBuilder {
       const col = columns[filter.field];
       if (!col) continue;
 
-      const condition = applyOperator(filter.operator, col, filter.value);
+      // Default to 'eq' if not specified (though schema defaults it, z.input might miss it)
+      const op = filter.operator ?? 'eq';
+      const condition = applyOperator(op, col, filter.value);
       if (condition) conditions.push(condition);
     }
 

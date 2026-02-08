@@ -23,9 +23,9 @@ export const ColumnConfigSchema = z.object({
   field: z.string().optional(), // Database column name (defaults to name). Can be "table.column"
   type: z.enum(['string', 'number', 'boolean', 'date', 'json', 'uuid']),
   label: z.string().optional(),
-  hidden: z.boolean().optional().default(false),
-  sortable: z.boolean().optional().default(true),
-  filterable: z.boolean().optional().default(true),
+  hidden: z.boolean().default(false).optional(),
+  sortable: z.boolean().default(true).optional(),
+  filterable: z.boolean().default(true).optional(),
   // Database-level transform (e.g., "upper", "trim") applied in SQL
   dbTransform: z.array(z.string()).optional(),
   // JavaScript-level transform applied after fetching
@@ -39,7 +39,7 @@ export type ColumnDefinition = z.input<typeof ColumnConfigSchema>;
 export const JoinConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
   table: z.string(), // Name of the joined table (as defined in config or db)
   alias: z.string().optional(),
-  type: JoinTypeSchema.default('left'),
+  type: JoinTypeSchema.default('left').optional(),
   on: z.string(), // SQL condition or simple "localKey=foreignKey"
   columns: z.array(ColumnConfigSchema).optional(),
   // Recursive joins
@@ -51,29 +51,29 @@ export type JoinDefinition = z.input<typeof JoinConfigSchema>;
 // --- Filter & Search Config ---
 export const FilterConfigSchema = z.object({
   field: z.string(),
-  operator: OperatorSchema.default('eq'),
+  operator: OperatorSchema.default('eq').optional(),
   value: z.any().optional(), // For static filters
   label: z.string().optional(),
-  type: FilterTypeSchema.default('dynamic'), // dynamic = from URL, static = fixed
+  type: FilterTypeSchema.default('dynamic').optional(), // dynamic = from URL, static = fixed
 });
 export type FilterConfig = z.infer<typeof FilterConfigSchema>;
 
 export const SearchConfigSchema = z.object({
   fields: z.array(z.string()), // Columns to search across
-  enabled: z.boolean().default(true),
+  enabled: z.boolean().default(true).optional(),
 });
 export type SearchConfig = z.infer<typeof SearchConfigSchema>;
 
 export const SortConfigSchema = z.object({
   field: z.string(),
-  order: z.enum(['asc', 'desc']).default('asc'),
+  order: z.enum(['asc', 'desc']).default('asc').optional(),
 });
 export type SortConfig = z.infer<typeof SortConfigSchema>;
 
 export const PaginationConfigSchema = z.object({
-  defaultPageSize: z.number().default(10),
-  maxPageSize: z.number().default(100),
-  enabled: z.boolean().default(true),
+  defaultPageSize: z.number().default(10).optional(),
+  maxPageSize: z.number().default(100).optional(),
+  enabled: z.boolean().default(true).optional(),
 });
 export type PaginationConfig = z.infer<typeof PaginationConfigSchema>;
 
@@ -102,27 +102,27 @@ export type BackendCondition = z.infer<typeof BackendConditionSchema>;
 
 // --- Platform Features ---
 export const TenantConfigSchema = z.object({
-  field: z.string().default('tenantId'),
-  enabled: z.boolean().default(true),
+  field: z.string().default('tenantId').optional(),
+  enabled: z.boolean().default(true).optional(),
 });
 export type TenantConfig = z.infer<typeof TenantConfigSchema>;
 
 export const SoftDeleteConfigSchema = z.object({
-  field: z.string().default('deletedAt'),
-  enabled: z.boolean().default(true),
+  field: z.string().default('deletedAt').optional(),
+  enabled: z.boolean().default(true).optional(),
 });
 export type SoftDeleteConfig = z.infer<typeof SoftDeleteConfigSchema>;
 
 export const CacheConfigSchema = z.object({
-  ttl: z.number().default(60), // Seconds
-  enabled: z.boolean().default(false),
+  ttl: z.number().default(60).optional(), // Seconds
+  enabled: z.boolean().default(false).optional(),
   staleWhileRevalidate: z.number().optional(),
 });
 export type CacheConfig = z.infer<typeof CacheConfigSchema>;
 
 export const ExportConfigSchema = z.object({
-  formats: z.array(z.enum(['csv', 'json'])).default(['csv', 'json']),
-  enabled: z.boolean().default(true),
+  formats: z.array(z.enum(['csv', 'json'])).default(['csv', 'json']).optional(),
+  enabled: z.boolean().default(true).optional(),
 });
 export type ExportConfig = z.infer<typeof ExportConfigSchema>;
 
