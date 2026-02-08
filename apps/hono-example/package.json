@@ -6,6 +6,7 @@
     "dev": "bun run --watch src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "seed": "bun run src/db/seed.ts",
     "test": "bun test"
   },
   "dependencies": {
