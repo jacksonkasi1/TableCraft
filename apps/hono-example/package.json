@@ -16,7 +16,8 @@
     "postgres": "^3.4.5",
     "dotenv": "^16.4.7",
     "@tablecraft/engine": "workspace:*",
-    "@tablecraft/adapter-hono": "workspace:*"
+    "@tablecraft/adapter-hono": "workspace:*",
+    "@tablecraft/plugin-cache": "workspace:*"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.4",

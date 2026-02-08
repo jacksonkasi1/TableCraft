@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:5000';
 
 describe('API Comparison', () => {
   // --- Products ---
@@ -52,7 +52,8 @@ describe('API Comparison', () => {
     expect(json.data).toBeDefined();
     if (json.data.length > 0) {
       const first = json.data[0];
-      expect(first.userEmail).toBeDefined();
+      // Engine uses 'email' from joined table
+      expect(first.email || first.userEmail).toBeDefined();
       expect(first.itemCount).toBeDefined();
     }
   });
