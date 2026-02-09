@@ -1,26 +1,38 @@
+// Types
 export * from './types/table';
 export * from './types/engine';
 
+// Errors
+export * from './errors';
+
+// Main API
 export { defineTable, TableDefinitionBuilder } from './define';
 export type { QuickOptions, RuntimeExtensions } from './define';
 
+// Engine factory
 export { createTableEngine, createEngines } from './engine';
 export type { ConfigInput } from './engine';
 
+// Core builders
 export * from './core/validator';
+export * from './core/inputValidator';
 export * from './core/queryBuilder';
 export * from './core/filterBuilder';
+export * from './core/filterGroupBuilder';
 export * from './core/searchBuilder';
 export * from './core/sortBuilder';
 export * from './core/paginationBuilder';
+export * from './core/cursorPagination';
 export * from './core/aggregationBuilder';
 export * from './core/subqueryBuilder';
 export * from './core/softDelete';
-export * from './core/filterGroupBuilder';
 export * from './core/groupByBuilder';
 export * from './core/relationBuilder';
 export * from './core/recursiveBuilder';
+export * from './core/fieldSelector';
+export * from './core/dialect';
 
+// Utilities
 export * from './utils/operators';
 export * from './utils/requestParser';
 export * from './utils/responseFormatter';

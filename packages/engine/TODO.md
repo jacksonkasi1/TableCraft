@@ -127,6 +127,35 @@
 
 
 ### Verification
-- [ ] **Build All**: `bun run build` (root)
-- [ ] **Typecheck**: `bun run typecheck`
-- [ ] **Test**: `bun test`
+- [x] **Build All**: `bun run build` (root)
+- [x] **Typecheck**: `bun run typecheck`
+- [x] **Test**: `bun test`
+
+## Phase 8: Production Readiness (New)
+
+### 1. New Types & Errors
+- [x] **Types**: Update `packages/engine/src/types/engine.ts` with new request/response types (cursor, select, distinct, countMode).
+- [x] **Errors**: Create `packages/engine/src/errors.ts` with standardized error classes (TableCraftError, ConfigError, etc.).
+
+### 2. Validation & Dialect
+- [x] **Input Validator**: Create `packages/engine/src/core/inputValidator.ts` to validate params against config before DB hit.
+- [x] **Dialect Detection**: Create `packages/engine/src/core/dialect.ts` to handle DB-specific features (ILIKE, recursive CTEs).
+
+### 3. Core Features
+- [x] **Field Selector**: Create `packages/engine/src/core/fieldSelector.ts` for `?select=id,name`.
+- [x] **Cursor Pagination**: Create `packages/engine/src/core/cursorPagination.ts` for scalable pagination.
+- [x] **Request Parser**: Update `packages/engine/src/utils/requestParser.ts` to parse new params (select, distinct, cursor).
+
+### 4. Engine Integration
+- [x] **Builder**: Update `packages/engine/src/define.ts` with `.countMode()`, `.distinct()`, and hooks (`beforeQuery`, `afterQuery`, `onError`).
+- [x] **Engine Logic**: Update `packages/engine/src/engine.ts` to integrate all new components.
+- [x] **Exports**: Update `packages/engine/src/index.ts` to export new modules.
+
+### 5. Testing
+- [x] **Unit Tests**: Add tests for errors, validation, and cursor pagination.
+- [x] **Integration Tests**: Verify end-to-end functionality.
+
+### Verification
+- [x] **Build All**: `bun run build` (root)
+- [x] **Typecheck**: `bun run typecheck`
+- [x] **Test**: `bun test`

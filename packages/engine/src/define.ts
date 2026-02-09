@@ -46,6 +46,11 @@ export interface RuntimeExtensions {
   rawOrderBys: SQL[];
   ctes: Map<string, SQL>;
   sqlJoinConditions: Map<string, SQL>;
+  hooks?: {
+    beforeQuery?: (params: any, context: any) => any;
+    afterQuery?: (data: Record<string, unknown>[], params: any, context: any) => any;
+    onError?: (error: Error, params: any, context: any) => any;
+  };
 }
 
 function emptyExtensions(): RuntimeExtensions {
@@ -529,6 +534,53 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   as(name: string): this {
     this._config.name = name;
+    return this;
+  }
+
+  // ──── Count Mode ────
+
+  /**
+   * Control how row counting works.
+   * 'exact' = SELECT COUNT(*) — accurate but slow on large tables
+   * 'estimated' = PostgreSQL's reltuples — fast but approximate
+   * 'none' = skip counting entirely — fastest
+   */
+  countMode(mode: 'exact' | 'estimated' | 'none'): this {
+    if (!(this._config as any)._countMode) {
+      (this._config as any)._countMode = mode;
+    }
+    (this._config as any)._countMode = mode;
+    return this;
+  }
+
+  // ──── DISTINCT ────
+
+  /** Enable DISTINCT on queries */
+  distinct(): this {
+    (this._config as any)._distinct = true;
+    return this;
+  }
+
+  // ──── Hooks ────
+
+  /** Add a hook that runs before every query */
+  beforeQuery(fn: (params: any, context: any) => any): this {
+    this._ext.hooks = this._ext.hooks ?? {};
+    this._ext.hooks.beforeQuery = fn;
+    return this;
+  }
+
+  /** Add a hook that runs after every query */
+  afterQuery(fn: (data: Record<string, unknown>[], params: any, context: any) => any): this {
+    this._ext.hooks = this._ext.hooks ?? {};
+    this._ext.hooks.afterQuery = fn;
+    return this;
+  }
+
+  /** Add an error handler */
+  onError(fn: (error: Error, params: any, context: any) => any): this {
+    this._ext.hooks = this._ext.hooks ?? {};
+    this._ext.hooks.onError = fn;
     return this;
   }
 

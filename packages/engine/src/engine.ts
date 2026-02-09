@@ -1,6 +1,7 @@
 import {
   Table,
   SQL,
+  sql,
   getTableColumns,
   and,
   eq,
@@ -8,48 +9,54 @@ import {
   getTableName,
 } from 'drizzle-orm';
 import { TableConfig } from './types/table';
-import { EngineParams, EngineContext, EngineResult, TableEngine, GroupedResult } from './types/engine';
+import { EngineParams, EngineContext, EngineResult, GroupedResult, TableEngine, CountMode, QueryDebugInfo } from './types/engine';
 import { validateConfig, validateAgainstSchema } from './core/validator';
+import { validateInput } from './core/inputValidator';
 import { QueryBuilder } from './core/queryBuilder';
 import { FilterBuilder } from './core/filterBuilder';
+import { FilterGroupBuilder } from './core/filterGroupBuilder';
 import { SearchBuilder } from './core/searchBuilder';
 import { SortBuilder } from './core/sortBuilder';
 import { PaginationBuilder } from './core/paginationBuilder';
+import { CursorPaginationBuilder } from './core/cursorPagination';
 import { AggregationBuilder } from './core/aggregationBuilder';
 import { SubqueryBuilder } from './core/subqueryBuilder';
 import { SoftDeleteHandler } from './core/softDelete';
-import { FilterGroupBuilder } from './core/filterGroupBuilder';
 import { GroupByBuilder } from './core/groupByBuilder';
 import { RelationBuilder } from './core/relationBuilder';
 import { RecursiveBuilder } from './core/recursiveBuilder';
-import { formatResponse } from './utils/responseFormatter';
+import { FieldSelector } from './core/fieldSelector';
+import { detectDialect, supportsFeature, Dialect } from './core/dialect';
+import { formatResponse, applyJsTransforms } from './utils/responseFormatter';
 import { exportData } from './utils/export';
 import { TableDefinitionBuilder, RuntimeExtensions } from './define';
+import { TableCraftError, QueryError, DialectError } from './errors';
 
 // ── Config Resolution ──
 
 export type ConfigInput = TableConfig | TableDefinitionBuilder;
 
-interface ResolvedEngine {
+function resolveInput(input: ConfigInput): {
   config: TableConfig;
-  extensions?: RuntimeExtensions;
-}
-
-function resolveInput(input: ConfigInput): ResolvedEngine {
-  if (input instanceof TableDefinitionBuilder) {
-    return {
-      config: input.toConfig(),
-      extensions: input._ext,
-    };
+  ext: RuntimeExtensions;
+} {
+  if (input && typeof input === 'object' && '_config' in input && '_ext' in input) {
+    const b = input as TableDefinitionBuilder;
+    return { config: b.toConfig(), ext: b._ext };
   }
-  // Check for duck-typing if it's a different builder instance
-  if ('toConfig' in input && typeof input.toConfig === 'function') {
-    return {
-      config: (input as any).toConfig(),
-      extensions: (input as any)._ext,
-    };
-  }
-  return { config: input as TableConfig };
+  return {
+    config: input as TableConfig,
+    ext: {
+      computedExpressions: new Map(),
+      transforms: new Map(),
+      rawSelects: new Map(),
+      rawWheres: [],
+      rawJoins: [],
+      rawOrderBys: [],
+      ctes: new Map(),
+      sqlJoinConditions: new Map(),
+    },
+  };
 }
 
 function normalizeSchema(schema: Record<string, unknown>): Record<string, unknown> {
@@ -80,28 +87,36 @@ export interface CreateEngineOptions {
 export function createTableEngine(options: CreateEngineOptions): TableEngine {
   const { db, skipValidation } = options;
   const schema = normalizeSchema(options.schema);
-  const { config, extensions } = resolveInput(options.config);
+  const { config, ext } = resolveInput(options.config);
 
   if (!skipValidation) {
     validateConfig(config);
     validateAgainstSchema(config, schema);
   }
 
+  // Detect database dialect
+  const dialect: Dialect = detectDialect(db);
+
+  // Initialize all builders
   const queryBuilder = new QueryBuilder(schema);
   const filterBuilder = new FilterBuilder(schema);
+  const filterGroupBuilder = new FilterGroupBuilder(schema);
   const searchBuilder = new SearchBuilder(schema);
   const sortBuilder = new SortBuilder(schema);
   const paginationBuilder = new PaginationBuilder();
+  const cursorPagination = new CursorPaginationBuilder(schema);
   const aggregationBuilder = new AggregationBuilder(schema);
   const subqueryBuilder = new SubqueryBuilder(schema);
   const softDeleteHandler = new SoftDeleteHandler(schema);
-  // New builders
-  const filterGroupBuilder = new FilterGroupBuilder(schema);
   const groupByBuilder = new GroupByBuilder(schema);
   const relationBuilder = new RelationBuilder(schema);
   const recursiveBuilder = new RecursiveBuilder(schema);
+  const fieldSelector = new FieldSelector();
 
   const baseTable = schema[config.base] as Table;
+  const countMode: CountMode = (config as any)._countMode ?? 'exact';
+
+  // ── WHERE builder ──
 
   function buildWhereConditions(
     params: EngineParams,
@@ -109,13 +124,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
   ): SQL | undefined {
     const parts: (SQL | undefined)[] = [];
 
-    // 1. Backend Conditions (Static)
     parts.push(queryBuilder.buildBackendConditions(config, context));
-
-    // 2. Soft Delete
     parts.push(softDeleteHandler.buildSoftDeleteCondition(config, params.includeDeleted));
 
-    // 3. Tenant Isolation
     if (config.tenant?.enabled && context.tenantId !== undefined) {
       const cols = getTableColumns(baseTable);
       const tenantField = config.tenant.field ?? 'tenantId';
@@ -123,190 +134,238 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       if (tenantCol) parts.push(eq(tenantCol, context.tenantId));
     }
 
-    // 4. Static Filters (Deprecated? Kept for compatibility)
     parts.push(filterBuilder.buildStaticFilters(config));
-
-    // 5. Dynamic Filters (URL)
     if (params.filters) parts.push(filterBuilder.buildFilters(config, params.filters));
-
-    // 6. Search
     if (params.search) parts.push(searchBuilder.buildSearch(config, params.search));
-
-    // 7. Filter Groups (OR Logic)
-    if (config.filterGroups) {
-      parts.push(filterGroupBuilder.buildAll(config.filterGroups, config));
-    }
-
-    // 8. Raw SQL Wheres (Escape Hatch)
-    if (extensions?.rawWheres.length) {
-      parts.push(...extensions.rawWheres);
-    }
+    if (config.filterGroups?.length) parts.push(filterGroupBuilder.buildAll(config.filterGroups, config));
+    for (const raw of ext.rawWheres) parts.push(raw);
 
     const valid = parts.filter((p): p is SQL => p !== undefined);
     return valid.length > 0 ? and(...valid) : undefined;
   }
 
-  // ── query (Standard) ──
+  // ── Count helpers ──
+
+  async function getCount(where: SQL | undefined): Promise<number | null> {
+    if (countMode === 'none') return null;
+
+    if (countMode === 'estimated' && supportsFeature(dialect, 'estimatedCount')) {
+      const result = await db.execute(
+        sql`SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname = ${config.base}`
+      );
+      const rows = Array.isArray(result) ? result : result?.rows ?? [];
+      const estimate = rows[0]?.estimate;
+      return typeof estimate === 'number' ? estimate : 0;
+    }
+
+    // Exact count
+    let q = db.select({ total: drizzleCount() }).from(baseTable);
+    q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+    if (where) q = q.where(where);
+    const result = await q;
+    return result?.[0]?.total ?? 0;
+  }
+
+  // ── Standard query ──
 
   async function query(
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<EngineResult> {
-    // If GROUP BY is configured, redirect to queryGrouped
-    if (config.groupBy?.fields?.length) {
-      // Cast to any because the return type differs slightly (aggregations vs data)
-      // but EngineResult is generic enough to hold it.
-      return queryGrouped(params, context) as any;
+    // Hook: beforeQuery
+    let resolvedParams = params;
+    if (ext.hooks?.beforeQuery) {
+      resolvedParams = await ext.hooks.beforeQuery(params, context);
     }
 
-    // If recursive is configured, redirect
-    if (config.recursive) {
-      return queryRecursive(params, context);
-    }
+    try {
+      // Validate input
+      validateInput(resolvedParams, config);
 
-    const selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
+      // Build selection
+      let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
+      for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
+      for (const [name, expr] of ext.rawSelects) selection[name] = expr;
+      const subqueries = subqueryBuilder.buildSubqueries(config);
+      if (subqueries) Object.assign(selection, subqueries);
 
-    // Add computed expressions
-    if (extensions?.computedExpressions?.size) {
-      for (const [name, expr] of extensions.computedExpressions) {
-        selection[name] = expr;
-      }
-    }
+      // Field selection: ?select=id,name
+      selection = fieldSelector.applyFieldSelection(selection, resolvedParams.select, config);
 
-    // Add raw selects
-    if (extensions?.rawSelects?.size) {
-      for (const [name, expr] of extensions.rawSelects) {
-        selection[name] = expr;
-      }
-    }
+      const where = buildWhereConditions(resolvedParams, context);
 
-    const subqueries = subqueryBuilder.buildSubqueries(config);
-    if (subqueries) Object.assign(selection, subqueries);
+      // Decide: cursor pagination or offset pagination
+      const useCursor = !!resolvedParams.cursor;
 
-    const where = buildWhereConditions(params, context);
-    const orderBy = sortBuilder.buildSort(config, params.sort);
-    const pagination = paginationBuilder.buildPagination(config, params.page, params.pageSize);
+      let data: Record<string, unknown>[];
+      let total: number | null;
+      let nextCursor: string | null | undefined;
 
-    // Apply Raw Order By
-    if (extensions?.rawOrderBys.length) {
-      // Prepend or append? Usually raw sorts override default sorts.
-      orderBy.unshift(...extensions.rawOrderBys);
-    }
+      if (useCursor) {
+        // ── Cursor-based pagination ──
+        const maxSize = config.pagination?.maxPageSize ?? 100;
+        const pageSize = Math.min(resolvedParams.pageSize ?? config.pagination?.defaultPageSize ?? 10, maxSize);
+        const sortConfig = resolvedParams.sort?.map(s => ({ field: s.field, order: s.order })) ?? config.defaultSort;
 
-    let dataQuery = db.select(selection).from(baseTable);
-    dataQuery = queryBuilder.buildJoins(dataQuery, config, extensions?.sqlJoinConditions);
-    // Apply Raw Joins
-    if (extensions?.rawJoins.length) {
-      // Drizzle hack or robust handling needed.
-      // For now, we assume user knows what they are doing if they use rawJoin via db.execute
-      // But query builder method `applyRawJoins` is a placeholder.
-      // Real raw joins might need the `sql` template literal injection into the table list or join chain.
-      // This is hard in Drizzle's typed builder.
-      // For now, we skip raw joins in the builder phase unless we use `extras`.
-    }
+        const cursorResult = cursorPagination.build(config, resolvedParams.cursor, pageSize, sortConfig);
 
-    if (where) dataQuery = dataQuery.where(where);
-    if (orderBy.length > 0) dataQuery = dataQuery.orderBy(...orderBy);
-    dataQuery = dataQuery.limit(pagination.limit).offset(pagination.offset);
-
-    // Count Query
-    let countQuery = db.select({ total: drizzleCount() }).from(baseTable);
-    countQuery = queryBuilder.buildJoins(countQuery, config, extensions?.sqlJoinConditions);
-    if (where) countQuery = countQuery.where(where);
-
-    // Aggregations
-    let aggPromise: Promise<any[]> | undefined;
-    const aggSelect = aggregationBuilder.buildAggregations(config);
-    if (aggSelect) {
-      let aggQuery = db.select(aggSelect).from(baseTable);
-      aggQuery = queryBuilder.buildJoins(aggQuery, config, extensions?.sqlJoinConditions);
-      if (where) aggQuery = aggQuery.where(where);
-      aggPromise = aggQuery;
-    }
-
-    const [data, countResult, aggResult] = await Promise.all([
-      dataQuery,
-      countQuery,
-      aggPromise ?? Promise.resolve(undefined),
-    ]);
-
-    const total = countResult?.[0]?.total ?? 0;
-    const meta = paginationBuilder.buildMeta(total, pagination);
-
-    let aggregations: Record<string, number> | undefined;
-    if (aggResult?.[0]) {
-      aggregations = {};
-      for (const [key, val] of Object.entries(aggResult[0])) {
-        if (key === '_totalCount') continue;
-        aggregations[key] = Number(val) || 0;
-      }
-      if (Object.keys(aggregations).length === 0) aggregations = undefined;
-    }
-
-    // Post-process: Includes (Nested Relations)
-    let finalData = data;
-    if (config.include?.length) {
-      finalData = await relationBuilder.resolve(db, finalData, config);
-    }
-
-    // Format response (applies built-in transforms)
-    const result = formatResponse(finalData, meta, config, aggregations);
-
-    // Apply inline JS transforms from builder
-    if (extensions?.transforms?.size) {
-      result.data = result.data.map((row) => {
-        const r = { ...row };
-        for (const [field, fn] of extensions.transforms) {
-          if (field in r) r[field] = fn(r[field]);
+        let cursorWhere = where;
+        if (cursorResult.whereCondition) {
+          cursorWhere = where ? and(where, cursorResult.whereCondition) : cursorResult.whereCondition;
         }
-        return r;
-      });
-    }
 
-    return result;
+        let q = resolvedParams.distinct
+          ? db.selectDistinct(selection).from(baseTable)
+          : db.select(selection).from(baseTable);
+
+        q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+        if (cursorWhere) q = q.where(cursorWhere);
+        if (cursorResult.orderBy.length) q = q.orderBy(...cursorResult.orderBy);
+        q = q.limit(cursorResult.limit);
+
+        const rawData = await q;
+        const cursorMeta = cursorPagination.buildMeta(rawData, pageSize, sortConfig);
+        data = cursorMeta.data;
+        nextCursor = cursorMeta.meta.nextCursor;
+        total = null; // Cursor pagination doesn't need total
+
+      } else {
+        // ── Offset-based pagination ──
+        const orderBy = sortBuilder.buildSort(config, resolvedParams.sort);
+        const pagination = paginationBuilder.buildPagination(config, resolvedParams.page, resolvedParams.pageSize);
+
+        let dataQuery = resolvedParams.distinct
+          ? db.selectDistinct(selection).from(baseTable)
+          : db.select(selection).from(baseTable);
+
+        dataQuery = queryBuilder.buildJoins(dataQuery, config, ext.sqlJoinConditions);
+        if (where) dataQuery = dataQuery.where(where);
+
+        const allOrderBy = [...orderBy, ...ext.rawOrderBys];
+        if (allOrderBy.length > 0) dataQuery = dataQuery.orderBy(...allOrderBy);
+        dataQuery = dataQuery.limit(pagination.limit).offset(pagination.offset);
+
+        const [fetchedData, fetchedTotal] = await Promise.all([
+          dataQuery,
+          getCount(where),
+        ]);
+
+        data = fetchedData;
+        total = fetchedTotal;
+      }
+
+      // Aggregations
+      let aggregations: Record<string, number> | undefined;
+      const aggSelect = aggregationBuilder.buildAggregations(config);
+      if (aggSelect) {
+        let aggQuery = db.select(aggSelect).from(baseTable);
+        aggQuery = queryBuilder.buildJoins(aggQuery, config, ext.sqlJoinConditions);
+        if (where) aggQuery = aggQuery.where(where);
+        const aggResult = await aggQuery;
+        if (aggResult?.[0]) {
+          aggregations = {};
+          for (const [key, val] of Object.entries(aggResult[0])) {
+            if (key === '_totalCount') continue;
+            aggregations[key] = Number(val) || 0;
+          }
+          if (Object.keys(aggregations).length === 0) aggregations = undefined;
+        }
+      }
+
+      // Format response
+      const pagination = paginationBuilder.buildPagination(config, resolvedParams.page, resolvedParams.pageSize);
+      const meta = {
+        total,
+        page: useCursor ? 1 : pagination.page,
+        pageSize: pagination.pageSize,
+        totalPages: total !== null ? Math.ceil(total / pagination.pageSize) : null,
+        ...(useCursor && { nextCursor }),
+        countMode,
+      };
+
+      let result = formatResponse(data, meta as any, config, aggregations);
+
+      // Apply field selection to response
+      if (resolvedParams.select?.length) {
+        result.data = fieldSelector.filterResponseFields(result.data, resolvedParams.select);
+      }
+
+      // Apply inline transforms
+      if (ext.transforms.size > 0) {
+        result.data = result.data.map((row) => {
+          const r = { ...row };
+          for (const [field, fn] of ext.transforms) {
+            if (field in r) r[field] = fn(r[field]);
+          }
+          return r;
+        });
+      }
+
+      // Resolve includes
+      if (config.include?.length) {
+        result.data = await relationBuilder.resolve(db, result.data, config);
+      }
+
+      // Hook: afterQuery
+      if (ext.hooks?.afterQuery) {
+        result.data = await ext.hooks.afterQuery(result.data, resolvedParams, context);
+      }
+
+      return result;
+
+    } catch (error: unknown) {
+      // Hook: onError
+      if (ext.hooks?.onError && error instanceof Error) {
+        const transformed = await ext.hooks.onError(error, resolvedParams, context);
+        throw transformed;
+      }
+      if (error instanceof TableCraftError) throw error;
+      throw new QueryError(
+        error instanceof Error ? error.message : 'Query execution failed',
+        error
+      );
+    }
   }
 
-  // ── queryGrouped (GROUP BY) ──
+  // ── Grouped query ──
 
   async function queryGrouped(
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<GroupedResult> {
-    const selection = groupByBuilder.buildGroupedSelect(config);
-    if (!selection) throw new Error('GROUP BY configuration invalid');
+    const groupedSelect = groupByBuilder.buildGroupedSelect(config);
+    if (!groupedSelect) throw new QueryError(`No groupBy configured on '${config.name}'`);
+
+    const groupByColumns = groupByBuilder.buildGroupByColumns(config);
+    if (!groupByColumns?.length) throw new QueryError(`No valid groupBy columns on '${config.name}'`);
 
     const where = buildWhereConditions(params, context);
     const having = groupByBuilder.buildHaving(config);
-    // Sort logic might need adjustment for groups (alias vs column)
+
+    let q = db.select(groupedSelect).from(baseTable);
+    q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+    if (where) q = q.where(where);
+    q = q.groupBy(...groupByColumns);
+    if (having) q = q.having(having);
+
     const orderBy = sortBuilder.buildSort(config, params.sort);
+    if (orderBy.length > 0) q = q.orderBy(...orderBy);
 
-    let query = db.select(selection).from(baseTable);
-    query = queryBuilder.buildJoins(query, config, extensions?.sqlJoinConditions);
-    if (where) query = query.where(where);
+    const data = await q;
 
-    const groupCols = groupByBuilder.buildGroupByColumns(config);
-    if (groupCols) query = query.groupBy(...groupCols);
-    if (having) query = query.having(having);
-    if (orderBy.length > 0) query = query.orderBy(...orderBy);
+    const aggregations: Record<string, number> = {};
+    if (config.aggregations) {
+      for (const agg of config.aggregations) {
+        aggregations[agg.alias] = data.reduce(
+          (sum: number, row: any) => sum + (Number(row[agg.alias]) || 0), 0
+        );
+      }
+    }
 
-    // Pagination for groups?
-    // Usually analytics queries are smaller, but let's support limit
-    if (params.pageSize) query = query.limit(params.pageSize);
-
-    const data = await query;
-
-    // We don't have a total count for groups easily without a subquery
-    // For now, return total = data.length
-    const total = data.length;
-
-    return {
-      data,
-      meta: { total },
-      aggregations: {}, // Aggregations are in the rows for grouped queries
-    };
+    return { data, meta: { total: data.length }, aggregations };
   }
 
-  // ── queryRecursive (CTE) ──
+  // ── Recursive query ──
 
   async function queryRecursive(
     // params and context are unused but kept for interface consistency
@@ -315,52 +374,94 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _context: EngineContext = {}
   ): Promise<EngineResult> {
-    // Recursive queries use a completely different execution path (raw SQL)
-    // They generally ignore standard filters/pagination in the recursion itself
-    // but we can apply them to the final SELECT * FROM tree
-    // For now, the RecursiveBuilder handles the whole execution.
+    if (!supportsFeature(dialect, 'recursiveCTE')) {
+      throw new DialectError('Recursive CTE', dialect);
+    }
+
     const data = await recursiveBuilder.execute(db, config);
 
+    let processed = data;
+    if (ext.transforms.size > 0) {
+      processed = processed.map((row) => {
+        const r = { ...row };
+        for (const [field, fn] of ext.transforms) {
+          if (field in r) r[field] = fn(r[field]);
+        }
+        return r;
+      });
+    }
+
     return {
-      data,
-      meta: {
-        total: data.length,
-        page: 1,
-        pageSize: data.length,
-        totalPages: 1,
-      },
+      data: processed,
+      meta: { total: processed.length, page: 1, pageSize: processed.length, totalPages: 1, countMode: 'exact' },
     };
   }
 
-  // ── count ──
+  // ── Count ──
 
   async function countRows(
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<number> {
     const where = buildWhereConditions(params, context);
-    let q = db.select({ total: drizzleCount() }).from(baseTable);
-    q = queryBuilder.buildJoins(q, config, extensions?.sqlJoinConditions);
-    if (where) q = q.where(where);
-    const result = await q;
-    return result?.[0]?.total ?? 0;
+    const result = await getCount(where);
+    return result ?? 0;
   }
 
-  // ── export ──
+  // ── Export ──
 
   async function exportRows(
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<string> {
-    // ... (Use same logic as query but with higher limit and no pagination)
-    // Reuse query() internally if possible, but we need to override page/size
-    const result = await query({
-      ...params,
-      page: 1,
-      pageSize: 10000,
-    }, context);
+    let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
+    for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
+    if (params.select?.length) {
+      selection = fieldSelector.applyFieldSelection(selection, params.select, config);
+    }
 
-    return exportData(result.data, params.export ?? 'json', config);
+    const where = buildWhereConditions({ ...params, page: undefined, pageSize: undefined }, context);
+    const orderBy = sortBuilder.buildSort(config, params.sort);
+
+    let q = db.select(selection).from(baseTable);
+    q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+    if (where) q = q.where(where);
+    if (orderBy.length > 0) q = q.orderBy(...orderBy);
+    q = q.limit(10_000);
+
+    const data = await q;
+    const transformed = applyJsTransforms(data, config);
+    return exportData(transformed, params.export ?? 'json', config);
+  }
+
+  // ── Explain (debug) ──
+
+  async function explain(
+    params: EngineParams = {},
+    context: EngineContext = {}
+  ): Promise<QueryDebugInfo> {
+    let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
+    for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
+
+    const where = buildWhereConditions(params, context);
+    const orderBy = sortBuilder.buildSort(config, params.sort);
+    const pagination = paginationBuilder.buildPagination(config, params.page, params.pageSize);
+
+    let q = db.select(selection).from(baseTable);
+    q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+    if (where) q = q.where(where);
+    if (orderBy.length > 0) q = q.orderBy(...orderBy);
+    q = q.limit(pagination.limit).offset(pagination.offset);
+
+    // Drizzle's .toSQL() returns { sql, params }
+    const built = q.toSQL();
+
+    return {
+      sql: built.sql,
+      params: built.params,
+      duration: 0,
+      timestamp: Date.now(),
+    };
   }
 
   return {
@@ -369,6 +470,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     queryRecursive,
     count: countRows,
     exportData: exportRows,
+    explain,
     getConfig: () => config,
   };
 }
@@ -381,14 +483,11 @@ export function createEngines(options: {
   configs: ConfigInput[] | Record<string, ConfigInput>;
 }): Record<string, TableEngine> {
   const { db, schema, configs } = options;
-  const entries = Array.isArray(configs)
-    ? configs
-    : Object.values(configs);
-
+  const entries = Array.isArray(configs) ? configs : Object.values(configs);
   const engines: Record<string, TableEngine> = {};
   for (const input of entries) {
-    const resolved = resolveInput(input);
-    engines[resolved.config.name] = createTableEngine({ db, schema, config: input });
+    const { config } = resolveInput(input);
+    engines[config.name] = createTableEngine({ db, schema, config: input });
   }
   return engines;
 }
