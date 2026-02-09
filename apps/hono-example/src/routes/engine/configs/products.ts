@@ -11,5 +11,7 @@ export const products = defineTable(s.products)
   .staticFilter('isArchived', 'eq', false)
   // Sort by price desc by default
   .sort('-price')
+  // Use estimated count for better performance on large tables
+  .countMode('estimated')
   // Smaller page size
   .pageSize(5, { max: 50 });

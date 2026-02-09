@@ -1,8 +1,18 @@
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+import appConfig from '../src/index';
 
 const BASE_URL = 'http://localhost:5000';
+let server: any;
 
 describe('API Comparison', () => {
+  beforeAll(() => {
+    server = Bun.serve(appConfig);
+  });
+
+  afterAll(() => {
+    server?.stop();
+  });
+
   // --- Products ---
 
   it('should return products via manual route', async () => {
