@@ -124,3 +124,9 @@
     - [x] `ago()`: Type-safe NOW() - INTERVAL
 - [x] **Export**: Export helpers from `packages/engine/src/index.ts`
 - [x] **Test**: Add unit tests in `packages/engine/test/typedSql.test.ts`
+
+
+### Verification
+- [ ] **Build All**: `bun run build` (root)
+- [ ] **Typecheck**: `bun run typecheck`
+- [ ] **Test**: `bun test`
