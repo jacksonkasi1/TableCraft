@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { column, caseWhen, coalesce, concat } from '../src/utils/typedSql';
+import { column, caseWhen, coalesce, concat, dateTrunc, interval, ago } from '../src/utils/typedSql';
 import { pgTable, uuid, varchar, integer, timestamp } from 'drizzle-orm/pg-core';
 
 const users = pgTable('users', {
@@ -50,6 +50,27 @@ describe('coalesce', () => {
 describe('concat', () => {
   it('should build CONCAT', () => {
     const result = concat(column(users, 'name'), ' - ', column(users, 'nickname'));
+    expect(result).toBeDefined();
+  });
+});
+
+describe('dateTrunc', () => {
+  it('should build DATE_TRUNC', () => {
+    const result = dateTrunc('month', column(users, 'createdAt'));
+    expect(result).toBeDefined();
+  });
+});
+
+describe('interval', () => {
+  it('should build INTERVAL', () => {
+    const result = interval(30, 'days');
+    expect(result).toBeDefined();
+  });
+});
+
+describe('ago', () => {
+  it('should build NOW() - INTERVAL', () => {
+    const result = ago(30, 'days');
     expect(result).toBeDefined();
   });
 });
