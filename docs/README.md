@@ -33,6 +33,11 @@ Start with the basics to understand how to define tables and fetch data.
     *   Writing raw Drizzle queries.
     *   Using `manualResult` for consistent API responses.
 
+6.  [**Error Handling**](./6-errors.md)
+    *   Input validation and field checking.
+    *   Typed error classes (ValidationError, FieldError).
+    *   Handling errors in your API framework.
+
 ## Quick Example
 
 ```typescript

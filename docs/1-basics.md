@@ -99,8 +99,23 @@ Use `sort` with a field name. Prefix with `-` for descending.
 `GET /products?sort=name` (A-Z)
 
 ### Pagination
+The engine supports both **Offset-based** and **Cursor-based** pagination.
+
+#### Offset Pagination (Default)
 Use `page` and `pageSize`.
 `GET /products?page=2&pageSize=50`
+
+#### Cursor Pagination (Performance)
+For infinite scrolling or large datasets, use `cursor`. This is faster as it avoids `OFFSET`.
+The `nextCursor` is returned in the `meta` response of the previous page.
+`GET /products?cursor=eyJpZCI6MTB9&pageSize=50`
+
+### Field Selection (Partial Response)
+You can limit the fields returned by the API using the `select` parameter. This is useful for reducing payload size.
+`GET /products?select=id,name,price`
+
+*   **Note:** The `id` field is always returned if available.
+*   **Security:** Hidden fields cannot be selected.
 
 ## 4. Response Format
 
@@ -121,7 +136,8 @@ The engine returns a standardized JSON structure:
     "total": 150,       // Total rows matching filter
     "page": 2,          // Current page
     "pageSize": 50,     // Current page size
-    "totalPages": 3     // Total pages
+    "totalPages": 3,    // Total pages
+    "nextCursor": "..." // Cursor for the next page (if using cursor pagination)
   }
 }
 ```
