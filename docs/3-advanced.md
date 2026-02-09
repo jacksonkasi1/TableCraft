@@ -87,6 +87,35 @@ export const postConfig = defineTable(posts)
   .toConfig();
 ```
 
+## 5. Type-Safe Date Filters
+
+Working with dates in SQL can be tricky. We provide type-safe helpers to make common date operations easy and readable.
+
+### Relative Time (`ago`)
+Filter for records within a relative time range (e.g., "last 30 days").
+
+```typescript
+import { defineTable, ago } from '@tablecraft/engine';
+
+export const recentOrders = defineTable(orders)
+  // Only show orders from the last 30 days
+  .where({ field: 'createdAt', op: 'gt', value: ago(30, 'days') })
+  .toConfig();
+```
+
+### Date Truncation (`dateTrunc`)
+Group data by time periods (day, month, year).
+
+```typescript
+import { defineTable, dateTrunc } from '@tablecraft/engine';
+
+export const monthlySales = defineTable(orders)
+  // Group by month
+  .groupBy(dateTrunc('month', orders.createdAt))
+  .aggregate('total', 'sum', 'amount')
+  .toConfig();
+```
+
 ## Next Steps
 
 Learn how to handle [Security & Access Control](./4-security.md) to protect sensitive data.

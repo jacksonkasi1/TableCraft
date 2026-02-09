@@ -69,6 +69,30 @@ Use `filter[field]=value` for exact matches.
 You can also use operators (if your adapter supports parsing them, or pass them manually):
 `GET /products?filter[price][gte]=100`
 
+#### Date Range Filtering
+To filter by a date range (e.g., "orders created between Jan 1st and Jan 31st"), use the `gte` (Greater Than or Equal) and `lte` (Less Than or Equal) operators in the URL query string.
+
+**1. Configure the Table:**
+Ensure the date column is marked as filterable.
+
+```typescript
+export const orders = defineTable(schema.orders)
+  .filter('createdAt', 'status') // Enable filtering on 'createdAt'
+  .toConfig();
+```
+
+**2. Make the API Request:**
+Pass the start and end dates as filters.
+
+*   `filter[createdAt][gte]=2024-01-01T00:00:00Z` (Start Date)
+*   `filter[createdAt][lte]=2024-01-31T23:59:59Z` (End Date)
+
+**URL Example:**
+`GET /orders?filter[createdAt][gte]=2024-01-01&filter[createdAt][lte]=2024-01-31`
+
+This will generate a SQL query equivalent to:
+`WHERE "createdAt" >= '2024-01-01' AND "createdAt" <= '2024-01-31'`
+
 ### Sorting
 Use `sort` with a field name. Prefix with `-` for descending.
 `GET /products?sort=-price` (High to Low)
