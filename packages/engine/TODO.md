@@ -159,3 +159,28 @@
 - [x] **Build All**: `bun run build` (root)
 - [x] **Typecheck**: `bun run typecheck`
 - [x] **Test**: `bun test`
+
+## Phase 9: Client SDK (Completed)
+
+### 1. Metadata & Config Improvements
+- [x] **Types**: Update `ColumnConfigSchema` in `types/table.ts` with `format`, `align`, `width`, `options`, `datePresets`, `visibleTo`.
+- [x] **Builder**: Update `define.ts` with methods for frontend metadata (`format`, `options`, `datePresets`, `visibleTo`).
+- [x] **Metadata API**: Create `core/metadataBuilder.ts` to generate schema JSON for frontend.
+- [x] **Role Filter**: Create `core/roleFilter.ts` to hide columns based on user roles.
+- [x] **Date Presets**: Create `core/datePresets.ts` to handle `last7days`, `thisMonth`, etc.
+
+### 2. Engine Integration
+- [x] **Get Metadata**: Add `getMetadata()` method to `TableEngine` interface and implementation.
+- [x] **Role Logic**: Integrate `applyRoleBasedVisibility` into `engine.query()`.
+- [x] **Date Logic**: Integrate `buildDatePresetCondition` into `filterBuilder.ts`.
+- [x] **Adapter Updates**: Update all adapters (Next, Express, Hono, Elysia) to handle `/_meta` endpoint.
+
+### 3. Client Package (@tablecraft/client)
+- [x] **Scaffold**: Create package structure (package.json, tsconfig).
+- [x] **Core**: Implement `createClient` with type-safe methods (`query`, `meta`, `export`).
+- [x] **React**: Implement optional React hooks (`useTableQuery`, `useTableMeta`).
+
+### 4. Verification
+- [x] **Unit Tests**: Test metadata generation, role filtering, and date presets.
+- [ ] **Integration**: Verify client SDK against example app.
+
