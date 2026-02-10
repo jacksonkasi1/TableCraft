@@ -184,3 +184,49 @@
 - [x] **Unit Tests**: Test metadata generation, role filtering, and date presets.
 - [ ] **Integration**: Verify client SDK against example app.
 
+## Phase 10: Final Polish (Pending)
+
+### Minor Technical Debt
+
+#### 1. CountMode Storage Location
+**Issue**: `countMode` is stored as `(config as any)._countMode` (hacky type cast)
+**Location**: `packages/engine/src/engine.ts` line 119
+**Fix**: Move to `RuntimeExtensions` instead of `TableConfig`
+**Impact**: Low - works but not elegant
+**Priority**: Medium
+
+#### 2. Client Package Peer Dependencies
+**Issue**: Missing `react` as optional peer dependency
+**Location**: `packages/client/package.json`
+**Fix**: Add peerDependencies section:
+```json
+"peerDependencies": {
+  "react": ">=18.0.0"
+},
+"peerDependenciesMeta": {
+  "react": { "optional": true }
+}
+```
+**Impact**: Low - only affects React users
+**Priority**: Low
+
+#### 3. Next.js Meta Endpoint Routing
+**Issue**: `/_meta` suffix may not work with App Router `[table]` dynamic route
+**Location**: All adapters currently use `/:table/_meta`
+**Alternative**: Use query param `?_meta=true` instead
+**Status**: Needs testing with actual Next.js app
+**Priority**: Low (current implementation works in other frameworks)
+
+#### 4. OpenAPI Generator Currency
+**Issue**: May not include newest features (cursor, select, distinct, _meta)
+**Location**: `packages/engine/src/utils/openapi.ts`
+**Status**: Needs audit and update
+**Priority**: Low
+
+### Verification
+- [ ] Move countMode to RuntimeExtensions
+- [ ] Add React peer dependency to client
+- [ ] Test Next.js _meta endpoint
+- [ ] Audit and update OpenAPI generator
+- [ ] Full integration test with demo app
+
