@@ -943,6 +943,506 @@ The frontend can render a bar chart instead of a table.
 
 ---
 
+## Frequently Asked Questions
+
+### Why Format and Align? Aren't They Optional?
+
+**Yes, they're completely optional!** You never need to define them.
+
+**Purpose:** These are display hints for your frontend UI:
+
+- `format: 'currency'` → Frontend shows "$1,234.56" instead of "1234.56"
+- `format: 'date'` → Shows "Jan 15, 2024" instead of "2024-01-15"  
+- `align: 'right'` → Numbers look better right-aligned in tables
+- `align: 'left'` → Text looks better left-aligned
+
+**When to use them:**
+- Building a generic data table component that needs display hints
+- Want consistent formatting across your frontend
+- Don't want to hardcode column formatting logic
+
+**When to skip them:**
+- Your frontend handles all formatting
+- You're building a custom UI per table
+- You prefer full control in React/Vue components
+
+---
+
+### What Does Metadata Return By Default?
+
+For a simple table with **no custom metadata**, here's what you get:
+
+```typescript
+defineTable('users', usersTable)
+  .columns(['id', 'name', 'email', 'createdAt'])
+  .search(['name', 'email'])
+```
+
+**Default metadata response:**
+
+```json
+{
+  "name": "users",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",        // ← Inferred from Drizzle schema
+      "label": "id",         // ← Defaults to column name
+      "hidden": false,
+      "sortable": true,      // ← Default true
+      "filterable": true,    // ← Default true
+      "computed": false,
+      "source": "base",
+      "operators": ["eq", "neq", "isNull", "isNotNull", "in", "notIn"]
+      // NO format, align, width, options, datePresets
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "label": "name",
+      "hidden": false,
+      "sortable": true,
+      "filterable": true,
+      "computed": false,
+      "source": "base",
+      "operators": ["eq", "neq", "contains", "startsWith", "like", "in"]
+    }
+    // ... similar for email, createdAt
+  ],
+  "capabilities": {
+    "search": true,
+    "searchFields": ["name", "email"],
+    "export": false,       // ← Default false unless enabled
+    "exportFormats": [],
+    "pagination": {
+      "enabled": true,
+      "defaultPageSize": 25,  // ← Default
+      "maxPageSize": 100,     // ← Default
+      "cursor": false
+    },
+    "sort": {
+      "enabled": true,
+      "defaultSort": []       // ← Empty unless you set it
+    },
+    "groupBy": false,
+    "groupByFields": [],
+    "recursive": false
+  },
+  "filters": [
+    { "field": "id", "type": "uuid", "operators": [...] },
+    { "field": "name", "type": "string", "operators": [...] }
+  ],
+  "aggregations": [],
+  "includes": [],
+  "staticFilters": []
+}
+```
+
+**Key defaults:**
+- ✅ Column `type` comes from Drizzle schema
+- ✅ `sortable: true`, `filterable: true` by default
+- ✅ `operators` auto-generated based on type
+- ❌ NO `format`, `align`, `width`, `options`, `datePresets` unless you add them
+- ❌ NO aggregations/includes/groupBy unless configured
+
+---
+
+### Can I Add Custom Metadata to Multiple Columns?
+
+**Yes!** Each column can have different metadata:
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total', 'status', 'priority', 'createdAt'])
+  
+  // Column 1: Currency with custom width
+  .columnMeta('total', {
+    label: 'Order Total',
+    format: 'currency',
+    align: 'right',
+    width: 150
+  })
+  
+  // Column 2: Enum with dropdown options
+  .columnMeta('status', {
+    label: 'Status',
+    width: 120,
+    options: [
+      { value: 'pending', label: 'Pending', color: 'yellow' },
+      { value: 'completed', label: 'Completed', color: 'green' }
+    ]
+  })
+  
+  // Column 3: Numeric enum with center align
+  .columnMeta('priority', {
+    label: 'Priority',
+    align: 'center',
+    width: 100,
+    options: [
+      { value: 1, label: 'Low', color: 'blue' },
+      { value: 2, label: 'High', color: 'red' }
+    ]
+  })
+  
+  // Column 4: Date with presets
+  .columnMeta('createdAt', {
+    label: 'Created Date',
+    format: 'date',
+    datePresets: ['today', 'last7days', 'thisMonth']
+  })
+```
+
+**Each column gets its own independent metadata.** Nothing affects other columns.
+
+---
+
+### How Do I Just Change the Width?
+
+**Use `.columnMeta()` with only the fields you want to change:**
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total', 'status'])
+  
+  // Just set width, everything else stays default
+  .columnMeta('total', { width: 150 })
+  .columnMeta('status', { width: 100, minWidth: 80 })
+```
+
+You can also use the dedicated `.width()` method:
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total', 'status'])
+  .width('total', 150)
+  .width('status', 100, { min: 80, max: 200 })
+```
+
+---
+
+### How Does Sorting Work on Raw SQL Columns?
+
+Great question! Let's compare regular columns vs raw SQL:
+
+#### **Regular Column Sorting (Automatic)**
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total', 'createdAt'])
+```
+
+Frontend: `GET /api/data/orders?sort[total]=desc`
+
+**Backend auto-generates:**
+```sql
+SELECT * FROM orders
+ORDER BY total DESC
+```
+
+✅ **No extra code needed!**
+
+---
+
+#### **Raw SQL Column Sorting (Also Automatic)**
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total', 'cost'])
+  .rawSelect('profitMargin', sql`
+    CASE 
+      WHEN total = 0 THEN 0 
+      ELSE ((total - cost) / total * 100)::numeric(5,2)
+    END
+  `, {
+    type: 'number',
+    label: 'Profit Margin',
+    format: 'percent',
+    sortable: true  // ← Makes it sortable!
+  })
+```
+
+Frontend: `GET /api/data/orders?sort[profitMargin]=asc`
+
+**Backend auto-generates:**
+```sql
+SELECT 
+  *,
+  CASE 
+    WHEN total = 0 THEN 0 
+    ELSE ((total - cost) / total * 100)::numeric(5,2)
+  END AS profitMargin
+FROM orders
+ORDER BY profitMargin ASC  -- ← Uses the alias!
+```
+
+**How it works:**
+1. Engine adds the SQL expression to SELECT with an alias
+2. When sorting by that alias, it uses the alias name in ORDER BY
+3. Database evaluates the expression and sorts
+
+✅ **No manual sorting code needed!**
+
+---
+
+#### **When Sorting Fails**
+
+If you try to sort by a column that **doesn't exist in the database**:
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total'])
+
+// ❌ Frontend tries: ?sort[profitMargin]=asc
+// ERROR: column "profitMargin" does not exist
+```
+
+**Solution:** Use `.rawSelect()` or `.computed()` to create the column:
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total', 'cost'])
+  .rawSelect('profitMargin', sql`((total - cost) / total * 100)`)
+  
+// ✅ Now sorting works!
+```
+
+---
+
+### Are GroupBy and Aggregations Useful for Table Headers?
+
+**Short answer:** Not directly for headers, but **very useful for dashboards and summary views**.
+
+#### **When They're Useful:**
+
+**1. Dashboard Summary Cards**
+
+```typescript
+// Backend
+defineTable('orders', ordersTable)
+  .aggregate('totalRevenue', 'sum', 'total')
+  .aggregate('avgOrder', 'avg', 'total')
+  .groupBy('status')
+```
+
+```typescript
+// Frontend request
+GET /api/data/orders?groupBy=status&aggregate[totalRevenue]=sum:total
+```
+
+**Response:**
+```json
+{
+  "data": [
+    { "status": "completed", "totalRevenue": 45000 },
+    { "status": "pending", "totalRevenue": 12000 }
+  ]
+}
+```
+
+**Frontend displays:**
+```
+┌──────────────────┐  ┌──────────────────┐
+│ Completed Orders │  │ Pending Orders   │
+│    $45,000       │  │    $12,000       │
+└──────────────────┘  └──────────────────┘
+```
+
+---
+
+**2. Chart Data**
+
+```typescript
+// Monthly revenue trend
+GET /api/data/orders?groupBy=month&aggregate[revenue]=sum:total
+```
+
+Frontend renders a **line chart** with months on X-axis, revenue on Y-axis.
+
+---
+
+**3. Table Footer Totals**
+
+```typescript
+// Metadata tells frontend aggregations are available
+{
+  "aggregations": [
+    { "alias": "totalRevenue", "type": "sum", "field": "total" }
+  ]
+}
+```
+
+Frontend can call:
+```typescript
+GET /api/data/orders?aggregate[totalRevenue]=sum:total
+```
+
+To show totals row:
+```
+Order ID | Total
+---------|-------
+1001     | $100
+1002     | $200
+---------|-------
+TOTAL    | $300  ← from aggregation
+```
+
+---
+
+**Why Metadata Includes Them:**
+
+The metadata response:
+```json
+{
+  "aggregations": [
+    { "alias": "totalRevenue", "type": "sum", "field": "total" },
+    { "alias": "avgOrderValue", "type": "avg", "field": "total" }
+  ],
+  "capabilities": {
+    "groupBy": true,
+    "groupByFields": ["status", "customerId"]
+  }
+}
+```
+
+**Frontend knows:**
+- ✅ "I can group by `status` or `customerId`"
+- ✅ "I can aggregate `total` as sum or avg"
+- ✅ "I can build a dashboard with these dimensions"
+
+**Not for table headers directly**, but for **building rich analytics UIs**.
+
+---
+
+### Can I Modify Metadata Without `.columnMeta()`?
+
+Yes! There are **dedicated helper methods** for common cases:
+
+```typescript
+defineTable('orders', ordersTable)
+  // These are shortcuts:
+  .format('total', 'currency')              // Same as .columnMeta('total', { format: 'currency' })
+  .align('total', 'right')                  // Same as .columnMeta('total', { align: 'right' })
+  .width('status', 120)                     // Same as .columnMeta('status', { width: 120 })
+  .options('status', [...])                 // Same as .columnMeta('status', { options: [...] })
+  .datePresets('createdAt', [...])          // Same as .columnMeta('createdAt', { datePresets: [...] })
+  .visibleTo('salary', ['admin', 'hr'])     // Same as .columnMeta('salary', { visibleTo: [...] })
+```
+
+**Use `.columnMeta()` when:**
+- Setting multiple properties at once
+- Working with raw SQL columns
+- Need fine control (minWidth, maxWidth, etc.)
+
+**Use dedicated methods when:**
+- Setting one property
+- Want cleaner, more readable code
+
+---
+
+### What If My Column Doesn't Exist Yet?
+
+`.columnMeta()` works even if the column doesn't exist:
+
+```typescript
+defineTable('orders', ordersTable)
+  .columns(['id', 'total'])
+  
+  // This column doesn't exist yet!
+  .columnMeta('futureColumn', {
+    type: 'number',
+    label: 'Future Feature',
+    format: 'currency',
+    hidden: true  // Hide it for now
+  })
+```
+
+The engine creates a **placeholder column** with your metadata. Later, when you add:
+
+```typescript
+.rawSelect('futureColumn', sql`some_calculation`)
+```
+
+The metadata you defined earlier is already there!
+
+**Use case:** Planning your UI before implementing backend logic.
+
+---
+
+### Does Filtering Work on Raw SQL Columns?
+
+**Yes**, if you mark them as `filterable`:
+
+```typescript
+defineTable('orders', ordersTable)
+  .rawSelect('profitMargin', sql`((total - cost) / total * 100)`, {
+    type: 'number',
+    filterable: true,  // ← Enable filtering
+    sortable: true
+  })
+```
+
+Frontend: `GET /api/data/orders?filter[profitMargin][gte]=20`
+
+**Backend generates:**
+```sql
+SELECT 
+  *,
+  ((total - cost) / total * 100) AS profitMargin
+FROM orders
+WHERE profitMargin >= 20  -- ← Uses the alias in WHERE
+```
+
+✅ **Automatic filtering on computed columns!**
+
+---
+
+### What Happens If I Don't Set Any Metadata?
+
+**Your API still works!** Metadata is **optional**.
+
+**Without metadata:**
+- ✅ Queries work normally
+- ✅ Sorting/filtering/pagination all work
+- ✅ Data returns correctly
+- ❌ Frontend doesn't know column types, display hints, or capabilities
+- ❌ You have to hardcode everything in your UI
+
+**With metadata:**
+- ✅ Frontend auto-discovers column types
+- ✅ UI auto-generates filters, sorts, presets
+- ✅ Display formatting (currency, dates) is consistent
+- ✅ Role-based column hiding works automatically
+
+**Metadata is for frontend convenience**, not backend functionality.
+
+---
+
+### Can I Use Metadata with Non-TableCraft Frontends?
+
+**Yes!** The `_meta` endpoint is just JSON. Any frontend can consume it:
+
+```bash
+curl https://api.example.com/data/orders/_meta
+```
+
+```json
+{
+  "columns": [...],
+  "capabilities": {...},
+  "filters": [...]
+}
+```
+
+You can use it with:
+- Vue.js / Svelte / Angular (build your own data table)
+- Low-code tools (import schema definitions)
+- API documentation (auto-generate field descriptions)
+- Mobile apps (know which fields exist before making requests)
+
+The metadata is **framework-agnostic JSON**.
+
+---
+
 ## Next Steps
 
 - **Try it**: Add `.format()`, `.options()`, `.datePresets()` to your configs and call `/_meta`
