@@ -85,6 +85,8 @@ export interface QueryDebugInfo {
   timestamp: number;
 }
 
+import { TableMetadata } from '../core/metadataBuilder';
+
 // --- Count Mode ---
 
 export type CountMode = 'exact' | 'estimated' | 'none';
@@ -99,6 +101,7 @@ export interface TableEngine {
   exportData(params?: EngineParams, context?: EngineContext): Promise<string>;
   /** Returns the built SQL without executing — for debugging */
   explain(params?: EngineParams, context?: EngineContext): Promise<QueryDebugInfo>;
+  getMetadata(context?: EngineContext): TableMetadata;
   getConfig(): TableConfig;
 }
 

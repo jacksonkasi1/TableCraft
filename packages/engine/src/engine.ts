@@ -31,6 +31,8 @@ import { formatResponse, applyJsTransforms } from './utils/responseFormatter';
 import { exportData } from './utils/export';
 import { TableDefinitionBuilder, RuntimeExtensions } from './define';
 import { TableCraftError, QueryError, DialectError } from './errors';
+import { applyRoleBasedVisibility } from './core/roleFilter';
+import { buildMetadata } from './core/metadataBuilder';
 
 // ── Config Resolution ──
 
@@ -179,18 +181,21 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     }
 
     try {
+      // Apply role-based visibility
+      const effectiveConfig = applyRoleBasedVisibility(config, context);
+
       // Validate input
-      validateInput(resolvedParams, config);
+      validateInput(resolvedParams, effectiveConfig);
 
       // Build selection
-      let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
+      let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, effectiveConfig);
       for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
       for (const [name, expr] of ext.rawSelects) selection[name] = expr;
-      const subqueries = subqueryBuilder.buildSubqueries(config);
+      const subqueries = subqueryBuilder.buildSubqueries(effectiveConfig);
       if (subqueries) Object.assign(selection, subqueries);
 
       // Field selection: ?select=id,name
-      selection = fieldSelector.applyFieldSelection(selection, resolvedParams.select, config);
+      selection = fieldSelector.applyFieldSelection(selection, resolvedParams.select, effectiveConfig);
 
       const where = buildWhereConditions(resolvedParams, context);
 
@@ -471,6 +476,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     count: countRows,
     exportData: exportRows,
     explain,
+    getMetadata: (context?: EngineContext) => buildMetadata(config, context),
     getConfig: () => config,
   };
 }
