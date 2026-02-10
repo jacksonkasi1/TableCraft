@@ -1,0 +1,18 @@
+{
+  "name": "@tablecraft/client",
+  "version": "0.1.0",
+  "description": "Type-safe frontend client for TableCraft APIs",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.13",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8"
+  }
+}
