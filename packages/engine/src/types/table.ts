@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 // --- Primitives ---
 export const OperatorSchema = z.enum([
-  'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 
-  'like', 'ilike', 'in', 'notIn', 'between', 
+  'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
+  'like', 'ilike', 'in', 'notIn', 'between',
   'isNull', 'isNotNull', 'contains', 'startsWith', 'endsWith'
 ]);
 export type Operator = z.infer<typeof OperatorSchema>;
@@ -16,6 +16,35 @@ export type FilterType = z.infer<typeof FilterTypeSchema>;
 
 export const AggregationTypeSchema = z.enum(['count', 'sum', 'avg', 'min', 'max']);
 export type AggregationType = z.infer<typeof AggregationTypeSchema>;
+
+// --- Column Metadata (for frontend) ---
+export const ColumnFormatSchema = z.enum([
+  'text', 'number', 'currency', 'percent', 'date', 'datetime', 
+  'time', 'boolean', 'email', 'url', 'phone', 'image', 'badge', 'code'
+]);
+export type ColumnFormat = z.infer<typeof ColumnFormatSchema>;
+
+export const ColumnAlignSchema = z.enum(['left', 'center', 'right']);
+export type ColumnAlign = z.infer<typeof ColumnAlignSchema>;
+
+export const ColumnOptionsSchema = z.object({
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  label: z.string(),
+  color: z.string().optional(), // For badge display: "green", "#ff0000", etc.
+});
+export type ColumnOption = z.infer<typeof ColumnOptionsSchema>;
+
+// --- Date Presets ---
+export const DatePresetSchema = z.enum([
+  'today', 'yesterday', 
+  'last7days', 'last30days', 'last90days',
+  'thisWeek', 'lastWeek', 
+  'thisMonth', 'lastMonth',
+  'thisQuarter', 'lastQuarter',
+  'thisYear', 'lastYear',
+  'custom',
+]);
+export type DatePreset = z.infer<typeof DatePresetSchema>;
 
 // --- Column Config ---
 export const ColumnConfigSchema = z.object({
@@ -32,6 +61,22 @@ export const ColumnConfigSchema = z.object({
   jsTransform: z.array(z.string()).optional(),
   // Computed column (not in database)
   computed: z.boolean().default(false).optional(),
+  
+  // NEW: Frontend metadata
+  format: ColumnFormatSchema.optional(),
+  align: ColumnAlignSchema.optional(),
+  width: z.number().optional(),
+  minWidth: z.number().optional(),
+  maxWidth: z.number().optional(),
+  
+  // NEW: Enum options (for dropdown filters)
+  options: z.array(ColumnOptionsSchema).optional(),
+  
+  // NEW: Date presets (only for date columns)
+  datePresets: z.array(DatePresetSchema).optional(),
+  
+  // NEW: Role-based visibility
+  visibleTo: z.array(z.string()).optional(), // roles that can see this column
 });
 export type ColumnConfig = z.infer<typeof ColumnConfigSchema>;
 export type ColumnDefinition = z.input<typeof ColumnConfigSchema>;

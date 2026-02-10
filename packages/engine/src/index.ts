@@ -31,6 +31,9 @@ export * from './core/relationBuilder';
 export * from './core/recursiveBuilder';
 export * from './core/fieldSelector';
 export * from './core/dialect';
+export * from './core/datePresets';
+export * from './core/metadataBuilder';
+export * from './core/roleFilter';
 
 // Utilities
 export * from './utils/operators';
