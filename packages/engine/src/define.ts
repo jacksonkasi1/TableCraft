@@ -11,6 +11,8 @@ import {
   SortConfig,
   FilterExpression,
   IncludeConfig,
+  ColumnFormat,
+  DatePreset,
 } from './types/table';
 import {
   introspectTable,
@@ -77,6 +79,85 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     this._table = table;
     this._config = config;
     this._ext = emptyExtensions();
+  }
+
+  // ──── Column Format / Metadata ────
+
+  /** Set display format for a column */
+  format(column: InferColumns<T>, fmt: ColumnFormat): this {
+    const col = this._config.columns.find((c) => c.name === column);
+    if (col) (col as any).format = fmt;
+    return this;
+  }
+
+  /** Set column alignment */
+  align(column: InferColumns<T>, alignment: 'left' | 'center' | 'right'): this {
+    const col = this._config.columns.find((c) => c.name === column);
+    if (col) (col as any).align = alignment;
+    return this;
+  }
+
+  /** Set column width (px) */
+  width(column: InferColumns<T>, w: number, options?: { min?: number; max?: number }): this {
+    const col = this._config.columns.find((c) => c.name === column);
+    if (col) {
+      (col as any).width = w;
+      if (options?.min) (col as any).minWidth = options.min;
+      if (options?.max) (col as any).maxWidth = options.max;
+    }
+    return this;
+  }
+
+  // ──── Enum Options ────
+
+  /**
+   * Declare the valid values for a column.
+   * Used by frontend to render dropdown filters.
+   * @example
+   * .options('status', [
+   *   { value: 'active', label: 'Active', color: 'green' },
+   *   { value: 'inactive', label: 'Inactive', color: 'gray' },
+   *   { value: 'banned', label: 'Banned', color: 'red' },
+   * ])
+   */
+  options(
+    column: InferColumns<T>,
+    opts: { value: string | number | boolean; label: string; color?: string }[]
+  ): this {
+    const col = this._config.columns.find((c) => c.name === column);
+    if (col) (col as any).options = opts;
+    return this;
+  }
+
+  // ──── Date Presets ────
+
+  /**
+   * Set which date presets are available for filtering.
+   * @example
+   * .datePresets('createdAt', ['today', 'last7days', 'thisMonth', 'custom'])
+   */
+  datePresets(
+    column: InferColumns<T>,
+    presets: DatePreset[]
+  ): this {
+    const col = this._config.columns.find((c) => c.name === column);
+    if (col) (col as any).datePresets = presets;
+    return this;
+  }
+
+  // ──── Role-Based Column Visibility ────
+
+  /**
+   * Restrict column visibility to specific roles.
+   * Columns without visibleTo are visible to everyone.
+   * @example
+   * .visibleTo('salary', ['admin', 'hr'])
+   * .visibleTo('internalNotes', ['admin'])
+   */
+  visibleTo(column: InferColumns<T>, roles: string[]): this {
+    const col = this._config.columns.find((c) => c.name === column);
+    if (col) (col as any).visibleTo = roles;
+    return this;
   }
 
   // ──── Column Visibility ────
@@ -447,17 +528,152 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     return this;
   }
 
+  // ──── Column Metadata (universal) ────
+
+  /**
+   * Enrich any column's metadata — works on base columns, join columns,
+   * computed columns, rawSelect columns, or any column by name.
+   *
+   * Use this to describe raw SQL columns to the frontend, or override
+   * any auto-detected metadata.
+   *
+   * @example
+   * .rawSelect('revenue', sql`SUM(orders.total)`)
+   * .columnMeta('revenue', {
+   *   type: 'number',
+   *   label: 'Total Revenue',
+   *   format: 'currency',
+   *   align: 'right',
+   *   filterable: true,
+   *   sortable: true,
+   *   options: [
+   *     { value: 'high', label: 'High (>$1000)', color: 'green' },
+   *   ],
+   * })
+   */
+  columnMeta(
+    column: string,
+    meta: {
+      type?: ColumnConfig['type'];
+      label?: string;
+      format?: ColumnFormat;
+      align?: 'left' | 'center' | 'right';
+      width?: number;
+      minWidth?: number;
+      maxWidth?: number;
+      sortable?: boolean;
+      filterable?: boolean;
+      hidden?: boolean;
+      options?: { value: string | number | boolean; label: string; color?: string }[];
+      datePresets?: DatePreset[];
+      visibleTo?: string[];
+    }
+  ): this {
+    // Find in base columns first
+    let col = this._config.columns.find((c) => c.name === column);
+
+    // Then search join columns
+    if (!col && this._config.joins) {
+      col = this._findJoinColumn(this._config.joins, column);
+    }
+
+    if (!col) {
+      // Column doesn't exist yet — this is fine for rawSelect/computed that
+      // haven't been registered yet. Create a placeholder.
+      col = {
+        name: column,
+        type: meta.type ?? 'string',
+        hidden: false,
+        computed: true,
+      };
+      this._config.columns.push(col);
+    }
+
+    // Apply all provided metadata
+    if (meta.type !== undefined) col.type = meta.type;
+    if (meta.label !== undefined) col.label = meta.label;
+    if (meta.sortable !== undefined) col.sortable = meta.sortable;
+    if (meta.filterable !== undefined) col.filterable = meta.filterable;
+    if (meta.hidden !== undefined) col.hidden = meta.hidden;
+    if (meta.format !== undefined) (col as any).format = meta.format;
+    if (meta.align !== undefined) (col as any).align = meta.align;
+    if (meta.width !== undefined) (col as any).width = meta.width;
+    if (meta.minWidth !== undefined) (col as any).minWidth = meta.minWidth;
+    if (meta.maxWidth !== undefined) (col as any).maxWidth = meta.maxWidth;
+    if (meta.options !== undefined) (col as any).options = meta.options;
+    if (meta.datePresets !== undefined) (col as any).datePresets = meta.datePresets;
+    if (meta.visibleTo !== undefined) (col as any).visibleTo = meta.visibleTo;
+
+    return this;
+  }
+
+  /** Find a column inside the join tree by name */
+  private _findJoinColumn(joins: JoinConfig[], name: string): ColumnConfig | undefined {
+    for (const join of joins) {
+      if (join.columns) {
+        const col = join.columns.find((c: ColumnConfig) => c.name === name);
+        if (col) return col;
+      }
+      if (join.joins) {
+        const found = this._findJoinColumn(join.joins, name);
+        if (found) return found;
+      }
+    }
+    return undefined;
+  }
+
   // ──── Raw SQL Escape Hatches ────
 
-  rawSelect(alias: string, sqlExpr: SQL): this {
+  /**
+   * Add a raw SQL expression as a select column.
+   * By default typed as 'string'. Use the options parameter or
+   * chain `.columnMeta()` to set the correct type, label, format, etc.
+   *
+   * @example
+   * // Basic
+   * .rawSelect('revenue', sql`SUM(orders.total)`)
+   *
+   * // With inline metadata
+   * .rawSelect('revenue', sql`SUM(orders.total)`, {
+   *   type: 'number', label: 'Revenue', format: 'currency',
+   * })
+   *
+   * // Or chain .columnMeta() for full control
+   * .rawSelect('revenue', sql`SUM(orders.total)`)
+   * .columnMeta('revenue', { type: 'number', label: 'Revenue', format: 'currency' })
+   */
+  rawSelect(
+    alias: string,
+    sqlExpr: SQL,
+    options?: {
+      type?: ColumnConfig['type'];
+      label?: string;
+      format?: ColumnFormat;
+      align?: 'left' | 'center' | 'right';
+      sortable?: boolean;
+      filterable?: boolean;
+      hidden?: boolean;
+      width?: number;
+      options?: { value: string | number | boolean; label: string; color?: string }[];
+      visibleTo?: string[];
+    }
+  ): this {
     this._ext.rawSelects.set(alias, sqlExpr);
-    // Also register as a computed column so it passes validation
+    // Register as a computed column with metadata
     this._config.columns.push({
       name: alias,
-      type: 'string', // Default assume string, user can cast
-      hidden: false,
+      type: options?.type ?? 'string',
+      label: options?.label,
+      hidden: options?.hidden ?? false,
+      sortable: options?.sortable ?? true,
+      filterable: options?.filterable ?? false,
       computed: true,
-    });
+      ...(options?.format && { format: options.format }),
+      ...(options?.align && { align: options.align }),
+      ...(options?.width && { width: options.width }),
+      ...(options?.options && { options: options.options }),
+      ...(options?.visibleTo && { visibleTo: options.visibleTo }),
+    } as any);
     return this;
   }
 
