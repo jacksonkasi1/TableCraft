@@ -38,6 +38,13 @@ Start with the basics to understand how to define tables and fetch data.
     *   Typed error classes (ValidationError, FieldError).
     *   Handling errors in your API framework.
 
+7.  [**Metadata API**](./metadata-api.md) ⭐ NEW
+    *   Auto-generated frontend schema (`/_meta` endpoint).
+    *   Building data tables without hardcoding columns.
+    *   Role-based column visibility.
+    *   Date presets and enum dropdowns.
+    *   Frontend SDK (`@tablecraft/client`) and React hooks.
+
 ## Quick Example
 
 ```typescript
