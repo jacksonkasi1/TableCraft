@@ -1,4 +1,4 @@
-import type { TableEngine, EngineParams, EngineContext, EngineResult, GroupedResult, QueryDebugInfo } from '@tablecraft/engine';
+import type { TableEngine, EngineParams, EngineContext, EngineResult, GroupedResult, QueryDebugInfo, TableMetadata } from '@tablecraft/engine';
 import type { CacheOptions, CacheProvider } from './types';
 import { memoryProvider } from './providers/memory';
 
@@ -156,6 +156,10 @@ export function withCache(engine: TableEngine, options?: CacheOptions): TableEng
     ): Promise<QueryDebugInfo> {
       // Explain is never cached
       return engine.explain(params, context);
+    },
+
+    getMetadata(context?: EngineContext): TableMetadata {
+      return engine.getMetadata(context);
     },
 
     getConfig: () => engine.getConfig(),
