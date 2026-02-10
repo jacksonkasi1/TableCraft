@@ -51,6 +51,23 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
         return;
       }
 
+      // ─── Metadata endpoint: GET /api/data/users/_meta ───
+      if (tableName.endsWith('/_meta') || tableName.endsWith('_meta')) {
+        const actualName = tableName.replace(/\/?_meta$/, '');
+        const engine = engines[actualName];
+        if (!engine) {
+          res.status(404).json({ error: `Unknown resource '${actualName}'` });
+          return;
+        }
+
+        const context = options.getContext
+          ? await options.getContext(req)
+          : {};
+        const metadata = engine.getMetadata(context);
+        res.json(metadata);
+        return;
+      }
+
       const engine = engines[tableName];
       if (!engine) {
         res.status(404).json({ error: `Unknown resource '${tableName}'` });

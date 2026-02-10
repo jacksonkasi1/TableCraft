@@ -42,6 +42,22 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
 
   const app = new Hono();
 
+  // ─── Metadata endpoint: GET /data/users/_meta ───
+  app.get('/:table/_meta', async (c) => {
+    const tableName = c.req.param('table');
+
+    const engine = engines[tableName];
+    if (!engine) {
+      return c.json({ error: `Unknown resource '${tableName}'` }, 404);
+    }
+
+    const context = options.getContext
+      ? await options.getContext(c)
+      : {};
+    const metadata = engine.getMetadata(context);
+    return c.json(metadata);
+  });
+
   app.get('/:table', async (c) => {
     const tableName = c.req.param('table');
 

@@ -40,6 +40,22 @@ export function createElysiaPlugin(options: ElysiaAdapterOptions) {
   });
 
   return new Elysia({ prefix: '/api/data' }).get(
+    '/:table/_meta',
+    async ({ params, request, store, set }) => {
+      const tableName = params.table;
+
+      const engine = engines[tableName];
+      if (!engine) {
+        set.status = 404;
+        return { error: `Unknown resource '${tableName}'` };
+      }
+
+      const context = options.getContext
+        ? await options.getContext({ request, store: store as Record<string, unknown> })
+        : {};
+      return engine.getMetadata(context);
+    }
+  ).get(
     '/:table',
     async ({ params, request, store, set }) => {
       const tableName = params.table;

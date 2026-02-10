@@ -59,6 +59,24 @@ export function createNextHandler(options: NextHandlerOptions) {
       const resolved = await Promise.resolve(routeContext.params);
       const tableName = resolved.table;
 
+      // ─── Metadata endpoint: GET /api/data/users/_meta ───
+      if (tableName.endsWith('/_meta') || tableName.endsWith('_meta')) {
+        const actualName = tableName.replace(/\/?_meta$/, '');
+        const engine = engines[actualName];
+        if (!engine) {
+          return Response.json(
+            { error: `Unknown resource '${actualName}'` },
+            { status: 404 }
+          );
+        }
+
+        const context = options.getContext
+          ? await options.getContext(request)
+          : {};
+        const metadata = engine.getMetadata(context);
+        return Response.json(metadata);
+      }
+
       const engine = engines[tableName];
       if (!engine) {
         return Response.json(
