@@ -45,6 +45,12 @@ Start with the basics to understand how to define tables and fetch data.
     *   Date presets and enum dropdowns.
     *   Frontend SDK (`@tablecraft/client`) and React hooks.
 
+8.  [**OpenAPI Spec Generation**](./openapi.md)
+    *   Auto-generate OpenAPI 3.0 specifications from your configs.
+    *   Serve specs at runtime or write to files.
+    *   Integration with Swagger UI, Postman, and code generators.
+    *   Document all query parameters, filters, and responses.
+
 ## Quick Example
 
 ```typescript
