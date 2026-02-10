@@ -338,29 +338,32 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<GroupedResult> {
-    const groupedSelect = groupByBuilder.buildGroupedSelect(config);
-    if (!groupedSelect) throw new QueryError(`No groupBy configured on '${config.name}'`);
+    // Apply role-based visibility
+    const effectiveConfig = applyRoleBasedVisibility(config, context);
 
-    const groupByColumns = groupByBuilder.buildGroupByColumns(config);
-    if (!groupByColumns?.length) throw new QueryError(`No valid groupBy columns on '${config.name}'`);
+    const groupedSelect = groupByBuilder.buildGroupedSelect(effectiveConfig);
+    if (!groupedSelect) throw new QueryError(`No groupBy configured on '${effectiveConfig.name}'`);
+
+    const groupByColumns = groupByBuilder.buildGroupByColumns(effectiveConfig);
+    if (!groupByColumns?.length) throw new QueryError(`No valid groupBy columns on '${effectiveConfig.name}'`);
 
     const where = buildWhereConditions(params, context);
-    const having = groupByBuilder.buildHaving(config);
+    const having = groupByBuilder.buildHaving(effectiveConfig);
 
     let q = db.select(groupedSelect).from(baseTable);
-    q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+    q = queryBuilder.buildJoins(q, effectiveConfig, ext.sqlJoinConditions);
     if (where) q = q.where(where);
     q = q.groupBy(...groupByColumns);
     if (having) q = q.having(having);
 
-    const orderBy = sortBuilder.buildSort(config, params.sort);
+    const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort);
     if (orderBy.length > 0) q = q.orderBy(...orderBy);
 
     const data = await q;
 
     const aggregations: Record<string, number> = {};
-    if (config.aggregations) {
-      for (const agg of config.aggregations) {
+    if (effectiveConfig.aggregations) {
+      for (const agg of effectiveConfig.aggregations) {
         aggregations[agg.alias] = data.reduce(
           (sum: number, row: any) => sum + (Number(row[agg.alias]) || 0), 0
         );
@@ -419,24 +422,27 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<string> {
-    let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
+    // Apply role-based visibility
+    const effectiveConfig = applyRoleBasedVisibility(config, context);
+
+    let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, effectiveConfig);
     for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
     if (params.select?.length) {
-      selection = fieldSelector.applyFieldSelection(selection, params.select, config);
+      selection = fieldSelector.applyFieldSelection(selection, params.select, effectiveConfig);
     }
 
     const where = buildWhereConditions({ ...params, page: undefined, pageSize: undefined }, context);
-    const orderBy = sortBuilder.buildSort(config, params.sort);
+    const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort);
 
     let q = db.select(selection).from(baseTable);
-    q = queryBuilder.buildJoins(q, config, ext.sqlJoinConditions);
+    q = queryBuilder.buildJoins(q, effectiveConfig, ext.sqlJoinConditions);
     if (where) q = q.where(where);
     if (orderBy.length > 0) q = q.orderBy(...orderBy);
     q = q.limit(10_000);
 
     const data = await q;
-    const transformed = applyJsTransforms(data, config);
-    return exportData(transformed, params.export ?? 'json', config);
+    const transformed = applyJsTransforms(data, effectiveConfig);
+    return exportData(transformed, params.export ?? 'json', effectiveConfig);
   }
 
   // ── Explain (debug) ──
