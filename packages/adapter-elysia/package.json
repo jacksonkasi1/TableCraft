@@ -6,10 +6,10 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "bun run --bun tsc",
+    "dev": "bun run --bun tsc --watch",
     "test": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
     "@tablecraft/engine": "^0.1.0",

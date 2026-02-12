@@ -6,9 +6,10 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "test": "vitest"
+    "build": "bun run --bun tsc",
+    "dev": "bun run --bun tsc --watch",
+    "test": "vitest",
+    "typecheck": "bun run --bun tsc --noEmit"
   },
   "devDependencies": {
     "@types/react": "^19.2.13",
