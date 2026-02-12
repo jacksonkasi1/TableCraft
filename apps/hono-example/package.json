@@ -8,7 +8,7 @@
     "db:push": "drizzle-kit push",
     "seed": "bun run src/db/seed.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run --bun tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.7.0",
