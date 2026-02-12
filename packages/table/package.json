@@ -1,0 +1,51 @@
+{
+  "name": "@tablecraft/table",
+  "version": "0.1.0",
+  "description": "Schema-driven data table for React — built on TanStack Table + Shadcn UI with native TableCraft engine support",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun run --bun tsc",
+    "dev": "bun run --bun tsc --watch",
+    "test": "vitest",
+    "typecheck": "bun run --bun tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "@tanstack/react-table": ">=8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "exceljs": {
+      "optional": true
+    },
+    "@tablecraft/client": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "lucide-react": ">=0.300.0",
+    "class-variance-authority": ">=0.7.0",
+    "clsx": ">=2.0.0",
+    "tailwind-merge": ">=2.0.0",
+    "sonner": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@tablecraft/client": "workspace:*",
+    "@tanstack/react-table": "^8.20.0",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.1.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}
