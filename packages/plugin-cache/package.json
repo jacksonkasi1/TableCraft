@@ -29,14 +29,14 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": "^0.1.0"
+    "@tablecraft/engine": "workspace:*"
   },
   "peerDependenciesMeta": {
     "ioredis": { "optional": true },
     "@upstash/redis": { "optional": true }
   },
   "devDependencies": {
-    "@tablecraft/engine": "^0.1.0-beta.1",
+    "@tablecraft/engine": "workspace:*",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
   }

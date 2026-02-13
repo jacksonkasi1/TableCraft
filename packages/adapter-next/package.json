@@ -12,11 +12,11 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": "^0.1.0",
+    "@tablecraft/engine": "workspace:*",
     "next": ">=14.0.0"
   },
   "devDependencies": {
-    "@tablecraft/engine": "^0.1.0-beta.1",
+    "@tablecraft/engine": "workspace:*",
     "@types/node": "^25.2.2",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
