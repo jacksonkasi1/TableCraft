@@ -32,7 +32,9 @@ export function DataTableViewOptions<TData>({
         .getAllColumns()
         .filter(
           (column) =>
-            typeof column.accessorFn !== "undefined" && column.getCanHide()
+            // Only hide columns that explicitly cannot be hidden (like expand/select if configured)
+            // But allow columns even without accessors (like actions) if they are toggleable
+            column.getCanHide() && column.id !== "actions" && column.id !== "select"
         ),
     [table]
   );
@@ -147,7 +149,11 @@ export function DataTableViewOptions<TData>({
         aria-label="Toggle columns"
         className={cn(
           sizeClass,
-          "inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground cursor-pointer"
+          "ml-auto hidden lg:flex",
+          "inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium",
+          "hover:bg-accent hover:text-accent-foreground transition-colors",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "cursor-pointer"
         )}
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -163,14 +169,14 @@ export function DataTableViewOptions<TData>({
             onClick={() => setIsOpen(false)}
           />
           {/* Dropdown */}
-          <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-md border bg-popover p-0 shadow-md">
+          <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-md border bg-popover p-0 shadow-md text-popover-foreground animate-in fade-in-0 zoom-in-95">
             {/* Search */}
             <div className="p-2 border-b">
               <input
                 placeholder="Search columns..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
               />
             </div>
 
@@ -190,11 +196,12 @@ export function DataTableViewOptions<TData>({
                   onDrop={(e) => handleDrop(e, column.id)}
                   onClick={() => column.toggleVisibility()}
                   className={cn(
-                    "flex items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent",
+                    "flex items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors",
+                    "cursor-grab",
                     draggedColumnId === column.id && "bg-accent opacity-50"
                   )}
                 >
-                  <GripVertical className="mr-2 h-4 w-4 text-muted-foreground cursor-grab" />
+                  <GripVertical className="mr-2 h-4 w-4 cursor-grab text-muted-foreground" />
                   <span className="flex-grow truncate capitalize">
                     {getColumnLabel(column)}
                   </span>
@@ -212,7 +219,7 @@ export function DataTableViewOptions<TData>({
             <div className="border-t p-1">
               <div
                 onClick={resetColumnOrder}
-                className="flex items-center justify-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+                className="flex items-center justify-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reset Column Order

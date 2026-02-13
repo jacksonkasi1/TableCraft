@@ -178,7 +178,10 @@ export function DataTableExport<TData extends ExportableData>({
       <button
         className={cn(
           btnSize,
-          "inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium hover:bg-accent hover:text-accent-foreground cursor-pointer disabled:opacity-50"
+          "inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium",
+          "hover:bg-accent hover:text-accent-foreground transition-colors",
+          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
         )}
         disabled={isLoading}
         onClick={() => setIsOpen(!isOpen)}
@@ -203,42 +206,48 @@ export function DataTableExport<TData extends ExportableData>({
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-full z-50 mt-1 min-w-[180px] rounded-md border bg-popover p-1 shadow-md">
+          <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-md border bg-popover p-1 shadow-md text-popover-foreground animate-in fade-in-0 zoom-in-95">
             {hasSelection ? (
               <>
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                  Selected ({selectedCount})
+                </div>
                 {enableCsv && (
                   <div
                     onClick={() => handleExport("csv", "selected")}
-                    className="rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
-                    Export Selected as CSV
+                    Export as CSV
                   </div>
                 )}
                 {enableExcel && (
                   <div
                     onClick={() => handleExport("excel", "selected")}
-                    className="rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
-                    Export Selected as XLS
+                    Export as XLS
                   </div>
                 )}
               </>
             ) : (
               <>
+                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                  Current Page
+                </div>
                 {enableCsv && (
                   <div
                     onClick={() => handleExport("csv", "page")}
-                    className="rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
-                    Export Page as CSV
+                    Export as CSV
                   </div>
                 )}
                 {enableExcel && (
                   <div
                     onClick={() => handleExport("excel", "page")}
-                    className="rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   >
-                    Export Page as XLS
+                    Export as XLS
                   </div>
                 )}
               </>

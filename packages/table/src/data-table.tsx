@@ -18,6 +18,7 @@ import {
 } from "@tanstack/react-table";
 import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { Checkbox } from "./components/checkbox";
 import { cn } from "./utils/cn";
 
 import type { DataTableProps, ExportableData } from "./types";
@@ -76,7 +77,41 @@ export function DataTable<T extends Record<string, unknown>>({
   } = useTableData(adapter, tableConfig);
 
   // ─── Auto-columns from metadata ───
-  const { columns: resolvedColumns } = useAutoColumns(adapter, manualColumns, renderers);
+  const { columns: autoColumns } = useAutoColumns(adapter, manualColumns, renderers);
+
+  // Add selection column if row selection is enabled
+  const resolvedColumns = useMemo(() => {
+    if (!tableConfig.enableRowSelection) return autoColumns;
+
+    const selectColumn: ColumnDef<T, unknown> = {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          className="translate-y-[2px]"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          className="translate-y-[2px]"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      size: 40,
+      maxSize: 40,
+    };
+
+    return [selectColumn, ...autoColumns];
+  }, [autoColumns, tableConfig.enableRowSelection]);
 
   // ─── Column resize ───
   const { columnSizing, setColumnSizing, resetColumnSizing } =
@@ -415,108 +450,119 @@ export function DataTable<T extends Record<string, unknown>>({
           tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined
         }
       >
-        <table
-          className={cn(
-            "w-full caption-bottom text-sm",
-            tableConfig.enableColumnResizing && "resizable-table"
-          )}
-        >
-          <thead className="[&_tr]:border-b">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="border-b transition-colors hover:bg-muted/50">
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    colSpan={header.colSpan}
-                    scope="col"
-                    className="px-2 py-2 relative text-left align-middle font-medium text-muted-foreground group/th [&:has([role=checkbox])]:pr-0"
-                    style={{ width: header.getSize() }}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                    {tableConfig.enableColumnResizing &&
-                      header.column.getCanResize() && (
-                        <DataTableResizer header={header} table={table} />
-                      )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-
-          <tbody className="[&_tr:last-child]:border-0">
-            {isLoading ? (
-              Array.from({ length: pageSize }).map((_, i) => (
+        <div data-slot="table-container" className="relative w-full overflow-x-auto">
+          <table
+            data-slot="table"
+            className={cn(
+              "w-full caption-bottom text-sm",
+              tableConfig.enableColumnResizing && "resizable-table"
+            )}
+          >
+            <thead data-slot="table-header" className="[&_tr]:border-b">
+              {table.getHeaderGroups().map((headerGroup) => (
                 <tr
-                  key={`loading-${i}`}
-                  className="border-b transition-colors"
+                  key={headerGroup.id}
+                  data-slot="table-row"
+                  className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
                 >
-                  {Array.from({ length: resolvedColumns.length }).map(
-                    (_, j) => (
-                      <td
-                        key={`skeleton-${i}-${j}`}
-                        className="px-4 py-2 text-left"
-                      >
-                        <div className="h-5 w-full animate-pulse rounded bg-muted" />
-                      </td>
-                    )
-                  )}
-                </tr>
-              ))
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, rowIndex) => (
-                <tr
-                  key={row.id}
-                  id={`row-${rowIndex}`}
-                  data-row-index={rowIndex}
-                  data-state={row.getIsSelected() ? "selected" : undefined}
-                  tabIndex={0}
-                  aria-selected={row.getIsSelected()}
-                  className={cn(
-                    "border-b transition-colors hover:bg-muted/50",
-                    row.getIsSelected() && "bg-muted"
-                  )}
-                  onClick={(event) => {
-                    if (tableConfig.enableClickRowSelect) {
-                      row.toggleSelected();
-                    }
-                    if (onRowClick) {
-                      handleRowClick(event, row.original, rowIndex);
-                    }
-                  }}
-                  style={{
-                    cursor: onRowClick ? "pointer" : undefined,
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-4 py-2 truncate max-w-0 text-left align-middle [&:has([role=checkbox])]:pr-0"
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      data-slot="table-head"
+                      colSpan={header.colSpan}
+                      scope="col"
+                      className="text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap relative group/th [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
+                      style={{ width: header.getSize() }}
+                      data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
                     >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                      {tableConfig.enableColumnResizing &&
+                        header.column.getCanResize() && (
+                          <DataTableResizer header={header} table={table} />
+                        )}
+                    </th>
                   ))}
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={resolvedColumns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  No results.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              ))}
+            </thead>
+
+            <tbody data-slot="table-body" className="[&_tr:last-child]:border-0">
+              {isLoading ? (
+                Array.from({ length: pageSize }).map((_, i) => (
+                  <tr
+                    key={`loading-${i}`}
+                    data-slot="table-row"
+                    className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                  >
+                    {Array.from({ length: resolvedColumns.length }).map(
+                      (_, j) => (
+                        <td
+                          key={`skeleton-${i}-${j}`}
+                          data-slot="table-cell"
+                          className="p-2 align-middle whitespace-nowrap px-4 py-2 text-left"
+                        >
+                          <div className="h-6 w-full animate-pulse rounded bg-muted" />
+                        </td>
+                      )
+                    )}
+                  </tr>
+                ))
+              ) : table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row, rowIndex) => (
+                  <tr
+                    key={row.id}
+                    id={`row-${rowIndex}`}
+                    data-slot="table-row"
+                    data-row-index={rowIndex}
+                    data-state={row.getIsSelected() ? "selected" : undefined}
+                    tabIndex={0}
+                    aria-selected={row.getIsSelected()}
+                    className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                    onClick={(event) => {
+                      if (tableConfig.enableClickRowSelect) {
+                        row.toggleSelected();
+                      }
+                      if (onRowClick) {
+                        handleRowClick(event, row.original, rowIndex);
+                      }
+                    }}
+                    style={{
+                      cursor: onRowClick ? "pointer" : undefined,
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        data-slot="table-cell"
+                        className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] px-4 py-2 truncate max-w-0 text-left"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr data-slot="table-row">
+                  <td
+                    data-slot="table-cell"
+                    colSpan={resolvedColumns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No results.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {tableConfig.enablePagination && (

@@ -1,6 +1,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { TableMetadata, CellRenderer, ColumnMetadataForRenderer } from "../types";
 import { resolveRenderer } from "../renderers";
+import { DataTableColumnHeader } from "../column-header";
 
 /**
  * Generates TanStack Table column definitions from TableCraft metadata.
@@ -27,7 +28,9 @@ export function generateColumns<T extends Record<string, unknown>>(
       return {
         id: col.name,
         accessorKey: col.name,
-        header: col.label,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title={col.label} />
+        ),
         cell: ({ getValue, row }) => (
           <Renderer
             value={getValue()}

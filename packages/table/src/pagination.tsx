@@ -10,11 +10,11 @@ import { cn } from "./utils/cn";
 const getButtonSizeClass = (size: "sm" | "default" | "lg") => {
   switch (size) {
     case "sm":
-      return "h-7 w-7 p-0";
+      return "h-7 w-7";
     case "lg":
-      return "h-11 w-11 p-0";
+      return "h-11 w-11";
     default:
-      return "h-8 w-8 p-0";
+      return "h-8 w-8";
   }
 };
 
@@ -33,6 +33,8 @@ export function DataTablePagination<TData>({
   pageSizeOptions = [10, 20, 30, 40, 50],
   size = "default",
 }: DataTablePaginationProps<TData>) {
+  const selectSize = size === "sm" ? "h-7" : size === "lg" ? "h-10" : "h-8";
+
   return (
     <div className="flex w-full flex-col items-center justify-between gap-4 overflow-auto px-2 py-1 sm:flex-row sm:gap-8">
       <div className="flex-1 text-sm text-muted-foreground">
@@ -46,12 +48,28 @@ export function DataTablePagination<TData>({
             onChange={(e) => {
               const numericValue = parseInt(e.target.value, 10);
               if (isNaN(numericValue) || numericValue <= 0) return;
+
+              try {
+                // Update URL first for consistency
+                const url = new URL(window.location.href);
+                url.searchParams.set("pageSize", e.target.value);
+                url.searchParams.set("page", "1");
+                window.history.replaceState({}, "", url.toString());
+              } catch {
+                // ignore URL update errors
+              }
+
               table.setPagination({
                 pageIndex: 0,
                 pageSize: numericValue,
               });
             }}
-            className="h-8 rounded-md border border-input bg-background px-2 text-sm cursor-pointer"
+            className={cn(
+              selectSize,
+              "rounded-md border border-input bg-background px-2 text-sm cursor-pointer",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              "hover:bg-accent hover:text-accent-foreground transition-colors"
+            )}
           >
             {pageSizeOptions.map((ps) => (
               <option key={ps} value={`${ps}`}>
@@ -69,7 +87,10 @@ export function DataTablePagination<TData>({
             aria-label="Go to first page"
             className={cn(
               getButtonSizeClass(size),
-              "hidden lg:inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              "hidden lg:inline-flex items-center justify-center rounded-md border border-input bg-background",
+              "hover:bg-accent hover:text-accent-foreground transition-colors",
+              "cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             )}
             onClick={() =>
               table.setPagination({
@@ -85,7 +106,10 @@ export function DataTablePagination<TData>({
             aria-label="Go to previous page"
             className={cn(
               getButtonSizeClass(size),
-              "inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              "inline-flex items-center justify-center rounded-md border border-input bg-background",
+              "hover:bg-accent hover:text-accent-foreground transition-colors",
+              "cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             )}
             onClick={() =>
               table.setPagination({
@@ -101,7 +125,10 @@ export function DataTablePagination<TData>({
             aria-label="Go to next page"
             className={cn(
               getButtonSizeClass(size),
-              "inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              "inline-flex items-center justify-center rounded-md border border-input bg-background",
+              "hover:bg-accent hover:text-accent-foreground transition-colors",
+              "cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             )}
             onClick={() =>
               table.setPagination({
@@ -117,7 +144,10 @@ export function DataTablePagination<TData>({
             aria-label="Go to last page"
             className={cn(
               getButtonSizeClass(size),
-              "hidden lg:inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+              "hidden lg:inline-flex items-center justify-center rounded-md border border-input bg-background",
+              "hover:bg-accent hover:text-accent-foreground transition-colors",
+              "cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             )}
             onClick={() =>
               table.setPagination({
