@@ -22,7 +22,7 @@ export function UsersPage() {
         adapter={adapter}
         config={{
           enableSearch: true,
-          enableFilters: true,
+
           enableExport: true,
           enableColumnResizing: true,
           defaultPageSize: 10,

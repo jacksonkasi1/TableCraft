@@ -62,7 +62,7 @@ export function ProductsPage() {
           enableSearch: true,
           enableExport: true,
           enableColumnResizing: true,
-          enableMultiSort: false,
+
           enableDateFilter: false, // Disable built-in date filter since we're using custom
           defaultPageSize: 10,
           pageSizeOptions: [5, 10, 20, 50],
