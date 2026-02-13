@@ -21,4 +21,7 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    exclude: ['@tablecraft/table', '@tablecraft/client'],
+  },
 })
