@@ -1,7 +1,23 @@
+"use client";
+
 import type { Table, Column } from "@tanstack/react-table";
 import { Check, GripVertical, Settings2, RotateCcw } from "lucide-react";
 import { cn } from "./utils/cn";
 import { useCallback, useEffect, useState, useMemo } from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "./components/command";
 
 const COLUMN_ORDER_STORAGE_KEY = "tablecraft-column-order";
 
@@ -18,26 +34,23 @@ export function DataTableViewOptions<TData>({
   size = "default",
   tableId,
 }: DataTableViewOptionsProps<TData>) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const storageKey = tableId
-    ? `${COLUMN_ORDER_STORAGE_KEY}-${tableId}`
-    : COLUMN_ORDER_STORAGE_KEY;
-
+  // Get columns that can be hidden
   const columns = useMemo(
     () =>
       table
         .getAllColumns()
         .filter(
           (column) =>
-            // Only hide columns that explicitly cannot be hidden (like expand/select if configured)
-            // But allow columns even without accessors (like actions) if they are toggleable
-            column.getCanHide() && column.id !== "actions" && column.id !== "select"
+            typeof column.accessorFn !== "undefined" && column.getCanHide()
         ),
     [table]
   );
+
+  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
+
+  const storageKey = tableId
+    ? `${COLUMN_ORDER_STORAGE_KEY}-${tableId}`
+    : COLUMN_ORDER_STORAGE_KEY;
 
   const columnOrder = table.getState().columnOrder;
   const orderedColumns = useMemo(() => {
@@ -50,14 +63,6 @@ export function DataTableViewOptions<TData>({
       return aIndex - bIndex;
     });
   }, [columns, columnOrder]);
-
-  const filteredColumns = useMemo(() => {
-    if (!searchQuery) return orderedColumns;
-    return orderedColumns.filter((col) => {
-      const label = getColumnLabel(col);
-      return label.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-  }, [orderedColumns, searchQuery]);
 
   // Load column order from localStorage
   useEffect(() => {
@@ -85,23 +90,23 @@ export function DataTableViewOptions<TData>({
     [storageKey]
   );
 
-  const getColumnLabel = useCallback(
-    (column: Column<TData, unknown>) => {
-      if (columnMapping && column.id in columnMapping) {
-        return columnMapping[column.id];
-      }
-      return (
-        (column.columnDef.meta as { label?: string })?.label ??
-        column.id.replace(/_/g, " ")
-      );
-    },
-    [columnMapping]
-  );
+  const handleColumnVisibilityToggle = useCallback((columnId: string) => {
+    const currentVisibility = table.getState().columnVisibility;
+    const isCurrentlyVisible = currentVisibility[columnId] !== false;
+
+    table.setColumnVisibility({
+      ...currentVisibility,
+      [columnId]: !isCurrentlyVisible,
+    });
+  }, [table]);
 
   const handleDragStart = useCallback(
     (e: React.DragEvent, columnId: string) => {
       setDraggedColumnId(columnId);
       e.dataTransfer.effectAllowed = "move";
+      if (e.dataTransfer.setDragImage && e.currentTarget instanceof HTMLElement) {
+        e.dataTransfer.setDragImage(e.currentTarget, 20, 20);
+      }
     },
     []
   );
@@ -141,63 +146,54 @@ export function DataTableViewOptions<TData>({
     localStorage.removeItem(storageKey);
   }, [table, storageKey]);
 
-  const sizeClass = size === "sm" ? "h-8 px-3" : size === "lg" ? "h-11 px-5" : "h-9 px-4";
+  const getColumnLabel = useCallback(
+    (column: Column<TData, unknown>) => {
+      if (columnMapping && column.id in columnMapping) {
+        return columnMapping[column.id];
+      }
+      return (
+        (column.columnDef.meta as { label?: string })?.label ??
+        column.id.replace(/_/g, " ")
+      );
+    },
+    [columnMapping]
+  );
+
+  // Styles matching shadcn Button variant="outline"
+  const buttonClass = cn(
+    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+    "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+    size === "sm" ? "h-8 px-3" : size === "lg" ? "h-11 px-5" : "h-9 px-4",
+    "ml-auto hidden lg:flex"
+  );
 
   return (
-    <div className="relative">
-      <button
-        aria-label="Toggle columns"
-        className={cn(
-          sizeClass,
-          "ml-auto hidden lg:flex",
-          "inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium",
-          "hover:bg-accent hover:text-accent-foreground transition-colors",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          "cursor-pointer"
-        )}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <Settings2 className="mr-2 h-4 w-4" />
-        View
-      </button>
-
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-          {/* Dropdown */}
-          <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-md border bg-popover p-0 shadow-md text-popover-foreground animate-in fade-in-0 zoom-in-95">
-            {/* Search */}
-            <div className="p-2 border-b">
-              <input
-                placeholder="Search columns..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring transition-colors"
-              />
-            </div>
-
-            {/* Column list */}
-            <div className="max-h-[300px] overflow-y-auto p-1">
-              {filteredColumns.length === 0 && (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  No columns found.
-                </div>
-              )}
-              {filteredColumns.map((column) => (
-                <div
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          aria-label="Toggle columns"
+          className={buttonClass}
+        >
+          <Settings2 className="mr-2 h-4 w-4" />
+          View
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[220px] p-0">
+        <Command>
+          <CommandInput placeholder="Search columns..." />
+          <CommandList>
+            <CommandEmpty>No columns found.</CommandEmpty>
+            <CommandGroup>
+              {orderedColumns.map((column) => (
+                <CommandItem
                   key={column.id}
+                  onSelect={() => handleColumnVisibilityToggle(column.id)}
                   draggable
-                  onDragStart={(e) => handleDragStart(e, column.id)}
+                  onDragStart={(e) => handleDragStart(e as unknown as React.DragEvent, column.id)}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, column.id)}
-                  onClick={() => column.toggleVisibility()}
+                  onDrop={(e) => handleDrop(e as unknown as React.DragEvent, column.id)}
                   className={cn(
-                    "flex items-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors",
-                    "cursor-grab",
+                    "flex items-center cursor-grab",
                     draggedColumnId === column.id && "bg-accent opacity-50"
                   )}
                 >
@@ -211,23 +207,22 @@ export function DataTableViewOptions<TData>({
                       column.getIsVisible() ? "opacity-100" : "opacity-0"
                     )}
                   />
-                </div>
+                </CommandItem>
               ))}
-            </div>
-
-            {/* Reset */}
-            <div className="border-t p-1">
-              <div
-                onClick={resetColumnOrder}
-                className="flex items-center justify-center rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors"
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup>
+              <CommandItem
+                onSelect={resetColumnOrder}
+                className="justify-center text-center cursor-pointer"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 Reset Column Order
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+              </CommandItem>
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

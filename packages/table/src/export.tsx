@@ -1,10 +1,15 @@
 import { useState } from "react";
 import type { Table } from "@tanstack/react-table";
-import { DownloadIcon, Loader2 } from "lucide-react";
+import { DownloadIcon, Loader2, FileJson, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import type { ExportableData, DataTransformFunction, ExportConfig, TableConfig } from "./types";
 import { exportToCSV, exportToExcel } from "./utils/export-utils";
 import { cn } from "./utils/cn";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/popover";
 
 interface DataTableExportProps<TData extends ExportableData> {
   table: Table<TData>;
@@ -24,7 +29,6 @@ export function DataTableExport<TData extends ExportableData>({
   tableConfig,
 }: DataTableExportProps<TData>) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
 
   const entityName = exportConfig?.entityName || "items";
   const enableCsv = exportConfig?.enableCsv !== false;
@@ -109,7 +113,6 @@ export function DataTableExport<TData extends ExportableData>({
     mode: "selected" | "page"
   ) => {
     if (isLoading) return;
-    setIsOpen(false);
 
     try {
       setIsLoading(true);
@@ -174,87 +177,71 @@ export function DataTableExport<TData extends ExportableData>({
         : "h-9 px-4";
 
   return (
-    <div className="relative">
-      <button
-        className={cn(
-          btnSize,
-          "inline-flex items-center justify-center rounded-md border border-input bg-background text-sm font-medium",
-          "hover:bg-accent hover:text-accent-foreground transition-colors",
-          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-          "cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-        )}
-        disabled={isLoading}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Exporting...
-          </>
-        ) : (
-          <>
-            <DownloadIcon className="mr-2 h-4 w-4" />
-            Export
-            {hasSelection && <span className="ml-1">({selectedCount})</span>}
-          </>
-        )}
-      </button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className={cn(
+            "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+            "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+            btnSize,
+            "cursor-pointer"
+          )}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Exporting...
+            </>
+          ) : (
+            <>
+              <DownloadIcon className="mr-2 h-4 w-4" />
+              Export
+              {hasSelection && <span className="ml-1">({selectedCount})</span>}
+            </>
+          )}
+        </button>
+      </PopoverTrigger>
 
-      {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute right-0 top-full z-50 mt-1 w-[220px] rounded-md border bg-popover p-1 shadow-md text-popover-foreground animate-in fade-in-0 zoom-in-95">
-            {hasSelection ? (
-              <>
-                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                  Selected ({selectedCount})
-                </div>
-                {enableCsv && (
-                  <div
-                    onClick={() => handleExport("csv", "selected")}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    Export as CSV
-                  </div>
+      <PopoverContent align="end" className="w-60">
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <h4 className="font-medium leading-none">
+              {hasSelection ? `Selected (${selectedCount})` : "Current Page"}
+            </h4>
+          </div>
+          <div className="grid gap-2">
+            {enableCsv && (
+              <button
+                onClick={() => handleExport("csv", hasSelection ? "selected" : "page")}
+                className={cn(
+                  "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                  "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                  btnSize,
+                  "justify-start w-full"
                 )}
-                {enableExcel && (
-                  <div
-                    onClick={() => handleExport("excel", "selected")}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    Export as XLS
-                  </div>
+              >
+                <FileJson className="mr-2 h-4 w-4" />
+                Export as CSV
+              </button>
+            )}
+            {enableExcel && (
+              <button
+                onClick={() => handleExport("excel", hasSelection ? "selected" : "page")}
+                className={cn(
+                  "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                  "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                  btnSize,
+                  "justify-start w-full"
                 )}
-              </>
-            ) : (
-              <>
-                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                  Current Page
-                </div>
-                {enableCsv && (
-                  <div
-                    onClick={() => handleExport("csv", "page")}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    Export as CSV
-                  </div>
-                )}
-                {enableExcel && (
-                  <div
-                    onClick={() => handleExport("excel", "page")}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                  >
-                    Export as XLS
-                  </div>
-                )}
-              </>
+              >
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Export as XLSX
+              </button>
             )}
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

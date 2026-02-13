@@ -1,12 +1,16 @@
 import type { Table } from "@tanstack/react-table";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff } from "lucide-react";
 import type { TableConfig, ExportConfig, ExportableData } from "./types";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./export";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/popover";
 import { resetUrlState } from "./utils/deep-utils";
 import { cn } from "./utils/cn";
-import type { DateRange } from "react-day-picker";
 
 const getInputSizeClass = (size: "sm" | "default" | "lg") => {
   switch (size) {
@@ -126,18 +130,9 @@ export function DataTableToolbar<TData extends ExportableData>({
     });
   }, [dateRange.from, dateRange.to]);
 
-  const handleDateSelect = useCallback((range: { from: Date; to: Date }) => {
-    const fromStr = range.from ? range.from.toISOString().split('T')[0] : "";
-    const toStr = range.to ? range.to.toISOString().split('T')[0] : "";
-    setDateRange({ from: fromStr, to: toStr });
-  }, [setDateRange]);
-
   const datesModified = !!dateRange.from || !!dateRange.to;
   const tableFiltered = table.getState().columnFilters.length > 0;
   const isFiltered = tableFiltered || !!localSearch || datesModified;
-
-  // Settings popover
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleResetFilters = () => {
     table.resetColumnFilters();
@@ -184,7 +179,7 @@ export function DataTableToolbar<TData extends ExportableData>({
                   : ""
               }
               readOnly
-              onClick={(e) => {
+              onClick={() => {
                 // This will be handled by an external date picker component
                 // For now, we show the placeholder
               }}
@@ -238,113 +233,99 @@ export function DataTableToolbar<TData extends ExportableData>({
           />
         )}
 
-        {/* Settings */}
-        <div className="relative">
-          <button
-            className={cn(
-              getButtonSizeClass(config.size, true),
-              "inline-flex items-center justify-center rounded-md border border-input bg-background",
-              "hover:bg-accent hover:text-accent-foreground transition-colors",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              "cursor-pointer"
-            )}
-            title="Table Settings"
-            onClick={() => setSettingsOpen(!settingsOpen)}
-          >
-            <Settings className="h-4 w-4" />
-            <span className="sr-only">Open table settings</span>
-          </button>
-
-          {settingsOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setSettingsOpen(false)}
-              />
-              <div className="absolute right-0 top-full z-50 mt-1 w-60 rounded-md border bg-popover p-4 shadow-md text-popover-foreground">
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium leading-none">Table Settings</h4>
-                  </div>
-                  <div className="grid gap-2">
-                    {config.enableColumnResizing && resetColumnSizing && (
-                      <button
-                        className={cn(
-                          "flex items-center justify-start w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-                          "hover:bg-accent hover:text-accent-foreground transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                          "cursor-pointer"
-                        )}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          resetColumnSizing();
-                          setSettingsOpen(false);
-                        }}
-                      >
-                        <Undo2 className="mr-2 h-4 w-4" />
-                        Reset Column Sizes
-                      </button>
-                    )}
-                    {resetColumnOrder && (
-                      <button
-                        className={cn(
-                          "flex items-center justify-start w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-                          "hover:bg-accent hover:text-accent-foreground transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                          "cursor-pointer"
-                        )}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          resetColumnOrder();
-                          setSettingsOpen(false);
-                        }}
-                      >
-                        <MoveHorizontal className="mr-2 h-4 w-4" />
-                        Reset Column Order
-                      </button>
-                    )}
-                    {config.enableRowSelection && (
-                      <button
-                        className={cn(
-                          "flex items-center justify-start w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-                          "hover:bg-accent hover:text-accent-foreground transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                          "cursor-pointer"
-                        )}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          table.resetRowSelection();
-                          clearSelection();
-                          setSettingsOpen(false);
-                        }}
-                      >
-                        <CheckSquare className="mr-2 h-4 w-4" />
-                        Clear Selection
-                      </button>
-                    )}
-                    {!table.getIsAllColumnsVisible() && (
-                      <button
-                        className={cn(
-                          "flex items-center justify-start w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
-                          "hover:bg-accent hover:text-accent-foreground transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                          "cursor-pointer"
-                        )}
-                        onClick={() => {
-                          table.resetColumnVisibility();
-                          setSettingsOpen(false);
-                        }}
-                      >
-                        <EyeOff className="mr-2 h-4 w-4" />
-                        Show All Columns
-                      </button>
-                    )}
-                  </div>
-                </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                getButtonSizeClass(config.size, true),
+                "inline-flex items-center justify-center rounded-md border border-input bg-background",
+                "hover:bg-accent hover:text-accent-foreground transition-colors",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                "cursor-pointer"
+              )}
+              title="Table Settings"
+            >
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Open table settings</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-60" align="end">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">Table Settings</h4>
               </div>
-            </>
-          )}
-        </div>
+
+              <div className="grid gap-2">
+                {config.enableColumnResizing && resetColumnSizing && (
+                  <button
+                    className={cn(
+                      "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                      "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                      getButtonSizeClass(config.size),
+                      "justify-start w-full"
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      resetColumnSizing();
+                    }}
+                  >
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Reset Column Sizes
+                  </button>
+                )}
+                {resetColumnOrder && (
+                  <button
+                    className={cn(
+                      "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                      "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                      getButtonSizeClass(config.size),
+                      "justify-start w-full"
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      resetColumnOrder();
+                    }}
+                  >
+                    <MoveHorizontal className="mr-2 h-4 w-4" />
+                    Reset Column Order
+                  </button>
+                )}
+                {config.enableRowSelection && (
+                  <button
+                    className={cn(
+                      "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                      "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                      getButtonSizeClass(config.size),
+                      "justify-start w-full"
+                    )}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      table.resetRowSelection();
+                      clearSelection();
+                    }}
+                  >
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Clear Selection
+                  </button>
+                )}
+                {!table.getIsAllColumnsVisible() && (
+                  <button
+                    className={cn(
+                      "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                      "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+                      getButtonSizeClass(config.size),
+                      "justify-start w-full"
+                    )}
+                    onClick={() => table.resetColumnVisibility()}
+                  >
+                    <EyeOff className="mr-2 h-4 w-4" />
+                    Show All Columns
+                  </button>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
