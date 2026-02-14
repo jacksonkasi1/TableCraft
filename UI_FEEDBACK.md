@@ -73,3 +73,32 @@
 6.  **Toolbar Responsive Behavior**
     -   **Observation:** The toolbar uses `flex-wrap`. On smaller screens, the layout might break awkwardly.
     -   **Action:** Verify responsive behavior and maybe stack filters vertically on mobile.
+
+## Knowledge Transfer (KT) & Current Status
+
+### Goal
+Align the `TableCraft` UI with the user's design requirements, specifically focusing on the Toolbar and Table Header aesthetics and layout.
+
+### Accomplished Fixes
+1.  **Toolbar Layout**:
+    -   Implemented `startToolbarContent` prop in `DataTable` to allow injecting content (like the Date Picker) directly into the toolbar's left section.
+    -   Grouped Search and Date inputs in a flex container to ensure they stay side-by-side.
+    -   **File(s):** `packages/table/src/toolbar.tsx`, `packages/table/src/data-table.tsx`, `packages/table/src/types.ts`
+
+2.  **Search Input**:
+    -   Added `Search` icon from `lucide-react` inside the input wrapper.
+    -   Increased input left padding to `pl-12` (48px) to prevent text overlap with the icon.
+    -   **File(s):** `packages/table/src/toolbar.tsx`
+
+3.  **Table Headers**:
+    -   Increased header height to `h-12` (48px).
+    -   Increased column header button size to `h-9` (36px) with `px-4` padding for better hover states.
+    -   Unified horizontal padding to `px-4` for both headers and cells to align checkboxes and content.
+    -   **File(s):** `packages/table/src/data-table.tsx`, `packages/table/src/column-header.tsx`
+
+### Pending / Next Steps
+1.  **Column Drag/Grab**: Implement drag-and-drop reordering directly on column headers.
+2.  **Row Actions**: Add default "Three Dots" menu for row actions.
+3.  **Metadata Column**: Hide "metadata" column by default.
+4.  **Settings Button**: Verify square aspect ratio for the settings icon button.
+5.  **Empty State**: Improve "No results" visualization.

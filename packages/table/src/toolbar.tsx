@@ -164,7 +164,7 @@ export function DataTableToolbar<TData extends ExportableData>({
                 value={localSearch}
                 onChange={handleSearchChange}
                 className={cn(
-                  "w-[150px] lg:w-[250px] rounded-md border border-input bg-background pl-10 pr-3 text-sm",
+                  "w-[150px] lg:w-[250px] rounded-md border border-input bg-background pl-12 pr-3 text-sm",
                   "placeholder:text-muted-foreground",
                   "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   "transition-colors",
