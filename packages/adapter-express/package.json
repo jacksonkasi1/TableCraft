@@ -1,25 +1,25 @@
 {
   "name": "@tablecraft/adapter-express",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "description": "Express adapter for TableCraft",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "bun run --bun tsc",
+    "dev": "bun run --bun tsc --watch",
     "test": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": "^0.1.0",
+    "@tablecraft/engine": "workspace:*",
     "express": ">=4.0.0"
   },
   "devDependencies": {
     "@tablecraft/engine": "workspace:*",
     "@types/express": "^5.0.0",
     "@types/node": "^25.2.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   }
 }

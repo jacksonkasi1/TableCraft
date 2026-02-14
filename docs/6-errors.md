@@ -1,0 +1,75 @@
+# 6. Error Handling & Validation
+
+The TableCraft Engine includes a robust error handling system. It validates all inputs (filters, sorts, selections) and throws typed errors that you can catch and return as proper HTTP responses.
+
+## 1. Input Validation
+
+The engine automatically validates all incoming parameters against your schema.
+
+*   **Unknown Fields:** If a user tries to filter/sort by a field that doesn't exist or isn't enabled in the config, the engine throws a `FieldError`.
+*   **Type Mismatch:** If a user tries to filter a `number` column with a string like "abc", the engine throws a `ValidationError`.
+*   **Hidden Fields:** Users cannot select or filter by hidden columns.
+
+## 2. Error Types
+
+The engine exports several error classes that extend `TableCraftError`.
+
+| Error Class | Code | Description | HTTP Status Recommendation |
+| :--- | :--- | :--- | :--- |
+| `ValidationError` | `VALIDATION_ERROR` | Invalid input format (e.g., "abc" for a number). | 400 Bad Request |
+| `FieldError` | `FIELD_ERROR` | Invalid field name (unknown or hidden). | 400 Bad Request |
+| `ConfigError` | `CONFIG_ERROR` | Invalid table configuration (developer error). | 500 Internal Server Error |
+| `QueryError` | `QUERY_ERROR` | Database query failed (e.g., constraint violation). | 500 Internal Server Error |
+| `AccessDeniedError` | `ACCESS_DENIED` | User lacks permission (RBAC). | 403 Forbidden |
+| `NotFoundError` | `NOT_FOUND` | Resource not found. | 404 Not Found |
+
+## 3. Handling Errors in Your Framework
+
+You should wrap your engine calls in a try-catch block and return appropriate HTTP responses.
+
+### Hono Example
+
+```typescript
+import { TableCraftError } from '@tablecraft/engine';
+
+app.onError((err, c) => {
+  if (err instanceof TableCraftError) {
+    return c.json({
+      error: {
+        code: err.code,
+        message: err.message,
+        details: err.details // specific field errors
+      }
+    }, err.statusCode);
+  }
+
+  // Handle unknown errors
+  console.error(err);
+  return c.json({ error: 'Internal Server Error' }, 500);
+});
+```
+
+### Response Example
+
+If a user requests `GET /products?sort=invalid_column`, they will receive:
+
+```json
+{
+  "error": {
+    "code": "FIELD_ERROR",
+    "message": "Field 'invalid_column' is not sortable",
+    "details": {
+      "field": "invalid_column"
+    }
+  }
+}
+```
+
+## 4. Dialect Awareness
+
+The engine automatically detects your database dialect (PostgreSQL, MySQL, SQLite) and adjusts its behavior.
+
+*   **Case-Insensitive Search:** Uses `ILIKE` on Postgres, but falls back to `LIKE` on MySQL/SQLite.
+*   **Feature Support:** If a feature (like Recursive CTEs) isn't supported by your database, the engine will either emulate it or throw a helpful error.
+
+You don't need to configure this; it happens automatically based on your Drizzle database instance.

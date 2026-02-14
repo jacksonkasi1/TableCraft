@@ -24,8 +24,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "types": ["vitest/globals", "node"]
+    "types": ["bun-types", "vitest/globals", "node"]
   },
-  "include": ["src", "test"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "test"]
 }

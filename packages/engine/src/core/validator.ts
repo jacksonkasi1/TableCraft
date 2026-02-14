@@ -63,6 +63,11 @@ export function validateAgainstSchema(
           continue; // Validated
         }
 
+        // Check if column is computed (virtual)
+        if (col.computed) {
+          continue;
+        }
+
         // Check if column is a subquery alias
         if (config.subqueries?.some(s => s.alias === col.name)) {
           continue;

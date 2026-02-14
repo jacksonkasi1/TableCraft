@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 // --- Primitives ---
 export const OperatorSchema = z.enum([
-  'eq', 'neq', 'gt', 'gte', 'lt', 'lte', 
-  'like', 'ilike', 'in', 'notIn', 'between', 
+  'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
+  'like', 'ilike', 'in', 'notIn', 'between',
   'isNull', 'isNotNull', 'contains', 'startsWith', 'endsWith'
 ]);
 export type Operator = z.infer<typeof OperatorSchema>;
@@ -16,6 +16,35 @@ export type FilterType = z.infer<typeof FilterTypeSchema>;
 
 export const AggregationTypeSchema = z.enum(['count', 'sum', 'avg', 'min', 'max']);
 export type AggregationType = z.infer<typeof AggregationTypeSchema>;
+
+// --- Column Metadata (for frontend) ---
+export const ColumnFormatSchema = z.enum([
+  'text', 'number', 'currency', 'percent', 'date', 'datetime', 
+  'time', 'boolean', 'email', 'url', 'phone', 'image', 'badge', 'code'
+]);
+export type ColumnFormat = z.infer<typeof ColumnFormatSchema>;
+
+export const ColumnAlignSchema = z.enum(['left', 'center', 'right']);
+export type ColumnAlign = z.infer<typeof ColumnAlignSchema>;
+
+export const ColumnOptionsSchema = z.object({
+  value: z.union([z.string(), z.number(), z.boolean()]),
+  label: z.string(),
+  color: z.string().optional(), // For badge display: "green", "#ff0000", etc.
+});
+export type ColumnOption = z.infer<typeof ColumnOptionsSchema>;
+
+// --- Date Presets ---
+export const DatePresetSchema = z.enum([
+  'today', 'yesterday', 
+  'last7days', 'last30days', 'last90days',
+  'thisWeek', 'lastWeek', 
+  'thisMonth', 'lastMonth',
+  'thisQuarter', 'lastQuarter',
+  'thisYear', 'lastYear',
+  'custom',
+]);
+export type DatePreset = z.infer<typeof DatePresetSchema>;
 
 // --- Column Config ---
 export const ColumnConfigSchema = z.object({
@@ -30,6 +59,24 @@ export const ColumnConfigSchema = z.object({
   dbTransform: z.array(z.string()).optional(),
   // JavaScript-level transform applied after fetching
   jsTransform: z.array(z.string()).optional(),
+  // Computed column (not in database)
+  computed: z.boolean().default(false).optional(),
+  
+  // NEW: Frontend metadata
+  format: ColumnFormatSchema.optional(),
+  align: ColumnAlignSchema.optional(),
+  width: z.number().optional(),
+  minWidth: z.number().optional(),
+  maxWidth: z.number().optional(),
+  
+  // NEW: Enum options (for dropdown filters)
+  options: z.array(ColumnOptionsSchema).optional(),
+  
+  // NEW: Date presets (only for date columns)
+  datePresets: z.array(DatePresetSchema).optional(),
+  
+  // NEW: Role-based visibility
+  visibleTo: z.array(z.string()).optional(), // roles that can see this column
 });
 export type ColumnConfig = z.infer<typeof ColumnConfigSchema>;
 export type ColumnDefinition = z.input<typeof ColumnConfigSchema>;
@@ -100,6 +147,66 @@ export const BackendConditionSchema = z.object({
 });
 export type BackendCondition = z.infer<typeof BackendConditionSchema>;
 
+// --- Filter Groups (OR logic) ---
+export const FilterConditionSchema = z.object({
+  field: z.string(),
+  operator: OperatorSchema,
+  value: z.any(),
+});
+export type FilterCondition = z.infer<typeof FilterConditionSchema>;
+
+export const FilterExpressionSchema: z.ZodType<any> = z.lazy(() =>
+  z.union([
+    z.object({
+      type: z.enum(['and', 'or']),
+      conditions: z.array(FilterExpressionSchema),
+    }),
+    FilterConditionSchema,
+  ])
+);
+export type FilterExpression = 
+  | { type: 'and' | 'or'; conditions: FilterExpression[] }
+  | FilterCondition;
+
+// --- GROUP BY ---
+export const HavingConditionSchema = z.object({
+  alias: z.string(),
+  operator: OperatorSchema,
+  value: z.any(),
+});
+export type HavingCondition = z.infer<typeof HavingConditionSchema>;
+
+export const GroupByConfigSchema = z.object({
+  fields: z.array(z.string()),
+  having: z.array(HavingConditionSchema).optional(),
+});
+export type GroupByConfig = z.infer<typeof GroupByConfigSchema>;
+
+// --- Include (Nested Relations) ---
+export const IncludeConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
+  table: z.string(),
+  foreignKey: z.string(),
+  localKey: z.string().optional().default('id'),
+  as: z.string(),
+  columns: z.array(z.string()).optional(),
+  where: z.array(BackendConditionSchema).optional(),
+  orderBy: z.array(SortConfigSchema).optional(),
+  limit: z.number().optional(),
+  include: z.array(IncludeConfigSchema).optional(),
+}));
+export type IncludeConfig = z.infer<typeof IncludeConfigSchema>;
+
+// --- Recursive (CTE) ---
+export const RecursiveConfigSchema = z.object({
+  parentKey: z.string(),
+  childKey: z.string().default('id'),
+  startWith: BackendConditionSchema.optional(),
+  maxDepth: z.number().default(10),
+  depthAlias: z.string().default('depth'),
+  pathAlias: z.string().optional(),
+});
+export type RecursiveConfig = z.infer<typeof RecursiveConfigSchema>;
+
 // --- Platform Features ---
 export const TenantConfigSchema = z.object({
   field: z.string().default('tenantId').optional(),
@@ -112,13 +219,6 @@ export const SoftDeleteConfigSchema = z.object({
   enabled: z.boolean().default(true).optional(),
 });
 export type SoftDeleteConfig = z.infer<typeof SoftDeleteConfigSchema>;
-
-export const CacheConfigSchema = z.object({
-  ttl: z.number().default(60).optional(), // Seconds
-  enabled: z.boolean().default(false).optional(),
-  staleWhileRevalidate: z.number().optional(),
-});
-export type CacheConfig = z.infer<typeof CacheConfigSchema>;
 
 export const ExportConfigSchema = z.object({
   formats: z.array(z.enum(['csv', 'json'])).default(['csv', 'json']).optional(),
@@ -150,9 +250,17 @@ export const TableConfigSchema = z.object({
   aggregations: z.array(AggregationConfigSchema).optional(),
   subqueries: z.array(SubqueryConfigSchema).optional(),
   
+  // NEW: OR logic
+  filterGroups: z.array(FilterExpressionSchema).optional(),
+  // NEW: GROUP BY
+  groupBy: GroupByConfigSchema.optional(),
+  // NEW: Nested relations
+  include: z.array(IncludeConfigSchema).optional(),
+  // NEW: Recursive CTE
+  recursive: RecursiveConfigSchema.optional(),
+  
   tenant: TenantConfigSchema.optional(),
   softDelete: SoftDeleteConfigSchema.optional(),
-  cache: CacheConfigSchema.optional(),
   export: ExportConfigSchema.optional(),
   
   access: AccessControlSchema.optional(),

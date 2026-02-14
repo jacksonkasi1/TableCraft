@@ -5,7 +5,7 @@ Next.js App Router adapter for [TableCraft](https://github.com/your-org/tablecra
 ## Install
 
 ```bash
-npm install @tablecraft/engine @tablecraft/adapter-next
+bun add @tablecraft/engine @tablecraft/adapter-next
 ```
 
 ## Usage
