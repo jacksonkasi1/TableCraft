@@ -58,8 +58,8 @@ export function DataTableColumnHeader<TData, TValue>({
               "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
               // Variant "ghost"
               "hover:bg-accent hover:text-accent-foreground",
-              // Size "sm" (usually h-9 px-3) but overriden to h-8 by tnks
-              "h-9 px-4",
+              // Size "sm"
+              "h-8 px-2",
               // Custom overrides from tnks-data-table
               "data-[state=open]:bg-accent focus-visible:ring-0 focus-visible:ring-offset-0"
             )}
