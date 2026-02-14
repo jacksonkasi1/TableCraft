@@ -16,7 +16,7 @@ const getInputSizeClass = (size: "sm" | "default" | "lg") => {
   switch (size) {
     case "sm": return "h-8";
     case "lg": return "h-11";
-    default: return "h-9";
+    default: return "h-10";
   }
 };
 
@@ -25,13 +25,13 @@ const getButtonSizeClass = (size: "sm" | "default" | "lg", isIcon = false) => {
     switch (size) {
       case "sm": return "h-8 w-8 p-0";
       case "lg": return "h-11 w-11 p-0";
-      default: return "h-9 w-9 p-0";
+      default: return "h-10 w-10 p-0";
     }
   }
   switch (size) {
     case "sm": return "h-8 px-3";
     case "lg": return "h-11 px-5";
-    default: return "h-9 px-4";
+    default: return "h-10 px-4";
   }
 };
 
@@ -164,7 +164,7 @@ export function DataTableToolbar<TData extends ExportableData>({
                 value={localSearch}
                 onChange={handleSearchChange}
                 className={cn(
-                  "w-[150px] lg:w-[250px] rounded-md border border-input bg-background pl-12 pr-3 text-sm",
+                  "w-[150px] lg:w-[250px] rounded-md border border-input bg-background pl-9 pr-3 text-sm",
                   "placeholder:text-muted-foreground",
                   "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                   "transition-colors",
