@@ -407,7 +407,7 @@ export const CalendarDatePicker = React.forwardRef<
               ref={ref}
               {...props}
               className={cn(
-                "w-auto",
+                "w-auto h-10",
                 multiSelectVariants({ variant, className })
               )}
               size="default"
