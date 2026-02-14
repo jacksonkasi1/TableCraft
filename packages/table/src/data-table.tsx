@@ -473,7 +473,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       data-slot="table-head"
                       colSpan={header.colSpan}
                       scope="col"
-                      className="text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap relative group/th [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
+                      className="text-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap relative group/th [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
                       style={{ width: header.getSize() }}
                       data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
                     >

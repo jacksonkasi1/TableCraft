@@ -59,7 +59,7 @@ export function DataTableColumnHeader<TData, TValue>({
               // Variant "ghost"
               "hover:bg-accent hover:text-accent-foreground",
               // Size "sm"
-              "h-8 px-2",
+              "-ml-2 h-8 px-2",
               // Custom overrides from tnks-data-table
               "data-[state=open]:bg-accent focus-visible:ring-0 focus-visible:ring-offset-0"
             )}
