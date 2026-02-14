@@ -96,6 +96,14 @@ Align the `TableCraft` UI with the user's design requirements, specifically focu
     -   Unified horizontal padding to `px-4` for both headers and cells to align checkboxes and content.
     -   **File(s):** `packages/table/src/data-table.tsx`, `packages/table/src/column-header.tsx`
 
+5.  **Tailwind Configuration (Critical)**:
+    -   Added `@source "../../../packages/table/src"` to the example app's CSS. This ensures that changes made in the `packages/table` (like new padding/margin classes) are correctly detected and compiled by Tailwind in the example app. Without this, HMR updates might trigger but styles won't regenerate for classes not already in the app.
+    -   **File(s):** `apps/vite-web-example/src/index.css`
+
+6.  **Row Hover Opacity**:
+    -   Reverted row hover background opacity to `hover:bg-muted/50` (from `80`) as the visibility issue was primarily due to the missing Tailwind source configuration, which is now fixed.
+    -   **File(s):** `packages/table/src/data-table.tsx`
+
 ### Pending / Next Steps
 1.  **Column Drag/Grab**: Implement drag-and-drop reordering directly on column headers.
 2.  **Row Actions**: Add default "Three Dots" menu for row actions.
