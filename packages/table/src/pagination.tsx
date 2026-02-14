@@ -6,6 +6,13 @@ import {
 } from "lucide-react";
 import type { Table } from "@tanstack/react-table";
 import { cn } from "./utils/cn";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./components/select";
 
 const getButtonSizeClass = (size: "sm" | "default" | "lg") => {
   switch (size) {
@@ -43,16 +50,16 @@ export function DataTablePagination<TData>({
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center space-x-2">
           <p className="whitespace-nowrap text-sm font-medium">Rows per page</p>
-          <select
+          <Select
             value={`${table.getState().pagination.pageSize}`}
-            onChange={(e) => {
-              const numericValue = parseInt(e.target.value, 10);
+            onValueChange={(value) => {
+              const numericValue = parseInt(value, 10);
               if (isNaN(numericValue) || numericValue <= 0) return;
 
               try {
                 // Update URL first for consistency
                 const url = new URL(window.location.href);
-                url.searchParams.set("pageSize", e.target.value);
+                url.searchParams.set("pageSize", value);
                 url.searchParams.set("page", "1");
                 window.history.replaceState({}, "", url.toString());
               } catch {
@@ -64,33 +71,33 @@ export function DataTablePagination<TData>({
                 pageSize: numericValue,
               });
             }}
-            className={cn(
-              selectSize,
-              "rounded-md border border-input bg-background px-2 text-sm cursor-pointer",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              "hover:bg-accent hover:text-accent-foreground transition-colors"
-            )}
           >
-            {pageSizeOptions.map((ps) => (
-              <option key={ps} value={`${ps}`}>
-                {ps}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className={cn(selectSize, "w-[70px]")}>
+              <SelectValue placeholder={table.getState().pagination.pageSize} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {pageSizeOptions.map((pageSize) => (
+                <SelectItem key={pageSize} value={`${pageSize}`}>
+                  {pageSize}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center justify-center text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount() || 1}
+          Page {table.getState().pagination.pageIndex + 1}
+          {table.getPageCount() !== -1 ? ` of ${table.getPageCount() || 1}` : ""}
         </div>
         <div className="flex items-center space-x-2">
           <button
             aria-label="Go to first page"
             className={cn(
               getButtonSizeClass(size),
-              "hidden lg:inline-flex items-center justify-center rounded-md border border-input bg-background",
+              "items-center justify-center rounded-md border border-input bg-background",
               "hover:bg-accent hover:text-accent-foreground transition-colors",
               "cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              table.getPageCount() === -1 ? "hidden" : "hidden lg:inline-flex"
             )}
             onClick={() =>
               table.setPagination({
@@ -136,7 +143,7 @@ export function DataTablePagination<TData>({
                 pageSize: table.getState().pagination.pageSize,
               })
             }
-            disabled={!table.getCanNextPage()}
+            disabled={!table.getCanNextPage() && table.getPageCount() !== -1}
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -144,10 +151,11 @@ export function DataTablePagination<TData>({
             aria-label="Go to last page"
             className={cn(
               getButtonSizeClass(size),
-              "hidden lg:inline-flex items-center justify-center rounded-md border border-input bg-background",
+              "items-center justify-center rounded-md border border-input bg-background",
               "hover:bg-accent hover:text-accent-foreground transition-colors",
               "cursor-pointer disabled:opacity-50 disabled:pointer-events-none",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+              table.getPageCount() === -1 ? "hidden" : "hidden lg:inline-flex"
             )}
             onClick={() =>
               table.setPagination({
@@ -155,7 +163,7 @@ export function DataTablePagination<TData>({
                 pageSize: table.getState().pagination.pageSize,
               })
             }
-            disabled={!table.getCanNextPage()}
+            disabled={!table.getCanNextPage() || table.getPageCount() === -1}
           >
             <ChevronsRight className="h-4 w-4" aria-hidden="true" />
           </button>

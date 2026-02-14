@@ -385,16 +385,25 @@ export function DataTable<T extends Record<string, unknown>>({
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // ─── Render toolbar content ───
+  const toolbarContext = {
+    selectedRows: data.filter((item) => rowSelection[String(item[idField])]),
+    selectedIds: Object.keys(rowSelection),
+    totalSelected: totalSelectedItems,
+    clearSelection,
+    search,
+    setSearch,
+    dateRange,
+    setDateRange,
+  };
+
   const customToolbar = renderToolbar
-    ? renderToolbar({
-        selectedRows: data.filter(
-          (item) => rowSelection[String(item[idField])]
-        ),
-        selectedIds: Object.keys(rowSelection),
-        totalSelected: totalSelectedItems,
-        clearSelection,
-      })
+    ? renderToolbar(toolbarContext)
     : toolbarContent;
+
+  const resolvedStartToolbarContent =
+    typeof startToolbarContent === "function"
+      ? startToolbarContent(toolbarContext)
+      : startToolbarContent;
 
   // ─── Error state ───
   if (isError) {
@@ -440,7 +449,7 @@ export function DataTable<T extends Record<string, unknown>>({
           }}
           resetColumnOrder={resetColumnOrder}
           customToolbarContent={customToolbar}
-          startToolbarContent={startToolbarContent}
+          startToolbarContent={resolvedStartToolbarContent}
         />
       )}
 

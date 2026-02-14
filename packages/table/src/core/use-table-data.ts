@@ -142,10 +142,12 @@ export function useTableData<T extends Record<string, unknown>>(
   // ─── Validate page when total pages changes ───
   useEffect(() => {
     const totalPages = result?.meta.totalPages ?? 0;
-    if (totalPages > 0 && page > totalPages) {
+    const countMode = result?.meta?.countMode;
+    // Don't auto-reset page if we are in estimated mode or if totalPages is 0 (which might mean unknown)
+    if (countMode !== 'estimated' && totalPages > 0 && page > totalPages) {
       setPage(1);
     }
-  }, [result?.meta.totalPages, page, setPage]);
+  }, [result?.meta.totalPages, result?.meta?.countMode, page, setPage]);
 
   // ─── Reset to page 1 when filters change ───
   const prevFiltersRef = useRef(columnFilters);
@@ -160,11 +162,33 @@ export function useTableData<T extends Record<string, unknown>>(
 
   // ─── Memoized return ───
   const data = useMemo(() => result?.data ?? [], [result]);
-  const meta = useMemo(
-    () =>
-      result?.meta ?? { total: 0, page: 1, pageSize: 10, totalPages: 0 },
-    [result]
-  );
+  const meta = useMemo(() => {
+    if (!result?.meta) {
+      return { total: 0, page: 1, pageSize: 10, totalPages: 0 };
+    }
+
+    const m = result.meta;
+    let totalPages = m.totalPages ?? 0;
+
+    // Calculate total pages from total count if available
+    if ((m.total ?? 0) > 0 && m.pageSize > 0) {
+      const calculated = Math.ceil((m.total ?? 0) / m.pageSize);
+      if (calculated > totalPages) {
+        totalPages = calculated;
+      }
+    }
+
+    // If countMode is estimated and totalPages is 0, use -1 to indicate unknown total pages.
+    // This enables the "Next" button in the pagination controls.
+    if (m.countMode === "estimated" && totalPages === 0) {
+      totalPages = -1;
+    }
+
+    return {
+      ...m,
+      totalPages,
+    };
+  }, [result]);
 
   // Wrapper setters that cast away the Promise return type for simpler consumer API
   const wrappedSetPage = useCallback(

@@ -66,6 +66,7 @@ export interface QueryResult<T = Record<string, unknown>> {
     page: number;
     pageSize: number;
     totalPages: number | null;
+    countMode?: 'exact' | 'estimated';
   };
 }
 
@@ -214,7 +215,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   /** Row click handler */
   onRowClick?: (row: T, index: number) => void;
   /** Custom toolbar content (rendered at the start of the toolbar) */
-  startToolbarContent?: React.ReactNode;
+  startToolbarContent?: React.ReactNode | ((ctx: ToolbarContext<T>) => React.ReactNode);
   /** Custom toolbar content (rendered after built-in controls) */
   toolbarContent?: React.ReactNode;
   /** Render custom toolbar with selection context */
@@ -230,6 +231,14 @@ export interface ToolbarContext<T> {
   selectedIds: string[];
   totalSelected: number;
   clearSelection: () => void;
+  search: string;
+  setSearch: (value: string | ((prev: string) => string)) => void;
+  dateRange: { from: string; to: string };
+  setDateRange: (
+    value:
+      | { from: string; to: string }
+      | ((prev: { from: string; to: string }) => { from: string; to: string })
+  ) => void;
 }
 
 // ─────────────────────────────────────────────
