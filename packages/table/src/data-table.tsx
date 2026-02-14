@@ -44,6 +44,7 @@ export function DataTable<T extends Record<string, unknown>>({
   exportConfig,
   idField = "id" as keyof T,
   onRowClick,
+  startToolbarContent,
   toolbarContent,
   renderToolbar,
   className,
@@ -439,6 +440,7 @@ export function DataTable<T extends Record<string, unknown>>({
           }}
           resetColumnOrder={resetColumnOrder}
           customToolbarContent={customToolbar}
+          startToolbarContent={startToolbarContent}
         />
       )}
 
@@ -471,7 +473,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       data-slot="table-head"
                       colSpan={header.colSpan}
                       scope="col"
-                      className="text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap relative group/th [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
+                      className="text-foreground h-12 px-4 text-left align-middle font-medium whitespace-nowrap relative group/th [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
                       style={{ width: header.getSize() }}
                       data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
                     >
@@ -504,7 +506,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         <td
                           key={`skeleton-${i}-${j}`}
                           data-slot="table-cell"
-                          className="p-2 align-middle whitespace-nowrap px-4 py-2 text-left"
+                          className="align-middle whitespace-nowrap px-4 py-2 text-left"
                         >
                           <div className="h-6 w-full animate-pulse rounded bg-muted" />
                         </td>
@@ -539,7 +541,7 @@ export function DataTable<T extends Record<string, unknown>>({
                       <td
                         key={cell.id}
                         data-slot="table-cell"
-                        className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] px-4 py-2 truncate max-w-0 text-left"
+                        className="align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] px-4 py-2 truncate max-w-0 text-left"
                       >
                         {flexRender(
                           cell.column.columnDef.cell,

@@ -1,6 +1,6 @@
 import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
-import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff } from "lucide-react";
+import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search } from "lucide-react";
 import type { TableConfig, ExportConfig, ExportableData } from "./types";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./export";
@@ -55,6 +55,7 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   resetColumnOrder?: () => void;
   columnMapping?: Record<string, string>;
   customToolbarContent?: React.ReactNode;
+  startToolbarContent?: React.ReactNode;
 }
 
 export function DataTableToolbar<TData extends ExportableData>({
@@ -73,6 +74,7 @@ export function DataTableToolbar<TData extends ExportableData>({
   resetColumnOrder,
   columnMapping,
   customToolbarContent,
+  startToolbarContent,
 }: DataTableToolbarProps<TData>) {
   const entityName = exportConfig?.entityName || "items";
 
@@ -153,46 +155,53 @@ export function DataTableToolbar<TData extends ExportableData>({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-1 flex-wrap items-center gap-2">
-        {config.enableSearch && (
-          <input
-            placeholder={config.searchPlaceholder || `Search ${entityName}...`}
-            value={localSearch}
-            onChange={handleSearchChange}
-            className={cn(
-              "w-[150px] lg:w-[250px] rounded-md border border-input bg-background px-3 text-sm",
-              "placeholder:text-muted-foreground",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              "transition-colors",
-              getInputSizeClass(config.size)
-            )}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {config.enableSearch && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                placeholder={config.searchPlaceholder || `Search ${entityName}...`}
+                value={localSearch}
+                onChange={handleSearchChange}
+                className={cn(
+                  "w-[150px] lg:w-[250px] rounded-md border border-input bg-background pl-10 pr-3 text-sm",
+                  "placeholder:text-muted-foreground",
+                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "transition-colors",
+                  getInputSizeClass(config.size)
+                )}
+              />
+            </div>
+          )}
 
-        {config.enableDateFilter && (
-          <div className="flex items-center">
-            <input
-              type="text"
-              placeholder="dd/mm/yyyy to dd/mm/yyyy"
-              value={
-                dates.from && dates.to
-                  ? `${dates.from.toLocaleDateString('en-GB')} to ${dates.to.toLocaleDateString('en-GB')}`
-                  : ""
-              }
-              readOnly
-              onClick={() => {
-                // This will be handled by an external date picker component
-                // For now, we show the placeholder
-              }}
-              className={cn(
-                "w-fit cursor-pointer rounded-md border border-input bg-background px-3 text-sm",
-                "placeholder:text-muted-foreground",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                "transition-colors",
-                getInputSizeClass(config.size)
-              )}
-            />
-          </div>
-        )}
+          {startToolbarContent}
+
+          {config.enableDateFilter && (
+            <div className="flex items-center">
+              <input
+                type="text"
+                placeholder="dd/mm/yyyy to dd/mm/yyyy"
+                value={
+                  dates.from && dates.to
+                    ? `${dates.from.toLocaleDateString('en-GB')} to ${dates.to.toLocaleDateString('en-GB')}`
+                    : ""
+                }
+                readOnly
+                onClick={() => {
+                  // This will be handled by an external date picker component
+                  // For now, we show the placeholder
+                }}
+                className={cn(
+                  "w-fit cursor-pointer rounded-md border border-input bg-background px-3 text-sm",
+                  "placeholder:text-muted-foreground",
+                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "transition-colors",
+                  getInputSizeClass(config.size)
+                )}
+              />
+            </div>
+          )}
+        </div>
 
         {isFiltered && (
           <button

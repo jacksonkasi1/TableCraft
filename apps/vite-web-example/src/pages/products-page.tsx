@@ -43,21 +43,19 @@ export function ProductsPage() {
         </p>
       </div>
 
-      {/* Custom toolbar with date picker */}
-      <div className="flex items-center gap-2 mb-4">
-        <CalendarDatePicker
-          date={{
-            from: dateRange.from,
-            to: dateRange.to,
-          }}
-          onDateSelect={handleDateSelect}
-          className="w-fit cursor-pointer"
-          variant="outline"
-        />
-      </div>
-
       <DataTable
         adapter={adapter}
+        startToolbarContent={
+          <CalendarDatePicker
+            date={{
+              from: dateRange.from,
+              to: dateRange.to,
+            }}
+            onDateSelect={handleDateSelect}
+            className="w-fit cursor-pointer"
+            variant="outline"
+          />
+        }
         config={{
           enableSearch: true,
           enableExport: true,

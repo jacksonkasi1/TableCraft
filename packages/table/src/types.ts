@@ -213,6 +213,8 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   idField?: keyof T;
   /** Row click handler */
   onRowClick?: (row: T, index: number) => void;
+  /** Custom toolbar content (rendered at the start of the toolbar) */
+  startToolbarContent?: React.ReactNode;
   /** Custom toolbar content (rendered after built-in controls) */
   toolbarContent?: React.ReactNode;
   /** Render custom toolbar with selection context */
