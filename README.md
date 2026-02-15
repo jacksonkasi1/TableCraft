@@ -62,6 +62,7 @@ That's it! 🎉 No column definitions needed.
 | 📑 **Pagination** | Cursor or offset-based pagination |
 | 🎨 **Column Resizing** | Drag-to-resize columns with persistence |
 | 👁️ **Column Visibility** | Show/hide columns with URL state sync |
+| 🔗 **URL State Sync** | Search, filters, sort, page stored in URL for shareable links |
 | ⌨️ **Keyboard Navigation** | Full keyboard accessibility |
 | 🔐 **Role-based Visibility** | Control column visibility by user role |
 | 🗑️ **Soft Delete Support** | Built-in soft delete filtering |
