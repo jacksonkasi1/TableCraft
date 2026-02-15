@@ -54,7 +54,7 @@ function generateRowInterface(
     })
     .join('\n');
 
-  return `export interface ${interfaceName} {\n${fields}\n}`;
+  return `export interface ${interfaceName} extends Record<string, unknown> {\n${fields}\n}`;
 }
 
 function generateFiltersInterface(
