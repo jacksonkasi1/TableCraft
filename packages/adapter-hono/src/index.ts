@@ -16,6 +16,12 @@ export interface HonoAdapterOptions {
   schema: Record<string, unknown>;
   configs: ConfigInput[] | Record<string, ConfigInput>;
   /**
+   * Enable the /_tables discovery endpoint (default: false).
+   * This endpoint exposes all registered table names.
+   * Enable only in development or when you have proper access controls.
+   */
+  enableDiscovery?: boolean;
+  /**
    * Extract context from Hono's Context object.
    * Use `c.get('user')`, `c.req.header(...)`, etc.
    */
@@ -42,9 +48,26 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
 
   const app = new Hono();
 
-  app.get('/_tables', (c) => {
-    return c.json(Object.keys(engines));
-  });
+  if (options.enableDiscovery) {
+    app.get('/_tables', async (c) => {
+      const context = options.getContext
+        ? await options.getContext(c)
+        : {};
+      
+      if (options.checkAccess) {
+        const hasAccess = await options.checkAccess(
+          { name: '_tables' } as TableConfig,
+          context,
+          c
+        );
+        if (!hasAccess) {
+          return c.json({ error: 'Forbidden' }, 403);
+        }
+      }
+      
+      return c.json(Object.keys(engines));
+    });
+  }
 
   app.get('/:table/_meta', async (c) => {
     const tableName = c.req.param('table');
