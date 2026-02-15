@@ -56,8 +56,22 @@ console.log(result.columns); // Column metadata
 
 ## React Usage
 
+First, create a shared client instance that can be imported throughout your app:
+
+```ts
+// lib/client.ts
+import { TableCraftClient } from '@tablecraft/client';
+
+export const client = new TableCraftClient({
+  baseUrl: '/api/data',
+});
+```
+
+Then use it in your components:
+
 ```tsx
 import { useTableQuery } from '@tablecraft/client/react';
+import { client } from '@/lib/client'; // Import the shared client instance
 
 function UsersTable() {
   const { data, meta, isLoading, error } = useTableQuery(client, 'users', {

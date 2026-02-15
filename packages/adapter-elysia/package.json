@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/adapter-elysia",
-  "version": "0.1.0-beta.4",
+  "version": "0.1.0-beta.5",
   "description": "Elysia (Bun) adapter for TableCraft",
   "type": "module",
   "main": "dist/index.js",
@@ -8,8 +8,8 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [

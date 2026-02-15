@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/plugin-cache",
-  "version": "0.1.0-beta.4",
+  "version": "0.1.0-beta.5",
   "description": "Caching plugin for TableCraft — memory, Redis, or bring your own",
   "type": "module",
   "main": "dist/index.js",
@@ -8,16 +8,16 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./redis": {
-      "import": "./dist/providers/redis.js",
-      "types": "./dist/providers/redis.d.ts"
+      "types": "./dist/providers/redis.d.ts",
+      "import": "./dist/providers/redis.js"
     },
     "./upstash": {
-      "import": "./dist/providers/upstash.js",
-      "types": "./dist/providers/upstash.d.ts"
+      "types": "./dist/providers/upstash.d.ts",
+      "import": "./dist/providers/upstash.js"
     }
   },
   "files": [

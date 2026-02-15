@@ -93,7 +93,7 @@ export const GET = handler;
 
 ### Query from the client
 
-```
+```text
 GET /api/data/users?page=1&pageSize=25&sort=-createdAt&filter[status]=active&search=john
 GET /api/data/orders?export=csv
 GET /api/data/products?filter[category]=electronics&filter[price][gte]=100
