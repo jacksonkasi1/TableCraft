@@ -1,12 +1,31 @@
 # @tablecraft/adapter-next
 
-Next.js App Router adapter for [TableCraft](https://github.com/your-org/tablecraft).
+Next.js App Router adapter for TableCraft — build powerful data APIs in your Next.js application.
+
+## Links
+
+- [GitHub](https://github.com/jacksonkasi1/TableCraft)
+- [Documentation](https://jacksonkasi.gitbook.io/tablecraft/)
 
 ## Install
 
 ```bash
 bun add @tablecraft/engine @tablecraft/adapter-next
+# or
+npm install @tablecraft/engine @tablecraft/adapter-next
+# or
+yarn add @tablecraft/engine @tablecraft/adapter-next
+# or
+pnpm add @tablecraft/engine @tablecraft/adapter-next
 ```
+
+## Features
+
+- **App Router support** — Native Next.js App Router integration
+- **Dynamic routes** — Single endpoint for multiple tables
+- **Type-safe** — Full TypeScript support
+- **Server-side rendering** — Works with SSR and SSG
+- **Edge runtime** — Compatible with Edge runtime
 
 ## Usage
 
@@ -37,6 +56,9 @@ export const GET = handler;
 ```ts
 // app/api/users/route.ts
 import { createNextRouteHandler } from '@tablecraft/adapter-next';
+import { db } from '@/db';
+import * as schema from '@/db/schema';
+import { usersConfig } from '@/tablecraft.config';
 
 export const GET = createNextRouteHandler({
   db,
@@ -45,9 +67,56 @@ export const GET = createNextRouteHandler({
 });
 ```
 
+### With NextAuth.js
+
+```ts
+// app/api/data/[table]/route.ts
+import { createNextHandler } from '@tablecraft/adapter-next';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+
+const handler = createNextHandler({
+  db,
+  schema,
+  configs,
+  getContext: async (request) => {
+    const session = await getServerSession(authOptions);
+    return {
+      tenantId: session?.user?.tenantId,
+      user: session?.user,
+    };
+  },
+});
+
+export const GET = handler;
+```
+
 ### Query from the client
 
-```
+```text
 GET /api/data/users?page=1&pageSize=25&sort=-createdAt&filter[status]=active&search=john
 GET /api/data/orders?export=csv
+GET /api/data/products?filter[category]=electronics&filter[price][gte]=100
 ```
+
+## Configuration Options
+
+```ts
+createNextHandler({
+  db,                    // Drizzle database instance
+  schema,                // Drizzle schema object
+  configs,               // Table configs map
+  getContext: async (request) => ({
+    tenantId: string,
+    user: { id: string, roles: string[] },
+  }),
+  onError: (error, request) => {
+    // Custom error handling
+    console.error(error);
+  },
+});
+```
+
+## License
+
+MIT

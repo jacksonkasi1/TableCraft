@@ -1,10 +1,21 @@
 {
   "name": "@tablecraft/client",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Type-safe frontend client for TableCraft APIs",
+  "type": "module",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "bun run --bun tsc",
     "dev": "bun run --bun tsc --watch",
@@ -15,5 +26,21 @@
     "@types/react": "^19.2.13",
     "typescript": "^5.9.3",
     "vitest": "^2.1.8"
-  }
+  },
+  "keywords": [
+    "tablecraft",
+    "client",
+    "api-client",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jacksonkasi1/TableCraft.git",
+    "directory": "packages/client"
+  },
+  "homepage": "https://github.com/jacksonkasi1/TableCraft#readme",
+  "bugs": {
+    "url": "https://github.com/jacksonkasi1/TableCraft/issues"
+  },
+  "license": "MIT"
 }
