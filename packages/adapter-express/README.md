@@ -5,7 +5,7 @@ Express adapter for [TableCraft](https://github.com/your-org/tablecraft).
 ## Install
 
 ```bash
-npm install @tablecraft/engine @tablecraft/adapter-express
+bun add @tablecraft/engine @tablecraft/adapter-express
 ```
 
 ## Usage

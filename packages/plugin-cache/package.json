@@ -1,0 +1,43 @@
+{
+  "name": "@tablecraft/plugin-cache",
+  "version": "0.1.0-beta.1",
+  "description": "Caching plugin for TableCraft — memory, Redis, or bring your own",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./redis": {
+      "import": "./dist/providers/redis.mjs",
+      "require": "./dist/providers/redis.js",
+      "types": "./dist/providers/redis.d.ts"
+    },
+    "./upstash": {
+      "import": "./dist/providers/upstash.mjs",
+      "require": "./dist/providers/upstash.js",
+      "types": "./dist/providers/upstash.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "bun run --bun tsc",
+    "dev": "bun run --bun tsc --watch",
+    "test": "vitest",
+    "typecheck": "bun run --bun tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tablecraft/engine": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": { "optional": true },
+    "@upstash/redis": { "optional": true }
+  },
+  "devDependencies": {
+    "@tablecraft/engine": "workspace:*",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

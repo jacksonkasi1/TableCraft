@@ -8,7 +8,7 @@
     "db:push": "drizzle-kit push",
     "seed": "bun run src/db/seed.ts",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run --bun tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.7.0",
@@ -16,7 +16,8 @@
     "postgres": "^3.4.5",
     "dotenv": "^16.4.7",
     "@tablecraft/engine": "workspace:*",
-    "@tablecraft/adapter-hono": "workspace:*"
+    "@tablecraft/adapter-hono": "workspace:*",
+    "@tablecraft/plugin-cache": "workspace:*"
   },
   "devDependencies": {
     "drizzle-kit": "^0.30.4",

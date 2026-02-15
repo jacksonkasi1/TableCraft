@@ -8,6 +8,7 @@ import {
 import { TableConfig } from '../types/table';
 import { FilterParam } from '../types/engine';
 import { applyOperator } from '../utils/operators';
+import { isDatePreset, buildDatePresetCondition } from './datePresets';
 
 export class FilterBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -61,6 +62,13 @@ export class FilterBuilder {
       // Resolve the column — could be on the base table or a joined table
       const col = this.resolveColumn(config, columns, dbFieldName);
       if (!col) continue;
+
+      // Check if value is a date preset
+      if (isDatePreset(param.value)) {
+        const presetCondition = buildDatePresetCondition(col, param.value);
+        if (presetCondition) conditions.push(presetCondition);
+        continue;
+      }
 
       const condition = applyOperator(param.operator, col, param.value);
       if (condition) conditions.push(condition);

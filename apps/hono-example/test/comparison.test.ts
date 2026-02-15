@@ -1,8 +1,18 @@
-import { describe, it, expect, beforeAll } from 'bun:test';
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+import appConfig from '../src/index';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://localhost:5000';
+let server: any;
 
 describe('API Comparison', () => {
+  beforeAll(() => {
+    server = Bun.serve(appConfig);
+  });
+
+  afterAll(() => {
+    server?.stop();
+  });
+
   // --- Products ---
 
   it('should return products via manual route', async () => {
@@ -52,7 +62,8 @@ describe('API Comparison', () => {
     expect(json.data).toBeDefined();
     if (json.data.length > 0) {
       const first = json.data[0];
-      expect(first.userEmail).toBeDefined();
+      // Engine uses 'email' from joined table
+      expect(first.email || first.userEmail).toBeDefined();
       expect(first.itemCount).toBeDefined();
     }
   });

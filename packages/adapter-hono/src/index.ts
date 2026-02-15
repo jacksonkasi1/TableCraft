@@ -4,37 +4,34 @@ import {
   createEngines,
   createTableEngine,
   parseRequest,
-  checkAccess,
+  checkAccess as defaultCheckAccess,
   getExportMeta,
   TableConfig,
-  TableDefinition,
+  ConfigInput,
   EngineContext,
 } from '@tablecraft/engine';
 
 export interface HonoAdapterOptions {
   db: unknown;
   schema: Record<string, unknown>;
-  configs: TableDefinition[] | Record<string, TableDefinition>;
+  configs: ConfigInput[] | Record<string, ConfigInput>;
   /**
    * Extract context from Hono's Context object.
    * Use `c.get('user')`, `c.req.header(...)`, etc.
    */
   getContext?: (c: Context) => EngineContext | Promise<EngineContext>;
+  /**
+   * Override built-in access check with your own logic.
+   */
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    c: Context
+  ) => boolean | Promise<boolean>;
 }
 
 /**
  * Creates a Hono sub-app with a `/:table` route.
- *
- * @example
- * ```ts
- * import { Hono } from 'hono';
- * import { createHonoApp } from '@tablecraft/adapter-hono';
- *
- * const app = new Hono();
- * const tablecraft = createHonoApp({ db, schema, configs });
- *
- * app.route('/api/data', tablecraft);
- * ```
  */
 export function createHonoApp(options: HonoAdapterOptions): Hono {
   const engines = createEngines({
@@ -44,6 +41,22 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
   });
 
   const app = new Hono();
+
+  // ─── Metadata endpoint: GET /data/users/_meta ───
+  app.get('/:table/_meta', async (c) => {
+    const tableName = c.req.param('table');
+
+    const engine = engines[tableName];
+    if (!engine) {
+      return c.json({ error: `Unknown resource '${tableName}'` }, 404);
+    }
+
+    const context = options.getContext
+      ? await options.getContext(c)
+      : {};
+    const metadata = engine.getMetadata(context);
+    return c.json(metadata);
+  });
 
   app.get('/:table', async (c) => {
     const tableName = c.req.param('table');
@@ -61,7 +74,11 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
       : {};
 
     // Access control
-    if (!checkAccess(config, context)) {
+    const hasAccess = options.checkAccess
+      ? await options.checkAccess(config, context, c)
+      : defaultCheckAccess(config, context);
+
+    if (!hasAccess) {
       return c.json({ error: 'Forbidden' }, 403);
     }
 
@@ -97,28 +114,31 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
 
 /**
  * Creates a Hono handler for a single table.
- *
- * @example
- * ```ts
- * import { createHonoHandler } from '@tablecraft/adapter-hono';
- *
- * app.get('/api/users', createHonoHandler({ db, schema, config: usersConfig }));
- * ```
  */
 export function createHonoHandler(options: {
   db: unknown;
   schema: Record<string, unknown>;
-  config: TableDefinition;
+  config: ConfigInput;
   getContext?: (c: Context) => EngineContext | Promise<EngineContext>;
+  checkAccess?: (
+    config: TableConfig,
+    context: EngineContext,
+    c: Context
+  ) => boolean | Promise<boolean>;
 }) {
-  const { db, schema, config, getContext } = options;
+  const { db, schema, config, getContext, checkAccess } = options;
   const engine = createTableEngine({ db, schema, config });
 
   return async function handler(c: Context) {
     try {
       const context = getContext ? await getContext(c) : {};
+      const actualConfig = engine.getConfig();
 
-      if (!checkAccess(config, context)) {
+      const hasAccess = checkAccess
+        ? await checkAccess(actualConfig, context, c)
+        : defaultCheckAccess(actualConfig, context);
+
+      if (!hasAccess) {
         return c.json({ error: 'Forbidden' }, 403);
       }
 
@@ -127,13 +147,13 @@ export function createHonoHandler(options: {
       );
 
       if (params.export) {
-        const allowed = config.export?.formats ?? ['csv', 'json'];
-        if (!(config.export?.enabled ?? true) || !allowed.includes(params.export)) {
+        const allowed = actualConfig.export?.formats ?? ['csv', 'json'];
+        if (!(actualConfig.export?.enabled ?? true) || !allowed.includes(params.export)) {
           return c.json({ error: `Export format '${params.export}' not allowed` }, 400);
         }
 
         const body = await engine.exportData(params, context);
-        const { contentType, filename } = getExportMeta(config.name, params.export);
+        const { contentType, filename } = getExportMeta(actualConfig.name, params.export);
         c.header('Content-Disposition', `attachment; filename="${filename}"`);
         return c.body(body, 200, { 'Content-Type': contentType });
       }

@@ -6,7 +6,7 @@ Works on Cloudflare Workers, Bun, Deno, Node.js — anywhere Hono runs.
 ## Install
 
 ```bash
-npm install @tablecraft/engine @tablecraft/adapter-hono
+bun add @tablecraft/engine @tablecraft/adapter-hono
 ```
 
 ## Usage
