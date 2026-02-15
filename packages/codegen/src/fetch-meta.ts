@@ -5,23 +5,29 @@ export async function fetchMetadata(
   headers?: Record<string, string>
 ): Promise<TableMetadata[]> {
   const normalizedUrl = baseUrl.replace(/\/$/, '');
-  
-  const response = await fetch(`${normalizedUrl}/_tables`, {
-    headers: {
-      Accept: 'application/json',
-      ...headers,
-    },
-  });
 
-  if (response.ok) {
-    const tableNames = await response.json() as string[];
-    const metas = await Promise.all(
-      tableNames.map(name => fetchTableMetadata(normalizedUrl, name, headers))
-    );
-    return metas.filter((m): m is TableMetadata => m !== null);
+  try {
+    const response = await fetch(`${normalizedUrl}/_tables`, {
+      headers: {
+        Accept: 'application/json',
+        ...headers,
+      },
+    });
+
+    if (response.ok) {
+      const tableNames = await response.json() as string[];
+      const metas = await Promise.all(
+        tableNames.map(name => fetchTableMetadata(normalizedUrl, name, headers))
+      );
+      return metas.filter((m): m is TableMetadata => m !== null);
+    }
+
+    console.error(`Failed to fetch table list: ${response.status}`);
+    return [];
+  } catch (error) {
+    console.error('Error fetching table list:', error);
+    return [];
   }
-
-  return [];
 }
 
 export async function fetchTableMetadata(
