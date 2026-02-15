@@ -1,7 +1,8 @@
 {
   "name": "@tablecraft/adapter-next",
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0-beta.4",
   "description": "Next.js App Router adapter for TableCraft",
+  "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,7 +23,7 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": ">=0.1.0-beta.1",
+    "@tablecraft/engine": "^0.1.0-beta.3",
     "next": ">=14.0.0"
   },
   "devDependencies": {
