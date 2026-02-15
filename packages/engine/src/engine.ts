@@ -5,6 +5,8 @@ import {
   getTableColumns,
   and,
   eq,
+  gte,
+  lte,
   count as drizzleCount,
   getTableName,
 } from 'drizzle-orm';
@@ -134,6 +136,38 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       const tenantField = config.tenant.field ?? 'tenantId';
       const tenantCol = cols[tenantField];
       if (tenantCol) parts.push(eq(tenantCol, context.tenantId));
+    }
+
+    // Global date range filter
+    if (params.dateRange && (params.dateRange.from || params.dateRange.to)) {
+      const cols = getTableColumns(baseTable);
+      let dateColName = config.dateRangeColumn;
+
+      // Auto-detect if not configured
+      if (!dateColName) {
+        if (cols['createdAt']) dateColName = 'createdAt';
+        else if (cols['created_at']) dateColName = 'created_at';
+        else {
+          // Find first date column
+          const col = config.columns.find((c) => c.type === 'date' && !c.computed);
+          if (col) dateColName = col.name;
+        }
+      }
+
+      if (dateColName) {
+        const colDef = config.columns.find((c) => c.name === dateColName);
+        const dbFieldName = colDef?.field ?? dateColName;
+        const dateCol = cols[dbFieldName];
+
+        if (dateCol) {
+          if (params.dateRange.from) {
+            parts.push(gte(dateCol, new Date(params.dateRange.from)));
+          }
+          if (params.dateRange.to) {
+            parts.push(lte(dateCol, new Date(params.dateRange.to)));
+          }
+        }
+      }
     }
 
     parts.push(filterBuilder.buildStaticFilters(config));

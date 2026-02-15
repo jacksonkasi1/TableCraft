@@ -26,6 +26,7 @@ export interface EngineParams {
   distinct?: boolean;
   export?: 'csv' | 'json';
   includeDeleted?: boolean;
+  dateRange?: { from?: string; to?: string };
 }
 
 // --- Response ---

@@ -19,7 +19,7 @@ export type AggregationType = z.infer<typeof AggregationTypeSchema>;
 
 // --- Column Metadata (for frontend) ---
 export const ColumnFormatSchema = z.enum([
-  'text', 'number', 'currency', 'percent', 'date', 'datetime', 
+  'text', 'number', 'currency', 'percent', 'date', 'datetime',
   'time', 'boolean', 'email', 'url', 'phone', 'image', 'badge', 'code'
 ]);
 export type ColumnFormat = z.infer<typeof ColumnFormatSchema>;
@@ -36,9 +36,9 @@ export type ColumnOption = z.infer<typeof ColumnOptionsSchema>;
 
 // --- Date Presets ---
 export const DatePresetSchema = z.enum([
-  'today', 'yesterday', 
+  'today', 'yesterday',
   'last7days', 'last30days', 'last90days',
-  'thisWeek', 'lastWeek', 
+  'thisWeek', 'lastWeek',
   'thisMonth', 'lastMonth',
   'thisQuarter', 'lastQuarter',
   'thisYear', 'lastYear',
@@ -61,20 +61,20 @@ export const ColumnConfigSchema = z.object({
   jsTransform: z.array(z.string()).optional(),
   // Computed column (not in database)
   computed: z.boolean().default(false).optional(),
-  
+
   // NEW: Frontend metadata
   format: ColumnFormatSchema.optional(),
   align: ColumnAlignSchema.optional(),
   width: z.number().optional(),
   minWidth: z.number().optional(),
   maxWidth: z.number().optional(),
-  
+
   // NEW: Enum options (for dropdown filters)
   options: z.array(ColumnOptionsSchema).optional(),
-  
+
   // NEW: Date presets (only for date columns)
   datePresets: z.array(DatePresetSchema).optional(),
-  
+
   // NEW: Role-based visibility
   visibleTo: z.array(z.string()).optional(), // roles that can see this column
 });
@@ -164,7 +164,7 @@ export const FilterExpressionSchema: z.ZodType<any> = z.lazy(() =>
     FilterConditionSchema,
   ])
 );
-export type FilterExpression = 
+export type FilterExpression =
   | { type: 'and' | 'or'; conditions: FilterExpression[] }
   | FilterCondition;
 
@@ -236,20 +236,20 @@ export type AccessControl = z.infer<typeof AccessControlSchema>;
 export const TableConfigSchema = z.object({
   name: z.string(), // Unique identifier for the config
   base: z.string(), // Base Drizzle table name
-  
+
   columns: z.array(ColumnConfigSchema),
-  
+
   joins: z.array(JoinConfigSchema).optional(),
-  
+
   filters: z.array(FilterConfigSchema).optional(),
   search: SearchConfigSchema.optional(),
   defaultSort: z.array(SortConfigSchema).optional(),
   pagination: PaginationConfigSchema.optional(),
-  
+
   backendConditions: z.array(BackendConditionSchema).optional(),
   aggregations: z.array(AggregationConfigSchema).optional(),
   subqueries: z.array(SubqueryConfigSchema).optional(),
-  
+
   // NEW: OR logic
   filterGroups: z.array(FilterExpressionSchema).optional(),
   // NEW: GROUP BY
@@ -258,12 +258,15 @@ export const TableConfigSchema = z.object({
   include: z.array(IncludeConfigSchema).optional(),
   // NEW: Recursive CTE
   recursive: RecursiveConfigSchema.optional(),
-  
+
   tenant: TenantConfigSchema.optional(),
   softDelete: SoftDeleteConfigSchema.optional(),
   export: ExportConfigSchema.optional(),
-  
+
   access: AccessControlSchema.optional(),
+
+  // NEW: Global date range filter column
+  dateRangeColumn: z.string().optional(),
 });
 export type TableConfig = z.infer<typeof TableConfigSchema>;
 export type TableDefinition = z.input<typeof TableConfigSchema>;
