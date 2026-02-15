@@ -206,7 +206,15 @@ export function buildMetadata(
     .filter(c => c.type === 'date' && !c.computed && !c.hidden)
     .map(c => c.name);
 
-  let dateRangeColumn = config.dateRangeColumn ?? null;
+  let dateRangeColumn: string | null = null;
+  
+  if (config.dateRangeColumn) {
+    const colDef = allColumns.find(c => c.name === config.dateRangeColumn);
+    if (colDef && colDef.type === 'date' && !colDef.computed && !colDef.hidden) {
+      dateRangeColumn = config.dateRangeColumn;
+    }
+  }
+  
   if (!dateRangeColumn && dateColumns.length > 0) {
     const hasCreatedAt = dateColumns.includes('createdAt') || dateColumns.includes('created_at');
     if (hasCreatedAt) {
