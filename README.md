@@ -8,26 +8,41 @@
 
 ## ✨ Quick Example
 
+### Backend (Hono)
+
+```ts
+import { Hono } from 'hono'
+import { createHonoApp } from '@tablecraft/adapter-hono'
+import { defineTable } from '@tablecraft/engine'
+import { db } from './db'
+import * as schema from './db/schema'
+
+const users = defineTable(schema.users)
+  .hide('password')
+  .search('email', 'name')
+  .sort('-createdAt')
+
+const app = createHonoApp({
+  db,
+  schema,
+  configs: { users },
+})
+
+new Hono().route('/api/engine', app)
+```
+
+### Frontend (React)
+
 ```tsx
 import { DataTable, createTableCraftAdapter } from '@tablecraft/table'
-import type { UsersRow } from './generated'
+
+const adapter = createTableCraftAdapter({
+  baseUrl: '/api/engine',
+  table: 'users',
+})
 
 export function UsersPage() {
-  const adapter = createTableCraftAdapter<UsersRow>({
-    baseUrl: '/api/engine',
-    table: 'users',
-  })
-
-  return (
-    <DataTable<UsersRow>
-      adapter={adapter}
-      config={{
-        enableSearch: true,
-        enableExport: true,
-        enableColumnResizing: true,
-      }}
-    />
-  )
+  return <DataTable adapter={adapter} />
 }
 ```
 
