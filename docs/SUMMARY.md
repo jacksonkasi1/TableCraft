@@ -3,6 +3,8 @@
 ## Getting Started
 
 * [Introduction](README.md)
+* [Quick Start](quickstart.md)
+* [Packages Overview](packages.md)
 
 ## Basics
 
