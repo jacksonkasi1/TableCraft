@@ -42,7 +42,10 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
 
   const app = new Hono();
 
-  // ─── Metadata endpoint: GET /data/users/_meta ───
+  app.get('/_tables', (c) => {
+    return c.json(Object.keys(engines));
+  });
+
   app.get('/:table/_meta', async (c) => {
     const tableName = c.req.param('table');
 
