@@ -1,10 +1,20 @@
 {
   "name": "@tablecraft/adapter-next",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.3",
   "description": "Next.js App Router adapter for TableCraft",
   "main": "dist/index.js",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "bun run --bun tsc",
     "dev": "bun run --bun tsc --watch",
@@ -12,7 +22,7 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": "workspace:*",
+    "@tablecraft/engine": ">=0.1.0-beta.1",
     "next": ">=14.0.0"
   },
   "devDependencies": {
@@ -20,5 +30,21 @@
     "@types/node": "^25.2.2",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
-  }
+  },
+  "keywords": [
+    "tablecraft",
+    "nextjs",
+    "adapter",
+    "next"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jacksonkasi1/TableCraft.git",
+    "directory": "packages/adapter-next"
+  },
+  "homepage": "https://github.com/jacksonkasi1/TableCraft#readme",
+  "bugs": {
+    "url": "https://github.com/jacksonkasi1/TableCraft/issues"
+  },
+  "license": "MIT"
 }
