@@ -17,58 +17,70 @@ import {
 } from 'drizzle-orm';
 import { Operator } from '../types/table';
 
-/**
- * Maps a string operator name + column + value to a Drizzle SQL condition.
- * Shared across QueryBuilder, FilterBuilder, etc.
- */
+function isDateString(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  return /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/.test(value);
+}
+
+function toDbValue(value: unknown): unknown {
+  if (isDateString(value)) {
+    return new Date(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(v => isDateString(v) ? new Date(v) : v);
+  }
+  return value;
+}
+
 export function applyOperator(
   operator: Operator,
   column: Column,
   value: unknown
 ): SQL | undefined {
+  const dbValue = toDbValue(value);
+  
   switch (operator) {
     case 'eq':
-      return eq(column, value);
+      return eq(column, dbValue);
     case 'neq':
-      return ne(column, value);
+      return ne(column, dbValue);
     case 'gt':
-      return gt(column, value);
+      return gt(column, dbValue);
     case 'gte':
-      return gte(column, value);
+      return gte(column, dbValue);
     case 'lt':
-      return lt(column, value);
+      return lt(column, dbValue);
     case 'lte':
-      return lte(column, value);
+      return lte(column, dbValue);
     case 'like':
-      return like(column, value as string);
+      return like(column, dbValue as string);
     case 'ilike':
-      return ilike(column, value as string);
+      return ilike(column, dbValue as string);
     case 'in':
-      return Array.isArray(value) ? inArray(column, value) : undefined;
+      return Array.isArray(dbValue) ? inArray(column, dbValue) : undefined;
     case 'notIn':
-      return Array.isArray(value) ? notInArray(column, value) : undefined;
+      return Array.isArray(dbValue) ? notInArray(column, dbValue) : undefined;
     case 'between':
-      return Array.isArray(value) && value.length === 2
-        ? between(column, value[0], value[1])
+      return Array.isArray(dbValue) && dbValue.length === 2
+        ? between(column, dbValue[0], dbValue[1])
         : undefined;
     case 'isNull':
       return isNull(column);
     case 'isNotNull':
       return isNotNull(column);
     case 'contains':
-      return ilike(column, `%${escapeLikePattern(String(value))}%`);
+      return ilike(column, `%${escapeLikePattern(String(dbValue))}%`);
     case 'startsWith':
-      return ilike(column, `${escapeLikePattern(String(value))}%`);
+      return ilike(column, `${escapeLikePattern(String(dbValue))}%`);
     case 'endsWith':
-      return ilike(column, `%${escapeLikePattern(String(value))}`);
+      return ilike(column, `%${escapeLikePattern(String(dbValue))}%`);
     default:
       return undefined;
   }
 }
 
-/**
- * Escapes special characters in LIKE/ILIKE patterns to prevent injection.
- */
 export function escapeLikePattern(value: string): string {
   return value.replace(/[%_\\]/g, '\\$&');
 }
+
+export { toDbValue, isDateString };

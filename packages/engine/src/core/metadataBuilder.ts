@@ -7,7 +7,8 @@ import { EngineContext } from '../types/engine';
  */
 export interface TableMetadata {
   name: string;
-  dateRangeColumn?: string;
+  dateRangeColumn?: string | null;
+  dateColumns: string[];
   columns: ColumnMetadata[];
   capabilities: {
     search: boolean;
@@ -201,20 +202,24 @@ export function buildMetadata(
   }
 
   // ── Auto-detect date range column if not explicit ──
-  let dateRangeColumn = config.dateRangeColumn;
-  if (!dateRangeColumn) {
-    const hasCreatedAt = allColumns.some(c => c.name === 'createdAt' || c.name === 'created_at');
+  const dateColumns = allColumns
+    .filter(c => c.type === 'date' && !c.computed)
+    .map(c => c.name);
+
+  let dateRangeColumn = config.dateRangeColumn ?? null;
+  if (!dateRangeColumn && dateColumns.length > 0) {
+    const hasCreatedAt = dateColumns.includes('createdAt') || dateColumns.includes('created_at');
     if (hasCreatedAt) {
-      dateRangeColumn = allColumns.find(c => c.name === 'createdAt' || c.name === 'created_at')?.name;
+      dateRangeColumn = dateColumns.find(c => c === 'createdAt' || c === 'created_at') ?? null;
     } else {
-      const dateCol = allColumns.find(c => c.type === 'date' && !c.computed);
-      if (dateCol) dateRangeColumn = dateCol.name;
+      dateRangeColumn = dateColumns[0];
     }
   }
 
   return {
     name: config.name,
     dateRangeColumn,
+    dateColumns,
     columns,
     capabilities: {
       search: config.search?.enabled ?? false,
