@@ -20,6 +20,7 @@
 
 ## Features
 
+* [All Features](features.md)
 * [Date Filtering](date-filtering.md)
 * [Type Generation](codegen.md)
 
