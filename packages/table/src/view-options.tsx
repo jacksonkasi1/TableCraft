@@ -34,15 +34,15 @@ export function DataTableViewOptions<TData>({
   size = "default",
   tableId,
 }: DataTableViewOptionsProps<TData>) {
-  // Get columns that can be hidden
+  const allColumns = table.getAllColumns();
+  
   const columns = useMemo(
     () =>
-      table
-        .getAllColumns()
-        .filter(
-          (column) => column.getCanHide()
-        ),
-    [table]
+      allColumns.filter(
+        (column) =>
+          typeof column.accessorFn !== "undefined" && column.getCanHide()
+      ),
+    [allColumns]
   );
 
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);

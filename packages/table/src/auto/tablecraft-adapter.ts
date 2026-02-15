@@ -32,6 +32,8 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
 
   const tableUrl = `${baseUrl.replace(/\/$/, "")}/${tableName}`;
 
+  let cachedMetadata: TableMetadata | null = null;
+
   async function resolveHeaders(): Promise<Record<string, string>> {
     if (!options.headers) return {};
     if (typeof options.headers === "function") {
@@ -60,7 +62,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
     return response.json();
   }
 
-  function buildQueryUrl(params: QueryParams): string {
+  function buildQueryUrl(params: QueryParams, dateRangeColumn: string | null | undefined): string {
     const url = new URL(tableUrl, globalThis.location?.origin ?? "http://localhost");
 
     if (params.page) url.searchParams.set("page", String(params.page));
@@ -91,11 +93,11 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
       }
     }
 
-    if (params.dateRange?.from) {
-      url.searchParams.set("filter[createdAt][gte]", params.dateRange.from);
+    if (dateRangeColumn && params.dateRange?.from) {
+      url.searchParams.set(`filter[${dateRangeColumn}][gte]`, params.dateRange.from);
     }
-    if (params.dateRange?.to) {
-      url.searchParams.set("filter[createdAt][lte]", params.dateRange.to);
+    if (dateRangeColumn && params.dateRange?.to) {
+      url.searchParams.set(`filter[${dateRangeColumn}][lte]`, params.dateRange.to);
     }
 
     return url.toString();
@@ -103,7 +105,15 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
 
   return {
     async query(params: QueryParams): Promise<QueryResult<T>> {
-      const url = buildQueryUrl(params);
+      if (!cachedMetadata) {
+        try {
+          cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
+        } catch {
+          // Fallback to createdAt if metadata fetch fails
+        }
+      }
+      const dateRangeCol = cachedMetadata?.dateRangeColumn;
+      const url = buildQueryUrl(params, dateRangeCol);
       const result = await request<{
         data: T[];
         meta: {
@@ -121,10 +131,21 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
     },
 
     async meta(): Promise<TableMetadata> {
-      return request<TableMetadata>(`${tableUrl}/_meta`);
+      if (!cachedMetadata) {
+        cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
+      }
+      return cachedMetadata;
     },
 
     async export(format: "csv" | "json", params?: Partial<QueryParams>): Promise<string> {
+      if (!cachedMetadata) {
+        try {
+          cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
+        } catch {
+          // Fallback
+        }
+      }
+      const dateRangeCol = cachedMetadata?.dateRangeColumn;
       const fullParams: QueryParams = {
         page: 1,
         pageSize: 10000,
@@ -135,7 +156,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
         dateRange: { from: "", to: "" },
         ...params,
       };
-      const url = new URL(buildQueryUrl(fullParams));
+      const url = new URL(buildQueryUrl(fullParams, dateRangeCol));
       url.searchParams.set("export", format);
 
       const headers = await resolveHeaders();
