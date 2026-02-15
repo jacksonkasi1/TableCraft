@@ -105,14 +105,17 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
 
   return {
     async query(params: QueryParams): Promise<QueryResult<T>> {
+      let dateRangeCol: string | null | undefined = cachedMetadata?.dateRangeColumn ?? 'createdAt';
+      
       if (!cachedMetadata) {
         try {
           cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
-        } catch {
-          // Fallback to createdAt if metadata fetch fails
+          dateRangeCol = cachedMetadata?.dateRangeColumn ?? 'createdAt';
+        } catch (error) {
+          console.warn(`[TableCraft] Could not fetch metadata for "${tableName}"; date filtering will use fallback column "createdAt".`, error);
         }
       }
-      const dateRangeCol = cachedMetadata?.dateRangeColumn;
+      
       const url = buildQueryUrl(params, dateRangeCol);
       const result = await request<{
         data: T[];
@@ -138,14 +141,17 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
     },
 
     async export(format: "csv" | "json", params?: Partial<QueryParams>): Promise<string> {
+      let dateRangeCol: string | null | undefined = cachedMetadata?.dateRangeColumn ?? 'createdAt';
+      
       if (!cachedMetadata) {
         try {
           cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
-        } catch {
-          // Fallback
+          dateRangeCol = cachedMetadata?.dateRangeColumn ?? 'createdAt';
+        } catch (error) {
+          console.warn(`[TableCraft] Could not fetch metadata for "${tableName}"; date filtering will use fallback column "createdAt".`, error);
         }
       }
-      const dateRangeCol = cachedMetadata?.dateRangeColumn;
+      
       const fullParams: QueryParams = {
         page: 1,
         pageSize: 10000,

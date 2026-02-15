@@ -191,7 +191,7 @@ export function DataTableToolbar<TData extends ExportableData>({
                 });
               }}
               variant="outline"
-              className="h-9"
+              className={getInputSizeClass(config.size)}
             />
           )}
         </div>

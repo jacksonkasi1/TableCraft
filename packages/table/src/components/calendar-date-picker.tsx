@@ -6,6 +6,7 @@ import {
   startOfWeek,
   endOfWeek,
   subDays,
+  subYears,
   startOfMonth,
   endOfMonth,
   startOfYear,
@@ -165,7 +166,7 @@ export const CalendarDatePicker = React.forwardRef<
       setSelectedRange(null);
       if (part === "from") {
         if (yearFrom !== undefined) {
-          if (newMonthIndex < 0 || newMonthIndex > yearsRange + 1) return;
+          if (newMonthIndex < 0 || newMonthIndex > 11) return;
           const newMonth = new Date(yearFrom, newMonthIndex, 1);
           const from =
             numberOfMonths === 2
@@ -191,7 +192,7 @@ export const CalendarDatePicker = React.forwardRef<
         }
       } else {
         if (yearTo !== undefined) {
-          if (newMonthIndex < 0 || newMonthIndex > yearsRange + 1) return;
+          if (newMonthIndex < 0 || newMonthIndex > 11) return;
           const newMonth = new Date(yearTo, newMonthIndex, 1);
           const from = date.from
             ? startOfDay(toDate(date.from, { timeZone }))
@@ -293,8 +294,8 @@ export const CalendarDatePicker = React.forwardRef<
       { label: "This Year", start: startOfYear(today), end: endOfYear(today) },
       {
         label: "Last Year",
-        start: startOfYear(subDays(today, 365)),
-        end: endOfYear(subDays(today, 365)),
+        start: startOfYear(subYears(today, 1)),
+        end: endOfYear(subYears(today, 1)),
       },
     ];
 
@@ -347,6 +348,9 @@ export const CalendarDatePicker = React.forwardRef<
       }
     };
 
+    const handleWheelRef = React.useRef(handleWheel);
+    handleWheelRef.current = handleWheel;
+
     React.useEffect(() => {
       const firstDayElement = document.getElementById(`firstDay-${id}`);
       const firstMonthElement = document.getElementById(`firstMonth-${id}`);
@@ -364,11 +368,15 @@ export const CalendarDatePicker = React.forwardRef<
         secondYearElement,
       ];
 
+      const wheelHandler = (e: Event) => {
+        handleWheelRef.current(e as unknown as React.WheelEvent, "");
+      };
+
       const addPassiveEventListener = (element: HTMLElement | null) => {
         if (element) {
           element.addEventListener(
             "wheel",
-            handleWheel as unknown as EventListener,
+            wheelHandler,
             {
               passive: false,
             },
@@ -383,12 +391,12 @@ export const CalendarDatePicker = React.forwardRef<
           if (element) {
             element.removeEventListener(
               "wheel",
-              handleWheel as unknown as EventListener,
+              wheelHandler,
             );
           }
         });
       };
-    }, [highlightedPart, date]);
+    }, [id]);
 
     const formatWithTz = (date: Date, fmt: string) =>
       formatInTimeZone(date, timeZone, fmt);
