@@ -37,6 +37,29 @@ describe('inputValidator', () => {
       expect(() => validateInput(params, config)).not.toThrow();
     });
 
+    it('should skip unknown fields but still validate known fields in mixed requests', () => {
+      const config = createTestConfig([
+        { name: 'id', type: 'number', filterable: true },
+        { name: 'name', type: 'string', filterable: true },
+      ]);
+
+      const validMixedParams: EngineParams = {
+        filters: {
+          nonexistentField: { operator: 'eq', value: 123 },
+          id: { operator: 'gt', value: 100 },
+        },
+      };
+      expect(() => validateInput(validMixedParams, config)).not.toThrow();
+
+      const invalidMixedParams: EngineParams = {
+        filters: {
+          nonexistentField: { operator: 'eq', value: 123 },
+          id: { operator: 'gt', value: 'not-a-number' },
+        },
+      };
+      expect(() => validateInput(invalidMixedParams, config)).toThrow();
+    });
+
     it('should validate known filter fields with correct types', () => {
       const config = createTestConfig([
         { name: 'id', type: 'number', filterable: true },

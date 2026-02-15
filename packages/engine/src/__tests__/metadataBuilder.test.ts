@@ -104,6 +104,69 @@ describe('metadataBuilder', () => {
       expect(meta.dateColumns).toEqual(['createdAt', 'deliveredAt']);
     });
 
+    it('should fall back to auto-detected dateRangeColumn when config references a missing column', () => {
+      const config = createTestConfig({
+        dateRangeColumn: 'missingColumn',
+        columns: [
+          { name: 'id', type: 'number', label: 'ID', hidden: false, sortable: true, filterable: true },
+          { name: 'shippedAt', type: 'date', label: 'Shipped At', hidden: false, sortable: true, filterable: true },
+          { name: 'deliveredAt', type: 'date', label: 'Delivered At', hidden: false, sortable: true, filterable: true },
+        ],
+      });
+
+      const meta = buildMetadata(config);
+
+      expect(meta.dateRangeColumn).toBe('shippedAt');
+      expect(meta.dateColumns).toEqual(['shippedAt', 'deliveredAt']);
+    });
+
+    it('should fall back to auto-detected dateRangeColumn when config references a non-date column', () => {
+      const config = createTestConfig({
+        dateRangeColumn: 'id',
+        columns: [
+          { name: 'id', type: 'number', label: 'ID', hidden: false, sortable: true, filterable: true },
+          { name: 'shippedAt', type: 'date', label: 'Shipped At', hidden: false, sortable: true, filterable: true },
+          { name: 'deliveredAt', type: 'date', label: 'Delivered At', hidden: false, sortable: true, filterable: true },
+        ],
+      });
+
+      const meta = buildMetadata(config);
+
+      expect(meta.dateRangeColumn).toBe('shippedAt');
+      expect(meta.dateColumns).toEqual(['shippedAt', 'deliveredAt']);
+    });
+
+    it('should fall back to auto-detected dateRangeColumn when config references a hidden column', () => {
+      const config = createTestConfig({
+        dateRangeColumn: 'internalDate',
+        columns: [
+          { name: 'id', type: 'number', label: 'ID', hidden: false, sortable: true, filterable: true },
+          { name: 'shippedAt', type: 'date', label: 'Shipped At', hidden: false, sortable: true, filterable: true },
+          { name: 'internalDate', type: 'date', label: 'Internal', hidden: true, sortable: true, filterable: true },
+        ],
+      });
+
+      const meta = buildMetadata(config);
+
+      expect(meta.dateRangeColumn).toBe('shippedAt');
+      expect(meta.dateColumns).toEqual(['shippedAt']);
+    });
+
+    it('should exclude hidden columns from dateColumns', () => {
+      const config = createTestConfig({
+        columns: [
+          { name: 'id', type: 'number', label: 'ID', hidden: false, sortable: true, filterable: true },
+          { name: 'createdAt', type: 'date', label: 'Created At', hidden: false, sortable: true, filterable: true },
+          { name: 'internalDate', type: 'date', label: 'Internal', hidden: true, sortable: true, filterable: true },
+        ],
+      });
+
+      const meta = buildMetadata(config);
+
+      expect(meta.dateColumns).toEqual(['createdAt']);
+      expect(meta.dateRangeColumn).toBe('createdAt');
+    });
+
     it('should return null when dateRangeColumn is not set and no date columns exist', () => {
       const config = createTestConfig({
         columns: [

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolveDatePreset, isDatePreset } from '../src/core/datePresets';
 
 describe('isDatePreset', () => {
@@ -19,46 +19,51 @@ describe('isDatePreset', () => {
 });
 
 describe('resolveDatePreset', () => {
-  it('today should return a valid date range', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-06-15T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('today should return start of today to start of tomorrow (half-open interval)', () => {
     const range = resolveDatePreset('today')!;
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(range.start.getTime()).toBeLessThan(range.end.getTime());
+    expect(range.start.toISOString()).toBe('2024-06-15T00:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2024-06-16T00:00:00.000Z');
   });
 
-  it('yesterday should return a valid date range', () => {
+  it('yesterday should return start of yesterday to start of today (half-open interval)', () => {
     const range = resolveDatePreset('yesterday')!;
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(range.start.getTime()).toBeLessThan(range.end.getTime());
+    expect(range.start.toISOString()).toBe('2024-06-14T00:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2024-06-15T00:00:00.000Z');
   });
 
-  it('last7days should span approximately 7 days', () => {
+  it('last7days should span 7 days (half-open interval)', () => {
     const range = resolveDatePreset('last7days')!;
+    expect(range.start.toISOString()).toBe('2024-06-08T00:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2024-06-16T00:00:00.000Z');
     const diffDays = (range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24);
-    expect(diffDays).toBeGreaterThanOrEqual(7);
-    expect(diffDays).toBeLessThanOrEqual(9);
+    expect(diffDays).toBe(8);
   });
 
-  it('thisMonth should return a valid range', () => {
+  it('thisMonth should return first day of month to tomorrow (half-open interval)', () => {
     const range = resolveDatePreset('thisMonth')!;
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(range.start.getTime()).toBeLessThan(range.end.getTime());
+    expect(range.start.toISOString()).toBe('2024-06-01T00:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2024-06-16T00:00:00.000Z');
   });
 
-  it('lastMonth should return a valid range', () => {
+  it('lastMonth should return full previous month (half-open interval)', () => {
     const range = resolveDatePreset('lastMonth')!;
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(range.start.getTime()).toBeLessThan(range.end.getTime());
+    expect(range.start.toISOString()).toBe('2024-05-01T00:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2024-06-01T00:00:00.000Z');
   });
 
-  it('thisYear should return a valid range', () => {
+  it('thisYear should return first day of year to tomorrow (half-open interval)', () => {
     const range = resolveDatePreset('thisYear')!;
-    expect(range.start).toBeInstanceOf(Date);
-    expect(range.end).toBeInstanceOf(Date);
-    expect(range.start.getTime()).toBeLessThan(range.end.getTime());
+    expect(range.start.toISOString()).toBe('2024-01-01T00:00:00.000Z');
+    expect(range.end.toISOString()).toBe('2024-06-16T00:00:00.000Z');
   });
 
   it('custom should return undefined', () => {
