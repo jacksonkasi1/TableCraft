@@ -141,18 +141,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     // Global date range filter
     if (params.dateRange && (params.dateRange.from || params.dateRange.to)) {
       const cols = getTableColumns(baseTable);
-      let dateColName = config.dateRangeColumn;
-
-      // Auto-detect if not configured
-      if (!dateColName) {
-        if (cols['createdAt']) dateColName = 'createdAt';
-        else if (cols['created_at']) dateColName = 'created_at';
-        else {
-          // Find first date column
-          const col = config.columns.find((c) => c.type === 'date' && !c.computed);
-          if (col) dateColName = col.name;
-        }
-      }
+      
+      const metadata = buildMetadata(config, context);
+      let dateColName = config.dateRangeColumn ?? metadata.dateRangeColumn;
 
       if (dateColName) {
         const colDef = config.columns.find((c) => c.name === dateColName);
@@ -161,10 +152,16 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
         if (dateCol) {
           if (params.dateRange.from) {
-            parts.push(gte(dateCol, new Date(params.dateRange.from)));
+            const fromDate = new Date(params.dateRange.from);
+            if (!isNaN(fromDate.getTime())) {
+              parts.push(gte(dateCol, fromDate));
+            }
           }
           if (params.dateRange.to) {
-            parts.push(lte(dateCol, new Date(params.dateRange.to)));
+            const toDate = new Date(params.dateRange.to);
+            if (!isNaN(toDate.getTime())) {
+              parts.push(lte(dateCol, toDate));
+            }
           }
         }
       }

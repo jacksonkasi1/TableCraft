@@ -22,12 +22,22 @@ function isDateString(value: unknown): value is string {
   return /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?/.test(value);
 }
 
-function toDbValue(value: unknown): unknown {
+const STRING_OPERATORS = ['like', 'ilike', 'contains', 'startsWith', 'endsWith'];
+
+function toDbValue(value: unknown, operator?: Operator): unknown {
+  if (operator && STRING_OPERATORS.includes(operator)) {
+    return value;
+  }
   if (isDateString(value)) {
     return new Date(value);
   }
   if (Array.isArray(value)) {
-    return value.map(v => isDateString(v) ? new Date(v) : v);
+    return value.map(v => {
+      if (operator && STRING_OPERATORS.includes(operator)) {
+        return v;
+      }
+      return isDateString(v) ? new Date(v) : v;
+    });
   }
   return value;
 }
@@ -37,7 +47,7 @@ export function applyOperator(
   column: Column,
   value: unknown
 ): SQL | undefined {
-  const dbValue = toDbValue(value);
+  const dbValue = toDbValue(value, operator);
   
   switch (operator) {
     case 'eq':
@@ -73,7 +83,7 @@ export function applyOperator(
     case 'startsWith':
       return ilike(column, `${escapeLikePattern(String(dbValue))}%`);
     case 'endsWith':
-      return ilike(column, `%${escapeLikePattern(String(dbValue))}%`);
+      return ilike(column, `%${escapeLikePattern(String(dbValue))}`);
     default:
       return undefined;
   }

@@ -203,7 +203,7 @@ export function buildMetadata(
 
   // ── Auto-detect date range column if not explicit ──
   const dateColumns = allColumns
-    .filter(c => c.type === 'date' && !c.computed)
+    .filter(c => c.type === 'date' && !c.computed && !c.hidden)
     .map(c => c.name);
 
   let dateRangeColumn = config.dateRangeColumn ?? null;
