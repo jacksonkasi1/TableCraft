@@ -16,6 +16,11 @@
 * [Extending](5-extending.md)
 * [Errors](6-errors.md)
 
+## Features
+
+* [Date Filtering](date-filtering.md)
+* [Type Generation](codegen.md)
+
 ## API Reference
 
 * [API Reference](api-reference.md)
