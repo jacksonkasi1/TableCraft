@@ -67,6 +67,10 @@ That's it! 🎉 No column definitions needed.
 | 🔐 **Role-based Visibility** | Control column visibility by user role |
 | 🗑️ **Soft Delete Support** | Built-in soft delete filtering |
 
+**Plus:** Caching plugin, multiple backend adapters (Hono, Express, Next.js, Elysia), computed columns, relationships & joins, type generation, OpenAPI spec, and more...
+
+📚 **[Explore all features in the docs →](https://jacksonkasi.gitbook.io/tablecraft)**
+
 ---
 
 ## 📦 Packages
