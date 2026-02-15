@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/codegen",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Generate TypeScript types from TableCraft API metadata",
   "type": "module",
   "main": "./dist/index.js",
@@ -10,8 +10,8 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [

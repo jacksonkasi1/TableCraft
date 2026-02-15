@@ -102,16 +102,26 @@ GET /api/data/products?filter[category]=electronics&filter[price][gte]=100
 ## Configuration Options
 
 ```ts
+interface NextHandlerOptions {
+  db: DrizzleDb;                  // Drizzle database instance
+  schema: Record<string, unknown>; // Drizzle schema object
+  configs: TableConfigs;          // Table configs map
+  getContext?: (request: Request) => Promise<{
+    tenantId?: string;
+    user?: { id: string; roles: string[] };
+  }>;
+  onError?: (error: Error, request: Request) => void;
+}
+
 createNextHandler({
-  db,                    // Drizzle database instance
-  schema,                // Drizzle schema object
-  configs,               // Table configs map
+  db,
+  schema,
+  configs,
   getContext: async (request) => ({
-    tenantId: string,
-    user: { id: string, roles: string[] },
+    tenantId: 'tenant_123',
+    user: { id: '1', roles: ['admin'] },
   }),
   onError: (error, request) => {
-    // Custom error handling
     console.error(error);
   },
 });

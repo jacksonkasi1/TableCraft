@@ -126,17 +126,28 @@ const users = await client.api.data.users.get({
 ## Configuration Options
 
 ```ts
+interface ElysiaPluginOptions {
+  db: DrizzleDb;                   // Drizzle database instance
+  schema: Record<string, unknown>; // Drizzle schema object
+  configs: TableConfigs;           // Table configs map
+  prefix?: string;                 // Route prefix (default: '/api/data')
+  getContext?: (context: ElysiaContext) => Promise<{
+    tenantId?: string;
+    user?: { id: string; roles: string[] };
+  }>;
+  onError?: (error: Error, context: ElysiaContext) => void;
+}
+
 createElysiaPlugin({
-  db,                    // Drizzle database instance
-  schema,                // Drizzle schema object
-  configs,               // Table configs map
-  prefix: '/api/data',   // Route prefix (optional)
-  getContext: async ({ request, store, ...context }) => ({
-    tenantId: string,
-    user: { id: string, roles: string[] },
+  db,
+  schema,
+  configs,
+  prefix: '/api/data',
+  getContext: async ({ request, store }) => ({
+    tenantId: 'tenant_123',
+    user: { id: '1', roles: ['admin'] },
   }),
   onError: (error, context) => {
-    // Custom error handling
     console.error(error);
   },
 });
