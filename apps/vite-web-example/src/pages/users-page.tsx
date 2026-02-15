@@ -1,10 +1,8 @@
 import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
+import type { UsersRow } from '../generated';
 
-/**
- * Users Page - Demonstrates user management with TableCraft
- */
 export function UsersPage() {
-  const adapter = createTableCraftAdapter({
+  const adapter = createTableCraftAdapter<UsersRow>({
     baseUrl: '/api/engine',
     table: 'users',
   });
@@ -18,11 +16,10 @@ export function UsersPage() {
         </p>
       </div>
 
-      <DataTable
+      <DataTable<UsersRow>
         adapter={adapter}
         config={{
           enableSearch: true,
-
           enableExport: true,
           enableColumnResizing: true,
           defaultPageSize: 10,
