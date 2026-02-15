@@ -32,6 +32,7 @@ export function parseRequest(
     distinct: raw['distinct'] === 'true',
     export: parseExportFormat(raw['export']),
     includeDeleted: raw['includeDeleted'] === 'true',
+    dateRange: parseDateRange(raw),
   };
 }
 
@@ -120,5 +121,14 @@ function coerceValue(val: string): unknown {
 
 function parseExportFormat(val: string | undefined): 'csv' | 'json' | undefined {
   if (val === 'csv' || val === 'json') return val;
+  return undefined;
+}
+
+function parseDateRange(raw: Record<string, string>): { from?: string; to?: string } | undefined {
+  const from = raw['dateRange[from]'];
+  const to = raw['dateRange[to]'];
+  if (from || to) {
+    return { from, to };
+  }
   return undefined;
 }

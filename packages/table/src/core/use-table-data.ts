@@ -105,10 +105,13 @@ export function useTableData<T extends Record<string, unknown>>(
       search: preprocessSearch(search),
       sort: sortBy,
       sortOrder,
-      filters: {},
+      filters: columnFilters.reduce((acc, curr) => {
+        acc[curr.id] = { operator: "eq", value: curr.value };
+        return acc;
+      }, {} as Record<string, any>),
       dateRange: { from: dateRange.from, to: dateRange.to },
     }),
-    [page, pageSize, search, sortBy, sortOrder, dateRange]
+    [page, pageSize, search, sortBy, sortOrder, dateRange, columnFilters]
   );
 
   // ─── Fetch data on param change ───

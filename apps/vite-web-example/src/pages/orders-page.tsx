@@ -1,17 +1,9 @@
-import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
+import { DataTable } from '@tablecraft/table';
+import { createOrdersAdapter, type OrdersRow } from '../generated';
 
-/**
- * Orders Page - Demonstrates TableCraft with relationships
- *
- * This page showcases:
- * - TableCraft adapter with related data (joins)
- * - Custom column configurations
- * - Badge rendering for status
- */
 export function OrdersPage() {
-  const adapter = createTableCraftAdapter({
+  const adapter = createOrdersAdapter({
     baseUrl: '/api/engine',
-    table: 'orders',
   });
 
   return (
@@ -23,11 +15,10 @@ export function OrdersPage() {
         </p>
       </div>
 
-      <DataTable
+      <DataTable<OrdersRow>
         adapter={adapter}
         config={{
           enableSearch: true,
-
           enableExport: true,
           enableColumnResizing: true,
           defaultPageSize: 10,

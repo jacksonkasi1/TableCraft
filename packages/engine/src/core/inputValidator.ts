@@ -40,14 +40,16 @@ function validateFilterValues(params: EngineParams, config: TableConfig): void {
     const col = columnMap.get(field);
 
     if (!col) {
-      throw new FieldError(field, 'does not exist');
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'test') {
+        console.warn(`[TableCraft] Filter field '${field}' does not exist in table '${config.name}', skipping`);
+      }
+      continue;
     }
 
     if (!col.filterable) {
       throw new FieldError(field, 'is not filterable');
     }
 
-    // Skip type check for null operators
     if (filter.operator === 'isNull' || filter.operator === 'isNotNull') continue;
 
     validateValueType(field, col.type, filter);

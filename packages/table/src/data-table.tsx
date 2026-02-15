@@ -78,7 +78,22 @@ export function DataTable<T extends Record<string, unknown>>({
   } = useTableData(adapter, tableConfig);
 
   // ─── Auto-columns from metadata ───
-  const { columns: autoColumns } = useAutoColumns(adapter, manualColumns, renderers);
+  const { columns: autoColumns, metadata } = useAutoColumns(adapter, manualColumns, renderers);
+
+  // Dynamically determine if date filter should be enabled
+  const dateFilterEnabled = useMemo(() => {
+    // 1. Explicit override takes precedence
+    if (configOverrides?.enableDateFilter !== undefined) {
+      return configOverrides.enableDateFilter;
+    }
+    // 2. Fallback to metadata capability
+    return !!metadata?.dateRangeColumn;
+  }, [configOverrides?.enableDateFilter, metadata?.dateRangeColumn]);
+
+  const effectiveConfig = useMemo(() => ({
+    ...tableConfig,
+    enableDateFilter: dateFilterEnabled,
+  }), [tableConfig, dateFilterEnabled]);
 
   // Add selection column if row selection is enabled
   const resolvedColumns = useMemo(() => {
@@ -441,7 +456,7 @@ export function DataTable<T extends Record<string, unknown>>({
           clearSelection={clearSelection}
           getSelectedItems={getSelectedItems as () => Promise<ExportableData[]>}
           getAllItems={getAllItems as () => ExportableData[]}
-          config={tableConfig}
+          config={effectiveConfig}
           exportConfig={exportConfig as import("./types").ExportConfig<ExportableData>}
           resetColumnSizing={() => {
             resetColumnSizing();

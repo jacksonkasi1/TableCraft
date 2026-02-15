@@ -133,6 +133,8 @@ export interface IncludeMetadata {
 
 export interface TableMetadata {
   name: string;
+  dateRangeColumn?: string | null;
+  dateColumns?: string[];
   columns: ColumnMetadata[];
   capabilities: {
     search: boolean;

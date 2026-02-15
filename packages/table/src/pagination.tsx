@@ -17,11 +17,11 @@ import {
 const getButtonSizeClass = (size: "sm" | "default" | "lg") => {
   switch (size) {
     case "sm":
-      return "h-7 w-7";
-    case "lg":
-      return "h-11 w-11";
-    default:
       return "h-8 w-8";
+    case "lg":
+      return "h-10 w-10";
+    default:
+      return "h-9 w-9";
   }
 };
 
@@ -40,7 +40,7 @@ export function DataTablePagination<TData>({
   pageSizeOptions = [10, 20, 30, 40, 50],
   size = "default",
 }: DataTablePaginationProps<TData>) {
-  const selectSize = size === "sm" ? "h-7" : size === "lg" ? "h-10" : "h-8";
+  const selectSize = size === "sm" ? "h-8" : size === "lg" ? "h-10" : "h-9";
 
   return (
     <div className="flex w-full flex-col items-center justify-between gap-4 overflow-auto px-2 py-1 sm:flex-row sm:gap-8">

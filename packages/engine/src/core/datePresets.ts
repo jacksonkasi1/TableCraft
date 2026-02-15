@@ -55,11 +55,11 @@ export function resolveDatePreset(preset: DatePreset): { start: Date; end: Date 
     }
 
     case 'thisYear':
-      return { start: new Date(today.getFullYear(), 0, 1), end: tomorrow };
+      return { start: new Date(Date.UTC(today.getUTCFullYear(), 0, 1)), end: tomorrow };
 
     case 'lastYear': {
-      const year = today.getFullYear();
-      return { start: new Date(year - 1, 0, 1), end: new Date(year, 0, 1) };
+      const year = today.getUTCFullYear();
+      return { start: new Date(Date.UTC(year - 1, 0, 1)), end: new Date(Date.UTC(year, 0, 1)) };
     }
 
     case 'custom':

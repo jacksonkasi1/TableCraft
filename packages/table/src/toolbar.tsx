@@ -9,14 +9,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./components/popover";
+import { CalendarDatePicker } from "./components/calendar-date-picker";
 import { resetUrlState } from "./utils/deep-utils";
 import { cn } from "./utils/cn";
 
 const getInputSizeClass = (size: "sm" | "default" | "lg") => {
   switch (size) {
     case "sm": return "h-8";
-    case "lg": return "h-11";
-    default: return "h-10";
+    case "lg": return "h-10";
+    default: return "h-9";
   }
 };
 
@@ -24,14 +25,14 @@ const getButtonSizeClass = (size: "sm" | "default" | "lg", isIcon = false) => {
   if (isIcon) {
     switch (size) {
       case "sm": return "h-8 w-8 p-0";
-      case "lg": return "h-11 w-11 p-0";
-      default: return "h-10 w-10 p-0";
+      case "lg": return "h-10 w-10 p-0";
+      default: return "h-9 w-9 p-0";
     }
   }
   switch (size) {
     case "sm": return "h-8 px-3";
-    case "lg": return "h-11 px-5";
-    default: return "h-10 px-4";
+    case "lg": return "h-10 px-4";
+    default: return "h-9 px-3";
   }
 };
 
@@ -177,29 +178,21 @@ export function DataTableToolbar<TData extends ExportableData>({
           {startToolbarContent}
 
           {config.enableDateFilter && (
-            <div className="flex items-center">
-              <input
-                type="text"
-                placeholder="dd/mm/yyyy to dd/mm/yyyy"
-                value={
-                  dates.from && dates.to
-                    ? `${dates.from.toLocaleDateString('en-GB')} to ${dates.to.toLocaleDateString('en-GB')}`
-                    : ""
-                }
-                readOnly
-                onClick={() => {
-                  // This will be handled by an external date picker component
-                  // For now, we show the placeholder
-                }}
-                className={cn(
-                  "w-fit cursor-pointer rounded-md border border-input bg-background px-3 text-sm",
-                  "placeholder:text-muted-foreground",
-                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                  "transition-colors",
-                  getInputSizeClass(config.size)
-                )}
-              />
-            </div>
+            <CalendarDatePicker
+              date={{
+                from: dates.from,
+                to: dates.to,
+              }}
+              onDateSelect={(range) => {
+                setDates({ from: range.from, to: range.to });
+                setDateRange({
+                  from: range.from.toISOString(),
+                  to: range.to.toISOString(),
+                });
+              }}
+              variant="outline"
+              className={getInputSizeClass(config.size)}
+            />
           )}
         </div>
 

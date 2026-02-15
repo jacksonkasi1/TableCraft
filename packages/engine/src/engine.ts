@@ -5,6 +5,8 @@ import {
   getTableColumns,
   and,
   eq,
+  gte,
+  lte,
   count as drizzleCount,
   getTableName,
 } from 'drizzle-orm';
@@ -134,6 +136,35 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       const tenantField = config.tenant.field ?? 'tenantId';
       const tenantCol = cols[tenantField];
       if (tenantCol) parts.push(eq(tenantCol, context.tenantId));
+    }
+
+    // Global date range filter
+    if (params.dateRange && (params.dateRange.from || params.dateRange.to)) {
+      const cols = getTableColumns(baseTable);
+      
+      const metadata = buildMetadata(config, context);
+      let dateColName = config.dateRangeColumn ?? metadata.dateRangeColumn;
+
+      if (dateColName) {
+        const colDef = config.columns.find((c) => c.name === dateColName);
+        const dbFieldName = colDef?.field ?? dateColName;
+        const dateCol = cols[dbFieldName];
+
+        if (dateCol) {
+          if (params.dateRange.from) {
+            const fromDate = new Date(params.dateRange.from);
+            if (!isNaN(fromDate.getTime())) {
+              parts.push(gte(dateCol, fromDate));
+            }
+          }
+          if (params.dateRange.to) {
+            const toDate = new Date(params.dateRange.to);
+            if (!isNaN(toDate.getTime())) {
+              parts.push(lte(dateCol, toDate));
+            }
+          }
+        }
+      }
     }
 
     parts.push(filterBuilder.buildStaticFilters(config));
