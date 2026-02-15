@@ -125,21 +125,26 @@ const users = await client.api.data.users.get({
 
 ## Configuration Options
 
+The plugin options are typed by `ElysiaAdapterOptions` from this package, which uses `EngineContext` from `@tablecraft/engine`:
+
 ```ts
-createElysiaPlugin({
+import type { EngineContext, TableConfig } from '@tablecraft/engine';
+import type { ElysiaAdapterOptions } from '@tablecraft/adapter-elysia';
+
+const options: ElysiaAdapterOptions = {
   db,                    // Drizzle database instance
   schema,                // Drizzle schema object
-  configs,               // Table configs map
-  prefix: '/api/data',   // Route prefix (optional)
-  getContext: async ({ request, store, ...context }) => ({
-    tenantId: string,
-    user: { id: string, roles: string[] },
+  configs,               // Table configs (array or object map)
+  getContext: async ({ request, store }): Promise<EngineContext> => ({
+    tenantId: request.headers.get('x-tenant-id') ?? undefined,
+    user: { id: '1', roles: ['admin'] },
   }),
-  onError: (error, context) => {
-    // Custom error handling
-    console.error(error);
+  checkAccess: async (config: TableConfig, context: EngineContext) => {
+    return context.user?.roles?.includes('admin') ?? false;
   },
-});
+};
+
+const app = new Elysia().use(createElysiaPlugin(options)).listen(3000);
 ```
 
 ## License

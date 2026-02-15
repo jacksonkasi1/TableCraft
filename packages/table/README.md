@@ -25,6 +25,16 @@ pnpm add @tablecraft/table
 bun add @tanstack/react-table react react-dom
 ```
 
+## Optional Dependencies
+
+For Excel export support, install `exceljs`:
+
+```bash
+bun add exceljs
+```
+
+> **Note:** Excel export is optional — if `exceljs` is not installed, the export feature will gracefully fall back to CSV/JSON formats.
+
 ## Features
 
 - **Auto-generated columns** — Columns generated from your table config metadata

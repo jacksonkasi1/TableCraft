@@ -101,20 +101,26 @@ GET /api/data/products?filter[category]=electronics&filter[price][gte]=100
 
 ## Configuration Options
 
+The handler options are typed by `NextHandlerOptions` from this package, which uses `EngineContext` from `@tablecraft/engine`:
+
 ```ts
-createNextHandler({
+import type { EngineContext, TableConfig } from '@tablecraft/engine';
+import type { NextHandlerOptions } from '@tablecraft/adapter-next';
+
+const options: NextHandlerOptions = {
   db,                    // Drizzle database instance
   schema,                // Drizzle schema object
-  configs,               // Table configs map
-  getContext: async (request) => ({
-    tenantId: string,
-    user: { id: string, roles: string[] },
+  configs,               // Table configs (array or object map)
+  getContext: async (request: Request): Promise<EngineContext> => ({
+    tenantId: 'tenant_123',
+    user: { id: '1', roles: ['admin'] },
   }),
-  onError: (error, request) => {
-    // Custom error handling
-    console.error(error);
+  checkAccess: async (config: TableConfig, context: EngineContext) => {
+    return context.user?.roles?.includes('admin') ?? false;
   },
-});
+};
+
+const handler = createNextHandler(options);
 ```
 
 ## License

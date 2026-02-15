@@ -23,7 +23,7 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": "^0.1.0-beta.3",
+    "@tablecraft/engine": "^0.1.0-beta.4",
     "express": ">=4.0.0"
   },
   "devDependencies": {
