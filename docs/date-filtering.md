@@ -6,9 +6,9 @@ TableCraft provides powerful date filtering capabilities that work automatically
 
 When you define a table with date columns, TableCraft automatically:
 
-1. Detects date columns from your schema
-2. Sets `dateRangeColumn` in metadata (prefers `createdAt` if present)
-3. Enables the date filter in the frontend DataTable
+1.  Detects date columns from your schema
+2.  Sets `dateRangeColumn` in metadata (prefers `createdAt` if present)
+3.  Enables the date filter in the frontend DataTable
 
 ### Example: Table with Date Columns
 
@@ -24,8 +24,8 @@ defineTable(orders)
   );
 ```
 
-### Generated Metadata
-
+{% hint style="info" %}
+**Generated Metadata:**
 ```json
 {
   "name": "orders",
@@ -40,16 +40,16 @@ defineTable(orders)
   ]
 }
 ```
+{% endhint %}
 
 ## Date Range Column
 
 The `dateRangeColumn` determines which column the global date picker filters by default.
 
 ### Auto-Detection Priority
-
-1. Explicit `dateRangeColumn` in config
-2. Column named `createdAt` or `created_at`
-3. First column with `type: 'date'`
+1.  Explicit `dateRangeColumn` in config
+2.  Column named `createdAt` or `created_at`
+3.  First column with `type: 'date'`
 
 ### Manual Configuration
 
@@ -67,8 +67,8 @@ defineTable(products)
 
 ## Frontend Usage
 
-### Auto Date Filter
-
+{% tabs %}
+{% tab title="Auto Filter" %}
 The DataTable automatically shows a date picker when `dateRangeColumn` is set:
 
 ```tsx
@@ -84,9 +84,9 @@ function OrdersPage() {
   // Date picker automatically shown
 }
 ```
+{% endtab %}
 
-### No Date Filter
-
+{% tab title="No Filter" %}
 When a table has no date columns, no date picker is shown:
 
 ```tsx
@@ -100,15 +100,17 @@ function ProductsPage() {
   // No date picker shown
 }
 ```
+{% endtab %}
 
-### Disable Date Filter
-
+{% tab title="Explicitly Disabled" %}
 ```tsx
 <DataTable 
   adapter={adapter}
   config={{ enableDateFilter: false }}
 />
 ```
+{% endtab %}
+{% endtabs %}
 
 ## Date Filter Operators
 
@@ -147,54 +149,22 @@ GET /engine/orders?filter[shippedAt][gte]=2024-01-01T00:00:00Z
 
 The frontend uses a full-featured calendar date picker with:
 
-- Date range selection
-- Quick presets (Today, This Week, This Month, etc.)
-- Month/Year dropdown navigation
-- Scroll wheel date adjustment
-
-### Presets Available
-
-- Today
-- Yesterday
-- This Week
-- Last Week
-- Last 7 Days
-- This Month
-- Last Month
-- This Year
-- Last Year
+*   Date range selection
+*   Quick presets (Today, This Week, This Month, etc.)
+*   Month/Year dropdown navigation
+*   Scroll wheel date adjustment
 
 ## Handling Unknown Date Filters
 
-If a date filter is sent for a non-existent column, TableCraft gracefully ignores it instead of throwing an error:
+If a date filter is sent for a non-existent column, TableCraft gracefully ignores it instead of throwing an error.
 
-```bash
-# Products table has no createdAt column
-# This request will NOT crash - filter is ignored
-GET /engine/products?filter[createdAt][gte]=2024-01-01
-
-# Returns all products normally
-```
-
-This ensures:
-- Frontend caching doesn't cause errors
-- Generic components work across all tables
-- Graceful degradation
-
-## Date Serialization
-
-Dates are serialized as ISO 8601 strings:
-
-```typescript
-// Frontend sends
-{ dateRange: { from: "2024-01-15T00:00:00.000Z", to: "2024-01-16T23:59:59.999Z" } }
-
-// Backend receives and converts to Date objects for Drizzle ORM
-```
+{% hint style="warning" %}
+This ensures frontend caching doesn't cause errors and generic components work across all tables.
+{% endhint %}
 
 ## TypeScript Support
 
-Generated types include date columns:
+Generated types include date columns automatically serialized as ISO strings.
 
 ```typescript
 export interface OrdersRow extends Record<string, unknown> {
@@ -202,12 +172,5 @@ export interface OrdersRow extends Record<string, unknown> {
   status: string;
   createdAt: string | null;  // ISO string in TypeScript
   shippedAt: string | null;
-}
-
-export interface OrdersFilters {
-  createdAt?: { 
-    operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between'; 
-    value: string | [string, string] 
-  };
 }
 ```

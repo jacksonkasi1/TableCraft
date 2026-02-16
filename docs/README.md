@@ -6,8 +6,9 @@ Welcome to the TableCraft Engine documentation! This engine simplifies database 
 
 Start with the basics to understand how to define tables and fetch data.
 
-### Table of Contents
-
+{% columns %}
+{% column %}
+### Basics
 1. [**Basics**](./1-basics.md)
    - Defining your first table.
    - Standard query parameters (sort, filter, paginate).
@@ -22,26 +23,30 @@ Start with the basics to understand how to define tables and fetch data.
    - Computed columns (SQL expressions).
    - Custom search logic.
    - Transforms (formatting data).
+{% endcolumn %}
 
+{% column %}
+### Core Concepts
 4. [**Security & Access Control**](./4-security.md)
-   - Handling sensitive data (passwords, tokens).
+   - Handling sensitive data.
    - Tenant isolation.
    - Soft deletes.
 
 5. [**Extending & Raw SQL**](./5-extending.md)
    - When the engine isn't enough.
    - Writing raw Drizzle queries.
-   - Using `manualResult` for consistent API responses.
+   - Using `manualResult`.
 
 6. [**Error Handling**](./6-errors.md)
-   - Input validation and field checking.
-   - Typed error class (ValidationError, FieldError).
-   - Handling errors in your API framework.
+   - Input validation.
+   - Typed error class.
+{% endcolumn %}
+{% endcolumns %}
 
 ## Features
 
-### Date Filtering
-
+{% tabs %}
+{% tab title="Date Filtering" %}
 Automatic date range filtering with smart detection:
 
 - Auto-detects date columns from schema
@@ -50,9 +55,9 @@ Automatic date range filtering with smart detection:
 - Quick presets (Today, This Week, This Month, etc.)
 
 [Learn more about Date Filtering →](./date-filtering.md)
+{% endtab %}
 
-### Type Generation
-
+{% tab title="Type Generation" %}
 Generate TypeScript types from your API:
 
 - Full type safety for frontend code
@@ -61,47 +66,46 @@ Generate TypeScript types from your API:
 - CI/CD integration ready
 
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 
 [Learn more about Type Generation →](./codegen.md)
+{% endtab %}
+{% endtabs %}
 
 ## API Reference
 
-7. [**Metadata API**](./metadata-api.md)
-   - Auto-generated frontend schema (`/_meta` endpoint).
-   - Building data tables without hardcoding columns.
-   - Role-based column visibility.
-   - Date presets and enum dropdowns.
-   - Frontend SDK (`@tablecraft/client`) and React hooks.
-
-8. [**OpenAPI Spec Generation**](./openapi.md)
-   - Auto-generate OpenAPI 3.0 specifications from your configs.
-   - Serve specs at runtime or write to files.
-   - Integration with Swagger UI, Postman, and code generators.
-   - Document all query parameters, filters, and responses.
-
-9. [**Type Safety**](./type-safety.md)
-   - Type-safe helpers for common operations.
-   - Date range filtering with TypeScript.
-
-10. [**Examples**](./examples.md)
-    - Real-world usage patterns.
-
-## Quick Example
-
-```typescript
-import { defineTable } from '@tablecraft/engine';
-import { products } from './db/schema';
-
-export const productConfig = defineTable(products)
-  .label('name', 'Product Name')
-  .search('name', 'category')
-  .sort('-price')
-  .filter('category', 'isArchived')
-  .pageSize(20)
-  .toConfig();
-```
+<table data-view="cards">
+    <thead>
+        <tr>
+            <th>Topic</th>
+            <th>Description</th>
+            <th data-card-target data-type="content-ref">Link</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Metadata API</td>
+            <td>Auto-generated frontend schema endpoint.</td>
+            <td><a href="metadata-api.md">metadata-api.md</a></td>
+        </tr>
+        <tr>
+            <td>OpenAPI Spec</td>
+            <td>Auto-generate Swagger/OpenAPI 3.0 specs.</td>
+            <td><a href="openapi.md">openapi.md</a></td>
+        </tr>
+        <tr>
+            <td>Type Safety</td>
+            <td>Helpers for SQL type safety.</td>
+            <td><a href="type-safety.md">type-safety.md</a></td>
+        </tr>
+        <tr>
+            <td>Examples</td>
+            <td>Real-world usage patterns.</td>
+            <td><a href="examples.md">examples.md</a></td>
+        </tr>
+    </tbody>
+</table>
 
 ## Packages
 

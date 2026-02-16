@@ -25,12 +25,18 @@ export const userConfig = defineTable(users)
   .toConfig();
 ```
 
+{% hint style="success" %}
 **API Request:**
 `GET /users?sort=age&filter[age][gte]=18`
+{% endhint %}
 
 ## 2. Custom Search Logic
 
 By default, `.search('name')` does a simple `ILIKE %query%`. You can customize this behavior by adding computed columns specifically for searching.
+
+{% tabs %}
+{% tab title="Search Vector" %}
+Create a computed column that concatenates searchable text, then use it for search.
 
 ```typescript
 export const productConfig = defineTable(products)
@@ -42,41 +48,54 @@ export const productConfig = defineTable(products)
   .search('searchVector')
   .toConfig();
 ```
+{% endtab %}
 
+{% tab title="Multi-Column" %}
 Alternatively, you can just search across multiple existing columns:
+
 ```typescript
 .search('name', 'sku', 'category') // Matches ANY of these
 ```
+{% endtab %}
+{% endtabs %}
 
 ## 3. Data Transformation
 
 You often need to format data before sending it to the client.
 
-### Database Transforms (`dbTransform`)
+{% tabs %}
+{% tab title="Database Transforms" %}
 Use SQL functions to transform the data *before* it leaves the database.
 
 ```typescript
-.dbTransform('email', 'LOWER') // Always return lowercase emails
-.dbTransform('createdAt', "TO_CHAR(?, 'YYYY-MM-DD')") // Format date string
-```
+// Always return lowercase emails
+.dbTransform('email', 'LOWER')
 
-### JavaScript Transforms (`jsTransform`)
-Use JavaScript functions to transform the data *after* fetching it. This is useful for logic that is hard to write in SQL.
+// Format date string
+.dbTransform('createdAt', "TO_CHAR(?, 'YYYY-MM-DD')")
+```
+{% endtab %}
+
+{% tab title="JavaScript Transforms" %}
+Use JavaScript functions to transform the data *after* fetching it.
 
 ```typescript
+// Clean up metadata object
 .transform('metadata', (meta) => {
-  // Parse JSON or clean up object
   return meta?.publicArgs || {};
 })
+
+// Convert cents to dollars
 .transform('price', (cents) => {
-  // Convert cents to dollars
   return (cents / 100).toFixed(2);
 })
 ```
+{% endtab %}
+{% endtabs %}
 
 ## 4. Static Filters (Base Conditions)
 
-Sometimes you want to enforce a filter that the API user cannot change. For example, ensuring a user can only see "published" posts.
+Sometimes you want to enforce a filter that the API user cannot change.
 
 ```typescript
 // src/config/posts.ts
@@ -91,6 +110,8 @@ export const postConfig = defineTable(posts)
 
 Working with dates in SQL can be tricky. We provide type-safe helpers to make common date operations easy and readable.
 
+{% columns %}
+{% column %}
 ### Relative Time (`ago`)
 Filter for records within a relative time range (e.g., "last 30 days").
 
@@ -99,10 +120,16 @@ import { defineTable, ago } from '@tablecraft/engine';
 
 export const recentOrders = defineTable(orders)
   // Only show orders from the last 30 days
-  .where({ field: 'createdAt', op: 'gt', value: ago(30, 'days') })
+  .where({
+    field: 'createdAt',
+    op: 'gt',
+    value: ago(30, 'days')
+  })
   .toConfig();
 ```
+{% endcolumn %}
 
+{% column %}
 ### Date Truncation (`dateTrunc`)
 Group data by time periods (day, month, year).
 
@@ -115,6 +142,8 @@ export const monthlySales = defineTable(orders)
   .aggregate('total', 'sum', 'amount')
   .toConfig();
 ```
+{% endcolumn %}
+{% endcolumns %}
 
 ## Next Steps
 

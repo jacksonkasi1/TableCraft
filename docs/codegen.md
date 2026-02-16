@@ -4,20 +4,31 @@ The `@tablecraft/codegen` package generates TypeScript types from your TableCraf
 
 ## Installation
 
+{% tabs %}
+{% tab title="pnpm" %}
 ```bash
 # Install as dev dependency
 pnpm add -D @tablecraft/codegen
 
 # Or use directly with npx
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
+```
+{% endtab %}
+
+{% tab title="npx" %}
+```bash
+# Use directly with npx
 npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
 ```
+{% endtab %}
+{% endtabs %}
 
 ## Usage
 
 ### Basic Usage
 
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 
 This will:
@@ -36,16 +47,25 @@ This will:
 
 ### Examples
 
+{% tabs %}
+{% tab title="Generate All" %}
 ```bash
-# Generate all tables
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
+```
+{% endtab %}
 
-# Generate specific tables
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated --tables users orders
+{% tab title="Specific Tables" %}
+```bash
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated --tables users orders
+```
+{% endtab %}
 
-# With authentication
+{% tab title="Authenticated" %}
+```bash
 npx @tablecraft/codegen --url https://api.example.com/engine --out ./src/generated -H "Authorization: Bearer token"
 ```
+{% endtab %}
+{% endtabs %}
 
 ## Generated Files
 
@@ -60,8 +80,8 @@ src/generated/
 
 ## Generated Types
 
-### Row Interface
-
+{% tabs %}
+{% tab title="Row Interface" %}
 Each table generates a Row interface with all column types:
 
 ```typescript
@@ -73,9 +93,9 @@ export interface UsersRow extends Record<string, unknown> {
   createdAt: string | null;
 }
 ```
+{% endtab %}
 
-### Filters Interface
-
+{% tab title="Filters Interface" %}
 Filter types with operator unions:
 
 ```typescript
@@ -85,9 +105,9 @@ export interface UsersFilters {
   isActive?: { operator: 'eq' | 'neq'; value: boolean };
 }
 ```
+{% endtab %}
 
-### Adapter Factory
-
+{% tab title="Adapter Factory" %}
 Typed adapter factory functions:
 
 ```typescript
@@ -96,6 +116,8 @@ export function createUsersAdapter(options: {
   headers?: Record<string, string>;
 }): DataAdapter<UsersRow>
 ```
+{% endtab %}
+{% endtabs %}
 
 ## Using Generated Types
 
@@ -126,16 +148,38 @@ const adapter = createTableCraftAdapter<UsersRow>({
 });
 ```
 
-## Type Safety Benefits
+## Benefits
 
-1. **Autocomplete** - Column names and filter operators
-2. **Type checking** - Catch errors at compile time
-3. **Refactoring** - Rename columns safely across codebase
-4. **Documentation** - Types serve as inline documentation
+<table data-view="cards">
+    <thead>
+        <tr>
+            <th>Benefit</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Autocomplete</td>
+            <td>Column names and filter operators appear in your IDE.</td>
+        </tr>
+        <tr>
+            <td>Type Checking</td>
+            <td>Catch errors like typos or invalid types at compile time.</td>
+        </tr>
+        <tr>
+            <td>Refactoring</td>
+            <td>Rename columns safely across the entire codebase.</td>
+        </tr>
+        <tr>
+            <td>Documentation</td>
+            <td>Generated types serve as always-up-to-date documentation.</td>
+        </tr>
+    </tbody>
+</table>
 
 ## CI/CD Integration
 
-Add to your `package.json`:
+Add to your `package.json` to ensure types are always fresh before building:
 
 ```json
 {
@@ -144,24 +188,4 @@ Add to your `package.json`:
     "prebuild": "pnpm codegen"
   }
 }
-```
-
-## Configuration File (Coming Soon)
-
-Future versions will support a configuration file:
-
-```yaml
-# tablecraft.config.yaml
-api:
-  url: http://localhost:5000/engine
-  headers:
-    Authorization: Bearer ${API_TOKEN}
-
-output:
-  dir: ./src/generated
-  
-tables:
-  - users
-  - orders
-  - products
 ```
