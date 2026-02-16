@@ -247,7 +247,7 @@ import type { ProductsRow, ProductsColumn } from './generated';
 | `idField` | `keyof T` | ID field for row tracking (default: 'id') |
 | `onRowClick` | `(row: T, index: number) => void` | Row click handler |
 | `hiddenColumns` | `string[]` | Columns to hide from UI |
-| `startToolbarContent` | `React.ReactNode` | Content before built-in toolbar controls |
+| `startToolbarContent` | `React.ReactNode \| (ctx: ToolbarContext<T>) => React.ReactNode` | Content before built-in toolbar controls |
 | `toolbarContent` | `React.ReactNode` | Content after built-in toolbar controls |
 | `renderToolbar` | `(ctx: ToolbarContext<T>) => React.ReactNode` | Custom toolbar renderer |
 | `className` | `string` | CSS class for outer wrapper |

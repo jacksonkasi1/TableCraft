@@ -34,15 +34,12 @@ export function DataTableViewOptions<TData>({
   size = "default",
   tableId,
 }: DataTableViewOptionsProps<TData>) {
-  console.log("DataTableViewOptions");
   const isLoading = table.options.meta?.isLoadingColumns ?? false;
-  console.log({ isLoading, table });
 
   const columns = table.getAllColumns().filter(
     (column) =>
       typeof column.accessorFn !== "undefined" && column.getCanHide()
   );
-  console.log({ columns });
 
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
 

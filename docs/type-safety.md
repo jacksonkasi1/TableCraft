@@ -103,10 +103,10 @@ export interface ProductsRow extends Record<string, unknown> {
   id: number;
   name: string;
   price: number;
-  // ...
+  metadata: Record<string, unknown>;
 }
 
-export type ProductsColumn = 'id' | 'name' | 'price' | '...';
+export type ProductsColumn = 'id' | 'name' | 'price' | 'metadata';
 ```
 
 ### Type-Safe Hidden Columns

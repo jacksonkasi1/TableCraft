@@ -101,11 +101,11 @@ function generateColumnType(
   columns: ColumnMeta[]
 ): string {
   const pascalName = toPascalCase(tableName);
-  const columnNames = columns
-    .filter(col => !col.hidden)
-    .map(col => `'${col.name}'`)
-    .join(' | ');
-  return `export type ${toPascalCase(tableName)}Column = ${columnNames};`;
+  const visibleColumns = columns.filter(col => !col.hidden);
+  const columnNames = visibleColumns.length > 0
+    ? visibleColumns.map(col => `'${col.name}'`).join(' | ')
+    : 'never';
+  return `export type ${pascalName}Column = ${columnNames};`;
 }
 
 function generateAdapterFunction(
