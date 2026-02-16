@@ -99,7 +99,11 @@ await engine.query({ includeDeleted: true });
 
 ## 4. Access Control (RBAC)
 
-You can define role-based access control directly on the table definition.
+You can define role-based access control directly on the table definition. This relies on the `context` object passed to the engine during execution.
+
+### Configuration
+
+Define which roles or permissions are required to access the table:
 
 ```typescript
 export const userConfig = defineTable(users)
@@ -110,12 +114,44 @@ export const userConfig = defineTable(users)
   .toConfig();
 ```
 
-When creating the engine, pass the user's roles/permissions in the context:
+### Passing Context (Crucial)
+
+For RBAC to work, you **must** provide the user's roles and permissions in the `context`. The engine checks `context.user.roles` and `context.user.permissions` against your configuration.
+
+**In Adapters (Next.js, Hono, Express, Elysia):**
+
+Use the `getContext` function in your adapter setup to extract user info from the request (e.g., from a JWT or session).
+
+```typescript
+// Example with Hono adapter
+createHonoApp({
+  db,
+  schema,
+  configs,
+  // This is where you populate the security context
+  getContext: async (c) => {
+    const user = c.get('jwtPayload'); // Assuming you have auth middleware
+    return {
+      user: {
+        id: user.sub,
+        roles: user.roles,       // e.g. ['admin']
+        permissions: user.perms  // e.g. ['read:users']
+      },
+      tenantId: user.orgId // Also used for multi-tenancy
+    };
+  }
+});
+```
+
+**Direct Engine Usage:**
+
+If you use the engine directly, pass the context as the second argument to `query`.
 
 ```typescript
 const engine = createTableEngine({ db, config });
 
 await engine.query(params, {
+  // Context object
   user: {
     roles: ['member'], // This user would be denied if 'admin' is required
     permissions: []
