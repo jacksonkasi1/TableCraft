@@ -9,6 +9,7 @@ const engineApp = createHonoApp({
   db,
   schema,
   configs,
+  enableDiscovery: true,
   getContext: (c) => {
     // Mock context for example
     return {

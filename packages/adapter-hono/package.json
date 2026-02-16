@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/adapter-hono",
-  "version": "0.1.0-beta.5",
+  "version": "0.1.0-beta.6",
   "description": "Hono adapter for TableCraft",
   "type": "module",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": "^0.1.0-beta.4",
+    "@tablecraft/engine": ">=0.1.0",
     "hono": ">=4.0.0"
   },
   "devDependencies": {

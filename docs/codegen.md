@@ -95,6 +95,24 @@ export interface UsersRow extends Record<string, unknown> {
 ```
 {% endtab %}
 
+{% tab title="Column Type" %}
+Union type of all column names for type-safe operations:
+
+```typescript
+export type UsersColumn = 'id' | 'email' | 'role' | 'isActive' | 'createdAt';
+```
+
+Use with `hiddenColumns` for type safety:
+
+```typescript
+import { hiddenColumns } from '@tablecraft/table';
+import type { UsersColumn } from './generated';
+
+// Type-safe hidden columns
+hiddenColumns<UsersColumn>(['id', 'createdAt']);
+```
+{% endtab %}
+
 {% tab title="Filters Interface" %}
 Filter types with operator unions:
 
@@ -124,16 +142,36 @@ export function createUsersAdapter(options: {
 ### With DataTable
 
 ```typescript
-import { DataTable } from '@tablecraft/table';
-import { createOrdersAdapter, type OrdersRow } from './generated';
+import { DataTable, hiddenColumns } from '@tablecraft/table';
+import { createOrdersAdapter, type OrdersRow, type OrdersColumn } from './generated';
 
 function OrdersPage() {
   const adapter = createOrdersAdapter({
     baseUrl: '/api/engine',
   });
 
-  return <DataTable<OrdersRow> adapter={adapter} />;
+  return (
+    <DataTable<OrdersRow>
+      adapter={adapter}
+      hiddenColumns={hiddenColumns<OrdersColumn>(['id', 'tenantId'])}
+    />
+  );
 }
+```
+
+### Type-Safe Hidden Columns
+
+The `hiddenColumns` helper function provides compile-time type checking:
+
+```typescript
+import { hiddenColumns } from '@tablecraft/table';
+import type { ProductsColumn } from './generated';
+
+// ✅ Valid - type-checked
+hiddenColumns<ProductsColumn>(['id', 'metadata']);
+
+// ❌ Error - 'invalidColumn' is not assignable to ProductsColumn
+hiddenColumns<ProductsColumn>(['invalidColumn']);
 ```
 
 ### With Custom Adapter

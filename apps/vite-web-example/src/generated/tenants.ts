@@ -20,7 +20,7 @@ export interface TenantsFilters {
   createdAt?: { operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between'; value: string | [string, string] };
 }
 
-export type TenantsColumn = keyof TenantsRow;
+export type TenantsColumn = 'id' | 'name' | 'slug' | 'plan' | 'createdAt';
 
 export function createTenantsAdapter(options: {
   baseUrl: string;

@@ -20,7 +20,7 @@ export interface UsersFilters {
   createdAt?: { operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between'; value: string | [string, string] };
 }
 
-export type UsersColumn = keyof UsersRow;
+export type UsersColumn = 'id' | 'email' | 'role' | 'isActive' | 'createdAt';
 
 export function createUsersAdapter(options: {
   baseUrl: string;

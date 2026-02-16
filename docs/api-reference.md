@@ -185,3 +185,70 @@ Simple role-based access control metadata.
 Enables `/api/table?export=csv`.
 {% endcolumn %}
 {% endcolumns %}
+
+---
+
+## DataTable Props (Frontend)
+
+The `<DataTable>` component accepts the following props:
+
+### Core Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `adapter` | `DataAdapter<T>` | Data adapter for fetching data |
+| `columns` | `ColumnDef<T>[]` | Manual column definitions (optional) |
+| `config` | `Partial<TableConfig>` | Table configuration overrides |
+| `hiddenColumns` | `string[]` | Columns to hide from UI (data still received) |
+
+### Configuration Options
+
+```tsx
+<DataTable
+  adapter={adapter}
+  config={{
+    enableSearch: true,
+    enableExport: true,
+    enableColumnResizing: true,
+    enableRowSelection: true,
+    enableDateFilter: true,
+    enableColumnVisibility: true,
+    defaultPageSize: 20,
+    pageSizeOptions: [10, 20, 50, 100],
+  }}
+/>
+```
+
+### Hidden Columns
+
+Hide specific columns from the table UI while still receiving the data from the API:
+
+```tsx
+import { DataTable, hiddenColumns } from '@tablecraft/table';
+import type { ProductsRow, ProductsColumn } from './generated';
+
+<DataTable<ProductsRow>
+  adapter={adapter}
+  hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
+/>
+```
+
+> **Note:** The `hiddenColumns` helper function provides type safety when using generated `*Column` types from `@tablecraft/codegen`.
+
+### All Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `adapter` | `DataAdapter<T>` | Required. Data adapter instance |
+| `columns` | `ColumnDef<T>[]` | Manual column definitions |
+| `renderers` | `Record<string, CellRenderer>` | Custom cell renderers |
+| `config` | `Partial<TableConfig>` | Table configuration |
+| `exportConfig` | `ExportConfig<T>` | Export settings |
+| `idField` | `keyof T` | ID field for row tracking (default: 'id') |
+| `onRowClick` | `(row: T, index: number) => void` | Row click handler |
+| `hiddenColumns` | `string[]` | Columns to hide from UI |
+| `startToolbarContent` | `React.ReactNode` | Content before built-in toolbar controls |
+| `toolbarContent` | `React.ReactNode` | Content after built-in toolbar controls |
+| `renderToolbar` | `(ctx: ToolbarContext<T>) => React.ReactNode` | Custom toolbar renderer |
+| `className` | `string` | CSS class for outer wrapper |
+| `pageSizeOptions` | `number[]` | Page size options |

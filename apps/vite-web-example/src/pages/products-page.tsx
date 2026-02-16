@@ -1,17 +1,8 @@
-import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
+import { DataTable, createTableCraftAdapter, hiddenColumns } from '@tablecraft/table';
+import type { ProductsRow, ProductsColumn } from '../generated';
 
-/**
- * Products Page - Demonstrates TableCraft integration
- *
- * This page showcases:
- * - Native TableCraft adapter connecting to Hono backend
- * - Auto-generated columns from backend metadata
- * - Server-side filtering, sorting, and pagination
- * - URL state synchronization for shareable links
- * - Date filter auto-hidden when table has no date columns (metadata-driven)
- */
 export function ProductsPage() {
-  const adapter = createTableCraftAdapter({
+  const adapter = createTableCraftAdapter<ProductsRow>({
     baseUrl: '/api/engine',
     table: 'products',
   });
@@ -25,8 +16,9 @@ export function ProductsPage() {
         </p>
       </div>
 
-      <DataTable
+      <DataTable<ProductsRow>
         adapter={adapter}
+        hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
         config={{
           enableSearch: true,
           enableExport: true,

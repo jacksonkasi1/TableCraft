@@ -100,8 +100,12 @@ function generateColumnType(
   tableName: string,
   columns: ColumnMeta[]
 ): string {
-  const interfaceName = `${toPascalCase(tableName)}Row`;
-  return `export type ${toPascalCase(tableName)}Column = keyof ${interfaceName};`;
+  const pascalName = toPascalCase(tableName);
+  const columnNames = columns
+    .filter(col => !col.hidden)
+    .map(col => `'${col.name}'`)
+    .join(' | ');
+  return `export type ${toPascalCase(tableName)}Column = ${columnNames};`;
 }
 
 function generateAdapterFunction(

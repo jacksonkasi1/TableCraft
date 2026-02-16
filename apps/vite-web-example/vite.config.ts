@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@tablecraft/table": path.resolve(__dirname, "../../packages/table/src"),
+      "@tablecraft/client": path.resolve(__dirname, "../../packages/client/src"),
       react: path.resolve(__dirname, "../../node_modules/react"),
       "react-dom": path.resolve(__dirname, "../../node_modules/react-dom"),
     },
