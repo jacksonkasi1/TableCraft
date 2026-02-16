@@ -78,17 +78,73 @@ const meta = await fetch('/api/data/orders/_meta').then(r => r.json());
       "format": "currency",
       "align": "right",
       "sortable": true,
-      "filterable": true
+      "filterable": true,
+      "operators": ["eq", "neq", "gt", "gte", "lt", "lte", "between", "in"]
     },
     {
       "name": "status",
       "type": "string",
+      "label": "status",
+      "width": 120,
+      "sortable": true,
+      "filterable": true,
+      "options": [
+        { "value": "pending", "label": "Pending", "color": "yellow" },
+        { "value": "completed", "label": "Completed", "color": "green" }
+      ],
+      "operators": ["eq", "neq", "contains", "startsWith", "in"]
+    },
+    {
+      "name": "createdAt",
+      "type": "date",
+      "label": "createdAt",
+      "format": "datetime",
+      "datePresets": ["today", "last7days", "thisMonth"],
+      "sortable": true,
+      "filterable": true,
+      "operators": ["eq", "gt", "gte", "lt", "lte", "between"]
+    }
+  ],
+  "capabilities": {
+    "search": true,
+    "searchFields": ["status"],
+    "export": false,
+    "exportFormats": [],
+    "pagination": {
+      "enabled": true,
+      "defaultPageSize": 25,
+      "maxPageSize": 100,
+      "cursor": false
+    },
+    "sort": {
+      "enabled": true,
+      "defaultSort": [{ "field": "createdAt", "order": "desc" }]
+    },
+    "groupBy": false,
+    "recursive": false
+  },
+  "filters": [
+    {
+      "field": "status",
+      "type": "string",
+      "label": "status",
+      "operators": ["eq", "neq", "contains", "startsWith", "in"],
       "options": [
         { "value": "pending", "label": "Pending", "color": "yellow" },
         { "value": "completed", "label": "Completed", "color": "green" }
       ]
+    },
+    {
+      "field": "createdAt",
+      "type": "date",
+      "label": "createdAt",
+      "operators": ["gt", "gte", "lt", "lte", "between"],
+      "datePresets": ["today", "last7days", "thisMonth"]
     }
-  ]
+  ],
+  "aggregations": [],
+  "includes": [],
+  "staticFilters": []
 }
 ```
 {% endstep %}

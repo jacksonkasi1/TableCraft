@@ -9,6 +9,9 @@ The `@tablecraft/codegen` package generates TypeScript types from your TableCraf
 ```bash
 # Install as dev dependency
 pnpm add -D @tablecraft/codegen
+
+# Or use directly with npx
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 {% endtab %}
 
@@ -25,7 +28,7 @@ npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
 ### Basic Usage
 
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 
 This will:
@@ -47,13 +50,13 @@ This will:
 {% tabs %}
 {% tab title="Generate All" %}
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 {% endtab %}
 
 {% tab title="Specific Tables" %}
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated --tables users orders
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated --tables users orders
 ```
 {% endtab %}
 

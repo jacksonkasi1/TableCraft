@@ -40,7 +40,7 @@ function ProductsPage() {
 Generate types for full type safety:
 
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 
 ```tsx

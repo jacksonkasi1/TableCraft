@@ -93,14 +93,54 @@ const orders = defineTable(ordersTable)
 ```json
 {
   "openapi": "3.0.3",
+  "info": {
+    "title": "orders API",
+    "version": "1.0.0"
+  },
   "paths": {
     "/api/orders": {
       "get": {
         "summary": "List orders",
+        "operationId": "listOrders",
         "parameters": [
-          { "name": "page", "in": "query", "schema": { "type": "integer" } },
-          { "name": "sort", "in": "query", "schema": { "type": "string" } },
-          { "name": "filter[status]", "in": "query", "schema": { "type": "string" } }
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 25, "maximum": 100 }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Comma-separated fields. Prefix with - for desc."
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Search across: status, customerName"
+          },
+          {
+            "name": "export",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["csv", "json"] }
+          },
+          {
+            "name": "filter[status]",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
         ],
         "responses": {
           "200": {
@@ -110,14 +150,51 @@ const orders = defineTable(ordersTable)
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "data": { "type": "array" },
-                    "meta": { "type": "object" }
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "description": "Order ID" },
+                          "total": { "type": "number" },
+                          "status": { "type": "string" },
+                          "customerName": { "type": "string" }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": { "type": "integer" },
+                        "page": { "type": "integer" },
+                        "pageSize": { "type": "integer" },
+                        "totalPages": { "type": "integer" }
+                      }
+                    },
+                    "aggregations": {
+                      "type": "object",
+                      "properties": {
+                        "totalRevenue": { "type": "number" }
+                      }
+                    }
                   }
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          { "bearerAuth": [] }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }

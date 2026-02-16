@@ -66,7 +66,7 @@ Generate TypeScript types from your API:
 - CI/CD integration ready
 
 ```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
+npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 
 [Learn more about Type Generation →](./codegen.md)
