@@ -2,6 +2,8 @@
 
 TableCraft provides a comprehensive set of features for building data tables quickly and efficiently.
 
+{% columns %}
+{% column %}
 ## 🏗️ Auto Columns
 
 Columns are automatically generated from your Drizzle schema. No manual column definitions needed.
@@ -11,7 +13,9 @@ const users = defineTable(schema.users)
   // Columns auto-detected from schema
   .toConfig()
 ```
+{% endcolumn %}
 
+{% column %}
 ## 🔍 Global Search
 
 Full-text search across specified columns with operator support.
@@ -21,13 +25,11 @@ defineTable(schema.users)
   .search('email', 'name', 'company')
   // Supports: ?search=john
 ```
+{% endcolumn %}
+{% endcolumns %}
 
-**Search Operators:**
-- `john` - contains match
-- `john*` - starts with
-- `*john` - ends with
-- `exact:john` - exact match
-
+{% columns %}
+{% column %}
 ## 📅 Date Filters
 
 Smart date range filtering with auto-detection.
@@ -37,30 +39,24 @@ defineTable(schema.orders)
   .dateRangeColumn('createdAt')
   // Auto-detects if column is date type
 ```
+{% endcolumn %}
 
-**Date Presets:**
-- Today, Yesterday
-- This Week, Last Week
-- This Month, Last Month
-- Last 7/30/90 Days
-- Custom range
-
+{% column %}
 ## 📤 Export
 
 Export data to CSV or Excel.
 
-```typescript
-// Frontend
+```tsx
 <DataTable
   adapter={adapter}
   config={{ enableExport: true }}
 />
 ```
+{% endcolumn %}
+{% endcolumns %}
 
-- Export all rows or selected rows
-- CSV and Excel (XLSX) formats
-- Respects current filters and search
-
+{% columns %}
+{% column %}
 ## 📊 Sorting
 
 Multi-column sorting with URL synchronization.
@@ -68,11 +64,10 @@ Multi-column sorting with URL synchronization.
 ```typescript
 defineTable(schema.users)
   .sort('-createdAt', 'name')
-  // Default: newest first, then by name
 ```
+{% endcolumn %}
 
-**URL State:** `?sort=-createdAt&order=desc`
-
+{% column %}
 ## 📑 Pagination
 
 Cursor or offset-based pagination.
@@ -82,9 +77,13 @@ defineTable(schema.users)
   .pageSize(20)
   .paginationMode('cursor') // or 'offset'
 ```
+{% endcolumn %}
+{% endcolumns %}
 
-## 🎨 Column Resizing
+## 🎨 Advanced UI Features
 
+{% tabs %}
+{% tab title="Resizing" %}
 Drag-to-resize columns with localStorage persistence.
 
 ```tsx
@@ -93,166 +92,116 @@ Drag-to-resize columns with localStorage persistence.
   config={{ enableColumnResizing: true }}
 />
 ```
+{% endtab %}
 
-## 👁️ Column Visibility
-
+{% tab title="Visibility" %}
 Show/hide columns with URL state sync.
 
 ```typescript
 defineTable(schema.users)
   .hide('password', 'internalNotes')
 ```
+{% endtab %}
 
-**URL State:** `?columns=id,name,email`
+{% tab title="URL Sync" %}
+All table state stored in URL for shareable links:
+*   Search query
+*   Filters & Sort
+*   Page & PageSize
+*   Column visibility
+*   Date range
+{% endtab %}
 
-## 🔗 URL State Sync
+{% tab title="Keyboard" %}
+Full keyboard accessibility:
+*   Arrow keys: Navigate cells
+*   Enter: Activate
+*   Escape: Close
+{% endtab %}
+{% endtabs %}
 
-All table state stored in URL for shareable links.
+## 🔐 Security Features
 
-**Synced State:**
-- Search query
-- Filters
-- Sort column & direction
-- Page number
-- Page size
-- Column visibility
-- Date range
-
-## ⌨️ Keyboard Navigation
-
-Full keyboard accessibility for table navigation.
-
-- Arrow keys: Navigate between cells
-- Enter: Activate row/cell
-- Escape: Close dialogs
-- Tab: Move between controls
-
-## 🔐 Role-based Visibility
-
+{% columns %}
+{% column %}
+### Role-Based Access
 Control column visibility by user role.
 
 ```typescript
 defineTable(schema.users)
-  .roleVisibility('admin', ['salary', 'ssn'])
+  .roleVisibility('admin', ['salary'])
   .roleVisibility('manager', ['department'])
 ```
+{% endcolumn %}
 
-## 🗑️ Soft Delete Support
-
-Built-in soft delete filtering.
-
-```typescript
-defineTable(schema.posts)
-  .softDelete('deletedAt')
-  // Automatically filters out deleted records
-```
-
-## 🔌 Caching Plugin
-
-Cache query results with multiple backends.
-
-```typescript
-import { cachePlugin, memoryCache, redisCache } from '@tablecraft/plugin-cache'
-
-const engine = createTableEngine({
-  db, schema, config,
-  plugins: [
-    cachePlugin({ adapter: memoryCache({ ttl: 60000 }) }),
-    // or redisCache({ url: 'redis://localhost:6379' })
-  ]
-})
-```
-
-**Supported Backends:**
-- In-memory (default)
-- Redis
-- Upstash Redis
-
-## 🔗 Relationships & Joins
-
-Fetch related data with automatic joins.
-
-```typescript
-defineTable(schema.orders)
-  .include('user', (q) => q
-    .fields('id', 'name', 'email')
-  )
-  .include('items', (q) => q
-    .fields('id', 'productId', 'quantity')
-  )
-```
-
-## 🧮 Computed Columns
-
-Create virtual columns with SQL expressions.
+{% column %}
+### Data Protection
+*   Hide sensitive columns (passwords, tokens)
+*   Tenant isolation
+*   Soft delete support
 
 ```typescript
 defineTable(schema.users)
-  .computed('fullName', sql`CONCAT(firstName, ' ', lastName)`)
-  .computed('age', sql`EXTRACT(YEAR FROM AGE(birthDate))`)
-```
-
-## 🎯 Type Generation
-
-Generate TypeScript types from your API.
-
-```bash
-npx @tablecraft/codegen --url http://localhost:5000/engine --out ./src/generated
-```
-
-Generates:
-- `UsersRow` interface
-- `UsersFilters` interface
-- `createUsersAdapter()` factory
-
-## 📖 OpenAPI Spec
-
-Auto-generate OpenAPI 3.0 specifications.
-
-```typescript
-import { generateOpenApiSpec } from '@tablecraft/engine'
-
-const spec = generateOpenApiSpec(configs, {
-  title: 'My API',
-  version: '1.0.0'
-})
-```
-
-## 🏢 Multi-tenancy
-
-Built-in tenant isolation.
-
-```typescript
-defineTable(schema.orders)
-  .tenant('tenantId')
-  // Automatically filters by tenant context
-```
-
-## 🔒 Security Features
-
-- Hide sensitive columns (passwords, tokens)
-- Tenant isolation
-- Soft delete
-- Role-based access control
-
-```typescript
-defineTable(schema.users)
-  .hide('password', 'resetToken')
-  .tenant('organizationId')
+  .hide('password')
+  .tenant('orgId')
   .softDelete('deletedAt')
 ```
+{% endcolumn %}
+{% endcolumns %}
 
-## 📦 Multiple Backend Adapters
+## 🔌 Plugins & Adapters
 
-TableCraft supports multiple backend frameworks:
+{% columns %}
+{% column %}
+### Caching Plugin
+Cache query results with multiple backends (Redis, Upstash, Memory).
+
+```typescript
+import { cachePlugin } from '@tablecraft/plugin-cache'
+// ...
+plugins: [
+  cachePlugin({ adapter: redisCache({ url: '...' }) })
+]
+```
+{% endcolumn %}
+
+{% column %}
+### Backend Adapters
+Support for major frameworks:
 
 | Adapter | Framework |
 |---------|-----------|
 | `@tablecraft/adapter-hono` | Hono.js |
 | `@tablecraft/adapter-express` | Express |
-| `@tablecraft/adapter-next` | Next.js API Routes |
+| `@tablecraft/adapter-next` | Next.js |
 | `@tablecraft/adapter-elysia` | Elysia (Bun) |
+{% endcolumn %}
+{% endcolumns %}
 
----
+## 🧮 Data Logic
 
-📚 **For detailed guides, see the [full documentation](https://jacksonkasi.gitbook.io/tablecraft)**
+{% tabs %}
+{% tab title="Relationships" %}
+Fetch related data with automatic joins.
+
+```typescript
+defineTable(schema.orders)
+  .include('user', (q) => q.fields('name', 'email'))
+  .include('items', (q) => q.fields('quantity'))
+```
+{% endtab %}
+
+{% tab title="Computed" %}
+Create virtual columns with SQL expressions.
+
+```typescript
+defineTable(schema.users)
+  .computed('fullName', sql`CONCAT(first, ' ', last)`)
+```
+{% endtab %}
+{% endtabs %}
+
+## 🛠 Developer Tools
+
+*   **Type Generation:** `npx @tablecraft/codegen`
+*   **OpenAPI Specs:** Auto-generate Swagger/OpenAPI 3.0 specs

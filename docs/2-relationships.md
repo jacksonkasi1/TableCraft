@@ -4,7 +4,9 @@ Data is rarely stored in a single table. You often need to fetch `Orders` with t
 
 The TableCraft Engine makes joining tables simple and type-safe.
 
-## 1. Basic Join
+{% stepper %}
+{% step %}
+## Basic Join
 
 To join another table, use the `.join()` method.
 
@@ -22,9 +24,13 @@ export const orderConfig = defineTable(orders)
   .toConfig();
 ```
 
-When you query `orders`, the response will include `users.email` and `users.name` (often flattened depending on your driver/setup, e.g., `userEmail`, `userName` if you alias them).
+{% hint style="info" %}
+When you query `orders`, the response will include `users.email` and `users.name`.
+{% endhint %}
+{% endstep %}
 
-## 2. Filtering by Related Data
+{% step %}
+## Filtering by Related Data
 
 Once joined, you can filter the main table based on the related table's columns.
 
@@ -43,8 +49,10 @@ export const orderConfig = defineTable(orders)
 `GET /orders?filter[users.email]=jane@example.com`
 
 This will return only the orders belonging to Jane.
+{% endstep %}
 
-## 3. Sorting by Related Data
+{% step %}
+## Sorting by Related Data
 
 You can also sort the main list based on a column in the joined table.
 
@@ -59,12 +67,15 @@ export const orderConfig = defineTable(orders)
 ```
 
 **API Request:**
-`GET /orders?sort=users.name` (A-Z by Customer Name)
-`GET /orders?sort=-users.name` (Z-A)
+*   `GET /orders?sort=users.name` (A-Z by Customer Name)
+*   `GET /orders?sort=-users.name` (Z-A)
+{% endstep %}
+{% endstepper %}
 
-## 4. Advanced Join Options
+## Advanced Join Options
 
-### Custom Alias
+{% tabs %}
+{% tab title="Custom Alias" %}
 If you join the same table twice (e.g., `creator` and `assignee` are both Users), use an alias.
 
 ```typescript
@@ -79,8 +90,9 @@ If you join the same table twice (e.g., `creator` and `assignee` are both Users)
   columns: ['name'],
 })
 ```
+{% endtab %}
 
-### Complex "ON" Conditions
+{% tab title="Complex Conditions" %}
 The `on` clause supports standard SQL strings.
 
 ```typescript
@@ -90,6 +102,8 @@ The `on` clause supports standard SQL strings.
   type: 'inner'
 })
 ```
+{% endtab %}
+{% endtabs %}
 
 ## Next Steps
 

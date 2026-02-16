@@ -13,15 +13,22 @@ const config = defineTable(schema.users);
 
 ## Visibility & Transforms
 
+{% columns %}
+{% column %}
 ### `.hide(...columns)`
 Hides columns from the API response.
 ```typescript
 .hide('passwordHash', 'salt')
 ```
 
-### `.show(...columns)` / `.only(...columns)`
-Explicitly show specific columns. `.only()` hides everything else.
+### `.show(...columns)`
+Explicitly show specific columns.
 
+### `.only(...columns)`
+Hides everything except the specified columns.
+{% endcolumn %}
+
+{% column %}
 ### `.autoHide()`
 Automatically hides common sensitive columns (password, token, secret, etc.).
 ```typescript
@@ -33,9 +40,13 @@ Applies a JavaScript transformation **after** fetching data.
 ```typescript
 .transform('email', (email) => email.toLowerCase())
 ```
+{% endcolumn %}
+{% endcolumns %}
 
 ## Search & Filtering
 
+{% columns %}
+{% column %}
 ### `.search(...columns)`
 Enables fuzzy search (`?search=foo`) on specific columns.
 ```typescript
@@ -44,7 +55,9 @@ Enables fuzzy search (`?search=foo`) on specific columns.
 
 ### `.searchAll()`
 Enables search on ALL text columns detected in the table.
+{% endcolumn %}
 
+{% column %}
 ### `.filter(...columns)`
 Allows filtering by exact match in the URL (`?filter[role]=admin`).
 ```typescript
@@ -56,6 +69,10 @@ Applies a permanent filter that the user cannot remove.
 ```typescript
 .staticFilter('isArchived', 'eq', false)
 ```
+{% endcolumn %}
+{% endcolumns %}
+
+### Advanced Filtering
 
 ### `.where({ field, op, value })`
 Adds a backend condition (supports context variables like `$user.id`).
@@ -71,20 +88,29 @@ Adds an OR condition group.
 
 ## Sorting & Pagination
 
+{% columns %}
+{% column %}
 ### `.sort(...columns)`
 Sets default sort order. Use `-` for descending.
 ```typescript
 .sort('-createdAt', 'name')
 ```
 
-### `.sortable(...columns)` / `.noSort()`
+### `.sortable(...columns)`
 Controls which columns can be sorted by the user.
+{% endcolumn %}
 
+{% column %}
 ### `.pageSize(size, options)`
 Sets default and max page size.
 ```typescript
 .pageSize(20, { max: 100 })
 ```
+
+### `.noSort()`
+Disables sorting entirely.
+{% endcolumn %}
+{% endcolumns %}
 
 ## Joins & Relations
 
@@ -142,14 +168,20 @@ Enables CTE-based recursive queries for tree structures.
 
 ## Platform Features
 
+{% columns %}
+{% column %}
 ### `.tenant(field?)`
 Auto-filters by `context.tenantId`. Default field: `tenantId`.
 
 ### `.softDelete(field?)`
 Auto-filters rows where `deletedAt` is not null.
+{% endcolumn %}
 
+{% column %}
 ### `.access({ roles, permissions })`
 Simple role-based access control metadata.
 
 ### `.exportable(...formats)`
 Enables `/api/table?export=csv`.
+{% endcolumn %}
+{% endcolumns %}

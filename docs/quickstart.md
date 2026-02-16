@@ -2,28 +2,59 @@
 
 Get up and running with TableCraft in 5 minutes.
 
+{% stepper %}
+{% step %}
 ## Installation
 
+Install the core engine, frontend components, and the adapter for your backend framework.
+
+{% tabs %}
+{% tab title="Hono" %}
 ```bash
-# Core engine
-pnpm add @tablecraft/engine
+# Install core, table, and Hono adapter
+pnpm add @tablecraft/engine @tablecraft/table @tablecraft/adapter-hono
 
-# Frontend components
-pnpm add @tablecraft/table
-
-# Type generator (dev dependency)
+# Install codegen as dev dependency
 pnpm add -D @tablecraft/codegen
-
-# Choose your backend adapter
-pnpm add @tablecraft/adapter-hono    # For Hono
-pnpm add @tablecraft/adapter-express # For Express
-pnpm add @tablecraft/adapter-next    # For Next.js
-pnpm add @tablecraft/adapter-elysia  # For Elysia (Bun)
 ```
+{% endtab %}
 
-## Backend Setup
+{% tab title="Express" %}
+```bash
+# Install core, table, and Express adapter
+pnpm add @tablecraft/engine @tablecraft/table @tablecraft/adapter-express
 
-### 1. Define Your Table
+# Install codegen as dev dependency
+pnpm add -D @tablecraft/codegen
+```
+{% endtab %}
+
+{% tab title="Next.js" %}
+```bash
+# Install core, table, and Next.js adapter
+pnpm add @tablecraft/engine @tablecraft/table @tablecraft/adapter-next
+
+# Install codegen as dev dependency
+pnpm add -D @tablecraft/codegen
+```
+{% endtab %}
+
+{% tab title="Elysia" %}
+```bash
+# Install core, table, and Elysia adapter
+pnpm add @tablecraft/engine @tablecraft/table @tablecraft/adapter-elysia
+
+# Install codegen as dev dependency
+pnpm add -D @tablecraft/codegen
+```
+{% endtab %}
+{% endtabs %}
+{% endstep %}
+
+{% step %}
+## Define Your Table
+
+Create a table configuration file. This defines how your table behaves, including search, sort, and filter capabilities.
 
 ```typescript
 // src/tables/products.ts
@@ -39,10 +70,18 @@ export const productsConfig = defineTable(products)
   .toConfig();
 ```
 
-### 2. Create API Routes
+{% hint style="info" %}
+Make sure your database schema is already defined. TableCraft works with your existing Drizzle ORM schema.
+{% endhint %}
+{% endstep %}
 
-**With Hono:**
+{% step %}
+## Create API Routes
 
+Mount the TableCraft engine at `/api/engine`. Choose your framework below:
+
+{% tabs %}
+{% tab title="Hono" %}
 ```typescript
 // src/index.ts
 import { Hono } from 'hono';
@@ -62,10 +101,11 @@ app.route('/api/engine', createHonoApp({
 
 export default app;
 ```
+{% endtab %}
 
-**With Express:**
-
+{% tab title="Express" %}
 ```typescript
+// src/server.ts
 import express from 'express';
 import { createExpressMiddleware } from '@tablecraft/adapter-express';
 import { db } from './db';
@@ -75,7 +115,8 @@ import { productsConfig } from './tables/products';
 const app = express();
 
 // Mount TableCraft engine at /api/engine/:table
-app.get('/api/engine/:table', createExpressMiddleware({
+// The adapter handles the dynamic :table route automatically
+app.use('/api/engine', createExpressMiddleware({
   db,
   schema,
   configs: { products: productsConfig }
@@ -83,9 +124,9 @@ app.get('/api/engine/:table', createExpressMiddleware({
 
 app.listen(3000);
 ```
+{% endtab %}
 
-**With Next.js (App Router):**
-
+{% tab title="Next.js" %}
 ```typescript
 // app/api/engine/[table]/route.ts
 import { createNextHandler } from '@tablecraft/adapter-next';
@@ -101,10 +142,11 @@ const handler = createNextHandler({
 
 export const GET = handler;
 ```
+{% endtab %}
 
-**With Elysia (Bun):**
-
+{% tab title="Elysia" %}
 ```typescript
+// src/index.ts
 import { Elysia } from 'elysia';
 import { createElysiaPlugin } from '@tablecraft/adapter-elysia';
 import { db } from './db';
@@ -120,16 +162,28 @@ const app = new Elysia()
   }))
   .listen(3000);
 ```
+{% endtab %}
+{% endtabs %}
+{% endstep %}
 
-## Frontend Setup
+{% step %}
+## Generate Types
 
-### 1. Generate Types
+Run the codegen tool to introspect your API and generate type-safe client adapters.
 
 ```bash
 npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/generated
 ```
 
-### 2. Create DataTable Page
+{% hint style="warning" %}
+Ensure your backend server is running before executing this command, as it needs to fetch metadata from the API.
+{% endhint %}
+{% endstep %}
+
+{% step %}
+## Create DataTable Page
+
+Import the generated adapter and use it with the `DataTable` component.
 
 ```tsx
 // src/pages/products-page.tsx
@@ -137,6 +191,7 @@ import { DataTable } from '@tablecraft/table';
 import { createProductsAdapter, type ProductsRow } from '../generated';
 
 export function ProductsPage() {
+  // Initialize the adapter with your API base URL
   const adapter = createProductsAdapter({
     baseUrl: '/api/engine',
   });
@@ -153,18 +208,41 @@ export function ProductsPage() {
   );
 }
 ```
-
-That's it! You now have:
-
-- ✅ Backend API with filtering, sorting, pagination
-- ✅ Auto-generated metadata endpoint
-- ✅ Type-safe frontend DataTable
-- ✅ Date filtering (if table has date columns)
-- ✅ Export to CSV/JSON
+{% endstep %}
+{% endstepper %}
 
 ## Next Steps
 
-- [Configure advanced features](./3-advanced.md)
-- [Add relationships](./2-relationships.md)
-- [Learn about metadata API](./metadata-api.md)
-- [Set up date filtering](./date-filtering.md)
+Explore more features to customize your tables.
+
+<table data-view="cards">
+    <thead>
+        <tr>
+            <th>Topic</th>
+            <th>Description</th>
+            <th data-card-target data-type="content-ref">Link</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Advanced Config</td>
+            <td>Learn about custom cells, actions, and detailed configuration.</td>
+            <td><a href="3-advanced.md">3-advanced.md</a></td>
+        </tr>
+        <tr>
+            <td>Relationships</td>
+            <td>Display data from related tables (joins).</td>
+            <td><a href="2-relationships.md">2-relationships.md</a></td>
+        </tr>
+        <tr>
+            <td>Metadata API</td>
+            <td>Understand the underlying metadata API.</td>
+            <td><a href="metadata-api.md">metadata-api.md</a></td>
+        </tr>
+        <tr>
+            <td>Security</td>
+            <td>Implement Role-Based Access Control (RBAC).</td>
+            <td><a href="4-security.md">4-security.md</a></td>
+        </tr>
+    </tbody>
+</table>

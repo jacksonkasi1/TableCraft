@@ -12,24 +12,41 @@ The `manualResult` utility allows you to write *any* Drizzle query you want, and
 
 Suppose you need a report with `GROUP BY`, `HAVING`, and a subquery—features that might be cumbersome or impossible to configure purely via `defineTable`.
 
+{% stepper %}
+{% step %}
+## Define Formatting Config
+
+Define a config just for formatting (labels, hidden fields). This doesn't control the query, just the output shape.
+
 ```typescript
+// src/config/reports.ts
+import { defineTable } from '@tablecraft/engine';
+import { orders } from '@/db/schema';
+
+export const reportConfig = defineTable(orders)
+  .label('totalRevenue', 'Revenue')
+  .toConfig();
+```
+{% endstep %}
+
+{% step %}
+## Write the Route Handler
+
+Use full control with raw Drizzle/SQL features.
+
+```typescript
+// src/routes/analytics.ts
 import { db } from '@/db';
 import { orders } from '@/db/schema';
 import { sql, desc, count, sum } from 'drizzle-orm';
-import { manualResult, defineTable } from '@tablecraft/engine';
-
-// Define a config just for formatting (labels, hidden fields)
-// This doesn't control the query, just the output shape.
-const reportConfig = defineTable(orders)
-  .label('totalRevenue', 'Revenue')
-  .toConfig();
+import { manualResult } from '@tablecraft/engine';
+import { reportConfig } from '../config/reports';
 
 export async function GET(request: Request) {
   const page = 1;
   const pageSize = 25;
 
   // 1. Your Complex Query (Raw Drizzle)
-  // You have full control here. Use any Drizzle/SQL feature.
   const data = await db
     .select({
       month: sql<string>`DATE_TRUNC('month', ${orders.createdAt})`,
@@ -54,9 +71,11 @@ export async function GET(request: Request) {
   );
 }
 ```
+{% endstep %}
+{% endstepper %}
 
-### The Result
-The API response will look standard, identical to auto-generated endpoints:
+{% hint style="success" %}
+**The Result:** The API response will look standard, identical to auto-generated endpoints.
 
 ```json
 {
@@ -71,6 +90,7 @@ The API response will look standard, identical to auto-generated endpoints:
   }
 }
 ```
+{% endhint %}
 
 ## 2. Manual Exports
 

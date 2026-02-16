@@ -20,7 +20,7 @@ export const userConfig = defineTable(users)
 ```
 
 ### Auto-Hiding (Recommended)
- The engine can automatically detect and hide common sensitive column names (like `password`, `token`, `secret`, `key`).
+The engine can automatically detect and hide common sensitive column names (like `password`, `token`, `secret`, `key`).
 
 ```typescript
 export const userConfig = defineTable(users)
@@ -28,11 +28,13 @@ export const userConfig = defineTable(users)
   .toConfig();
 ```
 
-**Tip:** You can inspect what would be hidden without applying it:
+{% hint style="tip" %}
+You can inspect what would be hidden without applying it:
 ```typescript
 console.log(defineTable(users).inspectSensitive());
 // Output: ['password', 'twoFactorSecret']
 ```
+{% endhint %}
 
 ## 2. Multi-Tenancy (Tenant Isolation)
 
@@ -71,8 +73,9 @@ app.use('*', async (c, next) => {
 });
 ```
 
-**Result:**
-The user *cannot* bypass this filter, even if they try to pass `?filter[org_id]=other_org`. The context override is secure.
+{% hint style="success" %}
+**Result:** The user *cannot* bypass this filter, even if they try to pass `?filter[org_id]=other_org`. The context override is secure.
+{% endhint %}
 
 ## 3. Soft Deletes
 
@@ -116,34 +119,108 @@ export const userConfig = defineTable(users)
 
 ### Passing Context (Crucial)
 
-For RBAC to work, you **must** provide the user's roles and permissions in the `context`. The engine checks `context.user.roles` and `context.user.permissions` against your configuration.
+For RBAC to work, you **must** provide the user's roles and permissions in the `context`.
 
-**In Adapters (Next.js, Hono, Express, Elysia):**
+{% hint style="info" %}
+The engine checks `context.user.roles` and `context.user.permissions` against your configuration.
+{% endhint %}
+
+**Adapter Configuration**
 
 Use the `getContext` function in your adapter setup to extract user info from the request (e.g., from a JWT or session).
 
+{% tabs %}
+{% tab title="Hono" %}
 ```typescript
-// Example with Hono adapter
 createHonoApp({
   db,
   schema,
   configs,
-  // This is where you populate the security context
   getContext: async (c) => {
-    const user = c.get('jwtPayload'); // Assuming you have auth middleware
+    // Assuming you have auth middleware that sets 'jwtPayload'
+    const user = c.get('jwtPayload');
     return {
       user: {
         id: user.sub,
         roles: user.roles,       // e.g. ['admin']
         permissions: user.perms  // e.g. ['read:users']
       },
-      tenantId: user.orgId // Also used for multi-tenancy
+      tenantId: user.orgId
     };
   }
 });
 ```
+{% endtab %}
 
-**Direct Engine Usage:**
+{% tab title="Express" %}
+```typescript
+createExpressMiddleware({
+  db,
+  schema,
+  configs,
+  getContext: async (req) => {
+    // Express usually attaches user to req.user
+    const user = (req as any).user;
+    return {
+      user: {
+        id: user.id,
+        roles: user.roles,
+        permissions: user.permissions
+      },
+      tenantId: user.orgId
+    };
+  }
+});
+```
+{% endtab %}
+
+{% tab title="Next.js" %}
+```typescript
+createNextHandler({
+  db,
+  schema,
+  configs,
+  getContext: async (req) => {
+    // In Next.js App Router, you might get session from cookies/headers
+    // This is a simplified example
+    const session = await getSession(req);
+    return {
+      user: {
+        id: session.user.id,
+        roles: session.user.roles,
+        permissions: session.user.permissions
+      },
+      tenantId: session.user.orgId
+    };
+  }
+});
+```
+{% endtab %}
+
+{% tab title="Elysia" %}
+```typescript
+createElysiaPlugin({
+  db,
+  schema,
+  configs,
+  getContext: async (context) => {
+    // Elysia context
+    const user = context.store.user;
+    return {
+      user: {
+        id: user.id,
+        roles: user.roles,
+        permissions: user.permissions
+      },
+      tenantId: user.orgId
+    };
+  }
+});
+```
+{% endtab %}
+{% endtabs %}
+
+**Direct Engine Usage**
 
 If you use the engine directly, pass the context as the second argument to `query`.
 

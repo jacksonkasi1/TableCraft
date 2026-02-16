@@ -27,8 +27,8 @@ The engine exports several error classes that extend `TableCraftError`.
 
 You should wrap your engine calls in a try-catch block and return appropriate HTTP responses.
 
-### Hono Example
-
+{% tabs %}
+{% tab title="Hono Example" %}
 ```typescript
 import { TableCraftError } from '@tablecraft/engine';
 
@@ -48,9 +48,9 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal Server Error' }, 500);
 });
 ```
+{% endtab %}
 
-### Response Example
-
+{% tab title="Response Format" %}
 If a user requests `GET /products?sort=invalid_column`, they will receive:
 
 ```json
@@ -64,12 +64,22 @@ If a user requests `GET /products?sort=invalid_column`, they will receive:
   }
 }
 ```
+{% endtab %}
+{% endtabs %}
 
 ## 4. Dialect Awareness
 
 The engine automatically detects your database dialect (PostgreSQL, MySQL, SQLite) and adjusts its behavior.
 
-*   **Case-Insensitive Search:** Uses `ILIKE` on Postgres, but falls back to `LIKE` on MySQL/SQLite.
-*   **Feature Support:** If a feature (like Recursive CTEs) isn't supported by your database, the engine will either emulate it or throw a helpful error.
+{% columns %}
+{% column %}
+### Case Sensitivity
+*   **Postgres:** Uses `ILIKE` for case-insensitive search.
+*   **MySQL/SQLite:** Falls back to `LIKE` (often naturally case-insensitive depending on collation).
+{% endcolumn %}
 
-You don't need to configure this; it happens automatically based on your Drizzle database instance.
+{% column %}
+### Feature Support
+If a feature (like Recursive CTEs) isn't supported by your database, the engine will either emulate it or throw a helpful error.
+{% endcolumn %}
+{% endcolumns %}

@@ -4,8 +4,9 @@
 
 The simplest TableCraft setup:
 
+{% tabs %}
+{% tab title="Backend" %}
 ```typescript
-// Backend
 import { defineTable } from '@tablecraft/engine';
 import { products } from '../db/schema';
 
@@ -16,9 +17,10 @@ export const productsConfig = defineTable(products)
   .pageSize(20)
   .toConfig();
 ```
+{% endtab %}
 
+{% tab title="Frontend" %}
 ```tsx
-// Frontend
 import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
 
 function ProductsPage() {
@@ -30,6 +32,8 @@ function ProductsPage() {
   return <DataTable adapter={adapter} />;
 }
 ```
+{% endtab %}
+{% endtabs %}
 
 ## 2. Type-Safe with Codegen
 
@@ -164,27 +168,16 @@ export const tags = defineTable(schema.tags)
 Add custom content to the DataTable toolbar:
 
 ```tsx
-import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
-
-function OrdersPage() {
-  const adapter = createTableCraftAdapter({
-    baseUrl: '/api/engine',
-    table: 'orders',
-  });
-
-  return (
-    <DataTable
-      adapter={adapter}
-      startToolbarContent={({ selectedRows, clearSelection }) => (
-        selectedRows.length > 0 && (
-          <button onClick={clearSelection}>
-            Clear {selectedRows.length} selected
-          </button>
-        )
-      )}
-    />
-  );
-}
+<DataTable
+  adapter={adapter}
+  startToolbarContent={({ selectedRows, clearSelection }) => (
+    selectedRows.length > 0 && (
+      <button onClick={clearSelection}>
+        Clear {selectedRows.length} selected
+      </button>
+    )
+  )}
+/>
 ```
 
 ## 10. Conditional Column Visibility
