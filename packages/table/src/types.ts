@@ -1,4 +1,27 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, RowData } from "@tanstack/react-table";
+
+declare module "@tanstack/react-table" {
+  interface TableMeta<TData extends RowData> {
+    isLoadingColumns?: boolean;
+  }
+}
+
+// ─────────────────────────────────────────────
+// Type-safe Column Helper
+// ─────────────────────────────────────────────
+
+/**
+ * Use this with generated *Column types for type-safe hiddenColumns.
+ * @example
+ * import type { ProductsColumn } from './generated/products';
+ * 
+ * <DataTable
+ *   hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'metadata'])}
+ * />
+ */
+export function hiddenColumns<C extends string>(columns: C[]): C[] {
+  return columns;
+}
 
 // ─────────────────────────────────────────────
 // Table Configuration
@@ -216,6 +239,12 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   idField?: keyof T;
   /** Row click handler */
   onRowClick?: (row: T, index: number) => void;
+  /**
+   * Columns to hide from the table UI.
+   * Data is still received from the API - just not displayed.
+   * @example hiddenColumns={['id', 'tenantId', 'metadata']}
+   */
+  hiddenColumns?: string[];
   /** Custom toolbar content (rendered at the start of the toolbar) */
   startToolbarContent?: React.ReactNode | ((ctx: ToolbarContext<T>) => React.ReactNode);
   /** Custom toolbar content (rendered after built-in controls) */

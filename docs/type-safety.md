@@ -90,3 +90,39 @@ import { ago } from '@tablecraft/engine';
 1.  **Prefer Helpers**: Always check if a helper exists before writing raw SQL.
 2.  **Use Drizzle Columns**: Inside `sql` tags, always interpolate Drizzle column objects (`${s.users.name}`) instead of writing string names (`"name"`).
 3.  **Validate Configs**: If you are dynamically generating configs, use `validateConfig` to catch errors early.
+
+## Frontend Type Safety
+
+### Generated Types
+
+The `@tablecraft/codegen` package generates fully-typed interfaces from your API metadata:
+
+```typescript
+// Generated from API metadata
+export interface ProductsRow extends Record<string, unknown> {
+  id: number;
+  name: string;
+  price: number;
+  metadata: Record<string, unknown>;
+}
+
+export type ProductsColumn = 'id' | 'name' | 'price' | 'metadata';
+```
+
+### Type-Safe Hidden Columns
+
+Use the `hiddenColumns` helper with generated `*Column` types for compile-time safety:
+
+```typescript
+import { DataTable, hiddenColumns } from '@tablecraft/table';
+import type { ProductsRow, ProductsColumn } from './generated';
+
+<DataTable<ProductsRow>
+  adapter={adapter}
+  hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'metadata'])}
+/>
+```
+
+{% hint style="info" %}
+The `hiddenColumns` helper catches typos and invalid column names at compile time, not runtime.
+{% endhint %}

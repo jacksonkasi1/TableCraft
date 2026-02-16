@@ -22,7 +22,7 @@ export interface ProductsFilters {
   isArchived?: { operator: 'eq' | 'neq'; value: boolean };
 }
 
-export type ProductsColumn = keyof ProductsRow;
+export type ProductsColumn = 'id' | 'tenantId' | 'name' | 'description' | 'price' | 'category' | 'tags' | 'metadata' | 'isArchived';
 
 export function createProductsAdapter(options: {
   baseUrl: string;

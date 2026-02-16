@@ -94,6 +94,20 @@ Drag-to-resize columns with localStorage persistence.
 ```
 {% endtab %}
 
+{% tab title="Hidden Columns" %}
+Hide specific columns from the table UI. Data is still received from API.
+
+```tsx
+import { hiddenColumns } from '@tablecraft/table';
+import type { ProductsColumn } from './generated';
+
+<DataTable
+  adapter={adapter}
+  hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
+/>
+```
+{% endtab %}
+
 {% tab title="Visibility" %}
 Show/hide columns with URL state sync.
 

@@ -61,6 +61,7 @@ export {
   cleanupColumnResizing,
 } from "./utils/column-sizing";
 export { createKeyboardNavigationHandler } from "./utils/keyboard-navigation";
+export { hiddenColumns } from "./types";
 
 // ─── Types ───
 export type {

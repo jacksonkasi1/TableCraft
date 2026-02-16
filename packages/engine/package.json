@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/engine",
-  "version": "0.1.0-beta.4",
+  "version": "0.1.0",
   "description": "The backend query engine for TableCraft",
   "type": "module",
   "main": "dist/index.js",

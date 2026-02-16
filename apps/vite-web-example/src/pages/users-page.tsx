@@ -1,5 +1,5 @@
-import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
-import type { UsersRow } from '../generated';
+import { DataTable, createTableCraftAdapter, hiddenColumns } from '@tablecraft/table';
+import type { UsersRow, UsersColumn } from '../generated';
 
 export function UsersPage() {
   const adapter = createTableCraftAdapter<UsersRow>({
@@ -18,6 +18,7 @@ export function UsersPage() {
 
       <DataTable<UsersRow>
         adapter={adapter}
+        hiddenColumns={hiddenColumns<UsersColumn>(['id', 'createdAt'])}
         config={{
           enableSearch: true,
           enableExport: true,

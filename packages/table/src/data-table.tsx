@@ -44,6 +44,7 @@ export function DataTable<T extends Record<string, unknown>>({
   exportConfig,
   idField = "id" as keyof T,
   onRowClick,
+  hiddenColumns,
   startToolbarContent,
   toolbarContent,
   renderToolbar,
@@ -78,7 +79,11 @@ export function DataTable<T extends Record<string, unknown>>({
   } = useTableData(adapter, tableConfig);
 
   // ─── Auto-columns from metadata ───
-  const { columns: autoColumns, metadata } = useAutoColumns(adapter, manualColumns, renderers);
+  const {
+    columns: autoColumns,
+    metadata,
+    isLoadingMeta,
+  } = useAutoColumns(adapter, manualColumns, renderers);
 
   // Dynamically determine if date filter should be enabled
   const dateFilterEnabled = useMemo(() => {
@@ -159,6 +164,17 @@ export function DataTable<T extends Record<string, unknown>>({
     () => (sortBy ? [{ id: sortBy, desc: sortOrder === "desc" }] : []),
     [sortBy, sortOrder]
   );
+
+  // ─── Merge hiddenColumns with column visibility ───
+  const effectiveColumnVisibility = useMemo(() => {
+    const base = { ...urlColumnVisibility };
+    if (hiddenColumns?.length) {
+      for (const col of hiddenColumns) {
+        base[String(col)] = false;
+      }
+    }
+    return base;
+  }, [urlColumnVisibility, hiddenColumns]);
 
   // ─── Selection helpers ───
   const totalSelectedItems = useMemo(
@@ -322,12 +338,15 @@ export function DataTable<T extends Record<string, unknown>>({
       columns: resolvedColumns,
       state: {
         sorting,
-        columnVisibility: urlColumnVisibility,
+        columnVisibility: effectiveColumnVisibility,
         rowSelection,
         columnFilters: [] as ColumnFiltersState,
         pagination,
         columnSizing,
         columnOrder,
+      },
+      meta: {
+        isLoadingColumns: isLoadingMeta,
       },
       columnResizeMode: "onChange" as ColumnResizeMode,
       onColumnSizingChange: handleColumnSizingChange,
@@ -354,7 +373,7 @@ export function DataTable<T extends Record<string, unknown>>({
       data,
       resolvedColumns,
       sorting,
-      urlColumnVisibility,
+      effectiveColumnVisibility,
       rowSelection,
       pagination,
       columnSizing,
@@ -368,6 +387,7 @@ export function DataTable<T extends Record<string, unknown>>({
       setUrlColumnVisibility,
       handlePaginationChange,
       idField,
+      isLoadingMeta,
     ]
   );
 

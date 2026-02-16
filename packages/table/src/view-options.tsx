@@ -3,7 +3,7 @@
 import type { Table, Column } from "@tanstack/react-table";
 import { Check, GripVertical, Settings2, RotateCcw } from "lucide-react";
 import { cn } from "./utils/cn";
-import { useCallback, useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -34,13 +34,11 @@ export function DataTableViewOptions<TData>({
   size = "default",
   tableId,
 }: DataTableViewOptionsProps<TData>) {
-  const columns = useMemo(
-    () =>
-      table.getAllColumns().filter(
-        (column) =>
-          typeof column.accessorFn !== "undefined" && column.getCanHide()
-      ),
-    [table]
+  const isLoading = table.options.meta?.isLoadingColumns ?? false;
+
+  const columns = table.getAllColumns().filter(
+    (column) =>
+      typeof column.accessorFn !== "undefined" && column.getCanHide()
   );
 
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
@@ -50,16 +48,15 @@ export function DataTableViewOptions<TData>({
     : COLUMN_ORDER_STORAGE_KEY;
 
   const columnOrder = table.getState().columnOrder;
-  const orderedColumns = useMemo(() => {
-    if (!columnOrder.length) return columns;
-    return [...columns].sort((a, b) => {
-      const aIndex = columnOrder.indexOf(a.id);
-      const bIndex = columnOrder.indexOf(b.id);
-      if (aIndex === -1) return 1;
-      if (bIndex === -1) return -1;
-      return aIndex - bIndex;
-    });
-  }, [columns, columnOrder]);
+  const orderedColumns = !columnOrder.length
+    ? columns
+    : [...columns].sort((a, b) => {
+        const aIndex = columnOrder.indexOf(a.id);
+        const bIndex = columnOrder.indexOf(b.id);
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
 
   // Load column order from localStorage
   useEffect(() => {
@@ -179,9 +176,20 @@ export function DataTableViewOptions<TData>({
         <Command>
           <CommandInput placeholder="Search columns..." />
           <CommandList>
-            <CommandEmpty>No columns found.</CommandEmpty>
-            <CommandGroup>
-              {orderedColumns.map((column) => (
+            {isLoading ? (
+              <CommandGroup>
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center px-2 py-1.5 space-x-2">
+                    <div className="h-4 w-4 rounded bg-muted animate-pulse opacity-50" />
+                    <div className="h-4 grow rounded bg-muted animate-pulse opacity-50" />
+                  </div>
+                ))}
+              </CommandGroup>
+            ) : (
+              <>
+                <CommandEmpty>No columns found.</CommandEmpty>
+                <CommandGroup>
+                  {orderedColumns.map((column) => (
                 <CommandItem
                   key={column.id}
                   onSelect={() => handleColumnVisibilityToggle(column.id)}
@@ -206,7 +214,9 @@ export function DataTableViewOptions<TData>({
                   />
                 </CommandItem>
               ))}
-            </CommandGroup>
+                </CommandGroup>
+              </>
+            )}
             <CommandSeparator />
             <CommandGroup>
               <CommandItem

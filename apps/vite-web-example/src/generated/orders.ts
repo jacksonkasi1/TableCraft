@@ -32,7 +32,7 @@ export interface OrdersFilters {
   itemCount?: { operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'in' | 'notIn'; value: number | [number, number] };
 }
 
-export type OrdersColumn = keyof OrdersRow;
+export type OrdersColumn = 'id' | 'tenantId' | 'userId' | 'status' | 'total' | 'createdAt' | 'deletedAt' | 'statusLabel' | 'vatAmount' | 'email' | 'role' | 'itemCount';
 
 export function createOrdersAdapter(options: {
   baseUrl: string;

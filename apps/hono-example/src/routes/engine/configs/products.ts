@@ -11,5 +11,6 @@ export const products = defineTable(s.products)
   .staticFilter('isArchived', 'eq', false)
   // Sort by price desc by default
   .sort('-price')
+  // .hide('metadata') // from frontend also can hide that from ui. but still frontend receive this data.
   // Smaller page size
   .pageSize(5, { max: 50 });
