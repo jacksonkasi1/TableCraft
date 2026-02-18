@@ -57,6 +57,7 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   columnMapping?: Record<string, string>;
   customToolbarContent?: React.ReactNode;
   startToolbarContent?: React.ReactNode;
+  hiddenColumns?: string[];
 }
 
 export function DataTableToolbar<TData extends ExportableData>({
@@ -76,6 +77,7 @@ export function DataTableToolbar<TData extends ExportableData>({
   columnMapping,
   customToolbarContent,
   startToolbarContent,
+  hiddenColumns,
 }: DataTableToolbarProps<TData>) {
   const entityName = exportConfig?.entityName || "items";
 
@@ -232,6 +234,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             table={table}
             columnMapping={columnMapping}
             size={config.size}
+            hiddenColumns={hiddenColumns}
           />
         )}
 

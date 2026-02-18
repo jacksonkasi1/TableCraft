@@ -562,6 +562,7 @@ export function DataTable<T extends Record<string, unknown>>({
           resetColumnOrder={resetColumnOrder}
           customToolbarContent={customToolbar}
           startToolbarContent={resolvedStartToolbarContent}
+          hiddenColumns={hiddenColumns as string[]}
         />
       )}
 
