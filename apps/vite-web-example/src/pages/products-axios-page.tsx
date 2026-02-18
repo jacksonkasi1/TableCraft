@@ -17,31 +17,16 @@ export function ProductsAxiosPage() {
   const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
     baseUrl: '/api/engine',
     table: 'products',
-    axios: axiosInstance, // Pass axios instance directly!
+    axios: axiosInstance,
   }), []);
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Products (Axios)</h1>
-          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-            Axios Client
-          </span>
-        </div>
-        <p className="text-muted-foreground">
-          This page uses an Axios instance with interceptors for authentication and logging
-        </p>
-      </div>
-
-      <div className="rounded-lg border bg-muted/50 p-4">
-        <h3 className="font-medium mb-2">How it works:</h3>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Created an Axios instance with request/response interceptors</li>
-          <li>Passed it to <code className="bg-muted px-1 rounded">createTableCraftAdapter(&#123; axios: axiosInstance &#125;)</code></li>
-          <li>Interceptors handle auth tokens, logging, and error handling</li>
-          <li>Open browser console to see request logs in dev mode</li>
-        </ul>
+    <div className="p-8 space-y-4">
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold">Products</h1>
+        <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full">
+          Axios Client
+        </span>
       </div>
 
       <DataTable<ProductsRow>
@@ -76,22 +61,16 @@ export function ProductsAxiosPage() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(String(row.id))}
-              >
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(row.id))}>
                 Copy ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Edit product</DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => console.log('Delete', row.name)}
-              >
+              <DropdownMenuItem className="text-destructive">
                 Delete product
               </DropdownMenuItem>
             </DropdownMenuContent>

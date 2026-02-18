@@ -19,14 +19,9 @@ export function ProductsPage() {
   }), []);
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-        <p className="text-muted-foreground">
-          Manage your product catalog with powerful filtering and search
-        </p>
-      </div>
-
+    <div className="p-8 space-y-4">
+      <h1 className="text-2xl font-bold">Products</h1>
+      
       <DataTable<ProductsRow>
         adapter={adapter}
         hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
@@ -54,30 +49,21 @@ export function ProductsPage() {
             </span>
           ),
         })}
-        actions={({ row, table }) => (
+        actions={({ row }) => (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">Open menu</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(String(row.id))}
-              >
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(row.id))}>
                 Copy ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Edit product</DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => {
-                  // table.totalSelected gives count of selected rows
-                  console.log('Delete', row.name, '| Selected:', table.totalSelected);
-                }}
-              >
+              <DropdownMenuItem className="text-destructive">
                 Delete product
               </DropdownMenuItem>
             </DropdownMenuContent>
