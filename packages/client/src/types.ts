@@ -3,6 +3,8 @@ export interface ClientOptions {
   baseUrl: string;
   /** Custom fetch function. Defaults to global fetch. */
   fetch?: typeof fetch;
+  /** Axios instance. If provided, takes precedence over fetch. */
+  axios?: unknown;
   /** Default headers for every request (auth tokens, etc.) */
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
 }

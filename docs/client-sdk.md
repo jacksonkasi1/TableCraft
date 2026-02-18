@@ -127,6 +127,33 @@ const tc = createClient({
 });
 ```
 
+**With Axios Instance:**
+```typescript
+import axios from 'axios';
+import { createClient } from '@tablecraft/client';
+
+// Create axios instance with interceptors
+const axiosInstance = axios.create({
+  baseURL: '/api',
+  timeout: 10000,
+});
+
+// Add auth interceptor
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Just pass the axios instance - no wrapper needed!
+const tc = createClient({
+  baseUrl: '/api/engine',
+  axios: axiosInstance, // ✅ Direct axios support
+});
+```
+
 ---
 
 ### `tc.table<T>(name)`

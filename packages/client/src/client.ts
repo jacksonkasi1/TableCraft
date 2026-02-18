@@ -7,12 +7,70 @@ import type {
   TableMetadata,
 } from './types';
 
+interface AxiosResponse<T = unknown> {
+  data: T;
+  status: number;
+  statusText: string;
+  headers: Record<string, string>;
+}
+
+interface AxiosInstance {
+  get<T = unknown>(url: string, config?: { headers?: Record<string, string> }): Promise<AxiosResponse<T>>;
+}
+
+function isAxiosInstance(value: unknown): value is AxiosInstance {
+  return typeof value === 'object' && value !== null && typeof (value as AxiosInstance).get === 'function';
+}
+
+function createAxiosFetchAdapter(axios: AxiosInstance) {
+  return async (url: string, options?: RequestInit): Promise<Response> => {
+    const headers = options?.headers as Record<string, string> | undefined;
+    
+    try {
+      const response = await axios.get(url, { headers });
+      
+      return {
+        ok: response.status >= 200 && response.status < 300,
+        status: response.status,
+        statusText: response.statusText,
+        headers: new Headers(response.headers),
+        json: async () => response.data,
+        text: async () => typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
+      } as Response;
+    } catch (error: unknown) {
+      const axiosError = error as { response?: AxiosResponse<{ error?: string; code?: string; details?: unknown }>; message?: string };
+      
+      if (axiosError.response) {
+        return {
+          ok: false,
+          status: axiosError.response.status,
+          statusText: 'Error',
+          headers: new Headers(),
+          json: async () => axiosError.response?.data ?? { error: 'Request failed' },
+          text: async () => JSON.stringify(axiosError.response?.data ?? { error: 'Request failed' }),
+        } as Response;
+      }
+      
+      throw new Error(axiosError.message ?? 'Request failed');
+    }
+  };
+}
+
 /**
  * Creates a type-safe client for TableCraft APIs.
  */
 export function createClient(options: ClientOptions): TableCraftClient {
   const { baseUrl } = options;
-  const customFetch = options.fetch ?? globalThis.fetch;
+  
+  let customFetch: (url: string, options?: RequestInit) => Promise<Response>;
+  
+  if (options.axios && isAxiosInstance(options.axios)) {
+    customFetch = createAxiosFetchAdapter(options.axios);
+  } else if (options.fetch) {
+    customFetch = options.fetch;
+  } else {
+    customFetch = globalThis.fetch;
+  }
 
   async function resolveHeaders(): Promise<Record<string, string>> {
     if (!options.headers) return {};
