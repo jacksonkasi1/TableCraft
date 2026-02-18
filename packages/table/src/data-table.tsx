@@ -237,9 +237,9 @@ export function DataTable<T extends Record<string, unknown>>({
       updaterOrValue:
         | { pageIndex: number; pageSize: number }
         | ((prev: { pageIndex: number; pageSize: number }) => {
-            pageIndex: number;
-            pageSize: number;
-          })
+          pageIndex: number;
+          pageSize: number;
+        })
     ) => {
       const newPagination =
         typeof updaterOrValue === "function"
@@ -325,7 +325,7 @@ export function DataTable<T extends Record<string, unknown>>({
       null as unknown as ReturnType<typeof useReactTable>,
       onRowClick
         ? (rowData: unknown, rowIndex: number) =>
-            onRowClick(rowData as T, rowIndex)
+          onRowClick(rowData as T, rowIndex)
         : undefined
     ),
     [onRowClick]
@@ -418,6 +418,9 @@ export function DataTable<T extends Record<string, unknown>>({
 
   // ─── Table container ref ───
   const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // ─── Skeleton headers (for preserving column widths during loading) ───
+  const skeletonHeaders = table.getHeaderGroups()[0]?.headers ?? [];
 
   // ─── Render toolbar content ───
   const toolbarContext = {
@@ -524,9 +527,9 @@ export function DataTable<T extends Record<string, unknown>>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                       {tableConfig.enableColumnResizing &&
                         header.column.getCanResize() && (
                           <DataTableResizer header={header} table={table} />
@@ -545,17 +548,16 @@ export function DataTable<T extends Record<string, unknown>>({
                     data-slot="table-row"
                     className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
                   >
-                    {Array.from({ length: resolvedColumns.length }).map(
-                      (_, j) => (
-                        <td
-                          key={`skeleton-${i}-${j}`}
-                          data-slot="table-cell"
-                          className="align-middle whitespace-nowrap px-4 py-2 text-left"
-                        >
-                          <div className="h-6 w-full animate-pulse rounded bg-muted" />
-                        </td>
-                      )
-                    )}
+                    {skeletonHeaders.map((header) => (
+                      <td
+                        key={`skeleton-${i}-${header.id}`}
+                        data-slot="table-cell"
+                        className="align-middle whitespace-nowrap px-4 py-2 text-left"
+                        style={{ width: header.getSize() }}
+                      >
+                        <div className="h-6 w-full animate-pulse rounded bg-muted" />
+                      </td>
+                    ))}
                   </tr>
                 ))
               ) : table.getRowModel().rows?.length ? (
