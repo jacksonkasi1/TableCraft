@@ -193,3 +193,104 @@ export const users = defineTable(schema.users)
   })
   .toConfig();
 ```
+
+## 11. Custom Column Rendering (Column Overrides)
+
+Customize how column values are displayed in the table using `columnOverrides`. This allows you to transform data presentation without modifying the backend.
+
+```tsx
+import { DataTable, defineColumnOverrides, hiddenColumns } from '@tablecraft/table';
+import type { ProductsRow, ProductsColumn } from '../generated';
+
+function ProductsPage() {
+  const adapter = createTableCraftAdapter<ProductsRow>({
+    baseUrl: '/api/engine',
+    table: 'products',
+  });
+
+  return (
+    <DataTable<ProductsRow>
+      adapter={adapter}
+      hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
+      columnOverrides={defineColumnOverrides<ProductsRow>()({
+        // Format price as currency
+        price: ({ value }) => (
+          <span className="font-mono font-semibold text-emerald-500">
+            ${value.toFixed(2)}
+          </span>
+        ),
+        // Display status as a badge
+        isArchived: ({ value }) => (
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+            value 
+              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+          }`}>
+            {value ? 'Archived' : 'Active'}
+          </span>
+        ),
+      })}
+    />
+  );
+}
+```
+
+{% hint style="info" %}
+`columnOverrides` receives an object with `value`, `row`, and `column` for maximum flexibility.
+{% endhint %}
+
+## 12. Row Actions
+
+Add row-level actions (Edit, Delete, etc.) using the `actions` prop. This renders an action menu for each row.
+
+```tsx
+import { DataTable } from '@tablecraft/table';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal } from 'lucide-react';
+
+function ProductsPage() {
+  const adapter = createTableCraftAdapter({ baseUrl: '/api/engine', table: 'products' });
+
+  return (
+    <DataTable
+      adapter={adapter}
+      actions={({ row, table }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(row.id))}>
+              Copy ID
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Edit product</DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => console.log('Delete', row.name)}
+            >
+              Delete product
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    />
+  );
+}
+```
+
+{% hint style="info" %}
+The `actions` callback receives `{ row, table }` where `row` is the current row data and `table` provides utilities like `table.totalSelected` for bulk operations.
+{% endhint %}
