@@ -137,30 +137,32 @@ describe('createClient with axios', () => {
     };
 
     const mockAxios = {
-      get: vi.fn().mockResolvedValue({
+      request: vi.fn().mockResolvedValue({
         data: mockResponse,
         status: 200,
         statusText: 'OK',
         headers: {},
       }),
+      get: vi.fn(),
     };
 
     const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
     const result = await tc.table('users').query();
 
-    expect(mockAxios.get).toHaveBeenCalledTimes(1);
+    expect(mockAxios.request).toHaveBeenCalledTimes(1);
     expect(result.data).toHaveLength(1);
     expect(result.data[0].name).toBe('Alice');
   });
 
   it('should pass headers to axios', async () => {
     const mockAxios = {
-      get: vi.fn().mockResolvedValue({
+      request: vi.fn().mockResolvedValue({
         data: { data: [], meta: {} },
         status: 200,
         statusText: 'OK',
         headers: {},
       }),
+      get: vi.fn(),
     };
 
     const tc = createClient({
@@ -171,8 +173,7 @@ describe('createClient with axios', () => {
 
     await tc.table('users').query();
 
-    expect(mockAxios.get).toHaveBeenCalledWith(
-      expect.any(String),
+    expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer token123',
@@ -183,7 +184,7 @@ describe('createClient with axios', () => {
 
   it('should handle axios error responses', async () => {
     const mockAxios = {
-      get: vi.fn().mockRejectedValue({
+      request: vi.fn().mockRejectedValue({
         response: {
           data: { error: 'Not found', code: 'NOT_FOUND' },
           status: 404,
@@ -191,11 +192,25 @@ describe('createClient with axios', () => {
           headers: {},
         },
       }),
+      get: vi.fn(),
     };
 
     const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
 
     await expect(tc.table('users').query()).rejects.toThrow('Not found');
+  });
+
+  it('should handle axios errors without response', async () => {
+    const mockAxios = {
+      request: vi.fn().mockRejectedValue({
+        message: 'Network error',
+      }),
+      get: vi.fn(),
+    };
+
+    const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
+
+    await expect(tc.table('users').query()).rejects.toThrow('Network error');
   });
 
   it('should fetch metadata with axios', async () => {
@@ -223,12 +238,13 @@ describe('createClient with axios', () => {
     };
 
     const mockAxios = {
-      get: vi.fn().mockResolvedValue({
+      request: vi.fn().mockResolvedValue({
         data: mockMeta,
         status: 200,
         statusText: 'OK',
         headers: {},
       }),
+      get: vi.fn(),
     };
 
     const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
@@ -240,12 +256,13 @@ describe('createClient with axios', () => {
 
   it('should prefer axios over fetch when both provided', async () => {
     const mockAxios = {
-      get: vi.fn().mockResolvedValue({
+      request: vi.fn().mockResolvedValue({
         data: { data: [{ id: 1 }], meta: {} },
         status: 200,
         statusText: 'OK',
         headers: {},
       }),
+      get: vi.fn(),
     };
 
     const mockFetch = vi.fn();
@@ -258,7 +275,7 @@ describe('createClient with axios', () => {
 
     await tc.table('users').query();
 
-    expect(mockAxios.get).toHaveBeenCalled();
+    expect(mockAxios.request).toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });

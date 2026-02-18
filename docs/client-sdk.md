@@ -74,6 +74,7 @@ import { createClient } from '@tablecraft/client';
 const tc = createClient({
   baseUrl: string;
   fetch?: typeof fetch;          // Custom fetch function (optional)
+  axios?: unknown;               // Axios instance (optional)
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
 });
 ```
@@ -84,6 +85,7 @@ const tc = createClient({
 |--------|------|----------|-------------|
 | `baseUrl` | `string` | Yes | Base URL of your TableCraft API (e.g., `/api/engine`) |
 | `fetch` | `typeof fetch` | No | Custom fetch function for testing or custom environments |
+| `axios` | `AxiosInstance` | No | Axios instance. Takes precedence over `fetch` if provided |
 | `headers` | `Record<string, string>` or `() => Record<string, string>` | No | Default headers for all requests (e.g., auth tokens) |
 
 #### Examples
@@ -839,7 +841,7 @@ Interested? Open an issue on [GitHub](https://github.com/jacksonkasi1/TableCraft
 
 ## FAQ
 
-### Does axios support increase my bundle size?
+### Does using axios increase my bundle size?
 
 **No!** Axios is an **optional peer dependency**. If you don't use it, it won't be installed or bundled.
 

@@ -19,6 +19,7 @@
 | ⭐ Easy | < 2 hours, straightforward |
 | ⭐⭐ Medium | 2-8 hours, moderate complexity |
 | ⭐⭐⭐ Hard | > 8 hours, requires research/planning |
+| ⭐⭐⭐⭐ Very Hard | > 2 weeks, major feature |
 
 ---
 

@@ -7,6 +7,14 @@ import type {
   TableMetadata,
 } from './types';
 
+interface AxiosRequestConfig {
+  url?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  data?: unknown;
+  signal?: AbortSignal;
+}
+
 interface AxiosResponse<T = unknown> {
   data: T;
   status: number;
@@ -15,19 +23,27 @@ interface AxiosResponse<T = unknown> {
 }
 
 interface AxiosInstance {
-  get<T = unknown>(url: string, config?: { headers?: Record<string, string> }): Promise<AxiosResponse<T>>;
+  request<T = unknown>(config: AxiosRequestConfig): Promise<AxiosResponse<T>>;
+  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
 }
 
 function isAxiosInstance(value: unknown): value is AxiosInstance {
-  return typeof value === 'object' && value !== null && typeof (value as AxiosInstance).get === 'function';
+  return typeof value === 'object' && value !== null && typeof (value as AxiosInstance).request === 'function';
 }
 
 function createAxiosFetchAdapter(axios: AxiosInstance) {
   return async (url: string, options?: RequestInit): Promise<Response> => {
     const headers = options?.headers as Record<string, string> | undefined;
+    const method = options?.method || 'GET';
     
     try {
-      const response = await axios.get(url, { headers });
+      const response = await axios.request({
+        url,
+        method,
+        headers,
+        data: options?.body,
+        signal: options?.signal ?? undefined,
+      });
       
       return {
         ok: response.status >= 200 && response.status < 300,
@@ -44,8 +60,8 @@ function createAxiosFetchAdapter(axios: AxiosInstance) {
         return {
           ok: false,
           status: axiosError.response.status,
-          statusText: 'Error',
-          headers: new Headers(),
+          statusText: axiosError.response.statusText,
+          headers: new Headers(axiosError.response.headers),
           json: async () => axiosError.response?.data ?? { error: 'Request failed' },
           text: async () => JSON.stringify(axiosError.response?.data ?? { error: 'Request failed' }),
         } as Response;
