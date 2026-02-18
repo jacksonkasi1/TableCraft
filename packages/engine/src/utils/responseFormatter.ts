@@ -122,7 +122,29 @@ export function formatResponse(
     });
   }
 
-  // 2. Apply JS transforms
+  // 2. Coerce numeric columns from string → number
+  // SQL drivers (via Drizzle) return decimal/numeric columns as strings to preserve
+  // precision. We convert them here so JSON responses match the generated TS types.
+  const numericFields = config.columns
+    .filter((c) => c.type === 'number' && !c.hidden)
+    .map((c) => c.name);
+
+  if (numericFields.length > 0) {
+    processed = processed.map((row) => {
+      const r = { ...row };
+      for (const field of numericFields) {
+        if (field in r && typeof r[field] === 'string') {
+          const num = Number(r[field]);
+          if (!Number.isNaN(num)) {
+            r[field] = num;
+          }
+        }
+      }
+      return r;
+    });
+  }
+
+  // 3. Apply JS transforms
   processed = applyJsTransforms(processed, config);
 
   return {
