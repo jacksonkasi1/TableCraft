@@ -35,13 +35,3 @@ export function createProductsAdapter(options: {
     table: 'products',
   });
 }
-
-export async function productsAdapter(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<DataAdapter<ProductsRow>> {
-  return createTableCraftAdapter<ProductsRow>({
-    ...options,
-    table: 'products',
-  });
-}

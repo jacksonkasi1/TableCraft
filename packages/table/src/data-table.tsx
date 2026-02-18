@@ -29,7 +29,6 @@ import { useAutoColumns } from "./auto/use-auto-columns";
 import { DataTablePagination } from "./pagination";
 import { DataTableToolbar } from "./toolbar";
 import { DataTableResizer } from "./resizer";
-import { createKeyboardNavigationHandler } from "./utils/keyboard-navigation";
 import {
   initializeColumnSizes,
   trackColumnResizing,
@@ -122,15 +121,14 @@ export function DataTable<T extends Record<string, unknown>>({
     // Apply columnOverrides: replace cell renderer for matching columns
     if (columnOverrides) {
       cols = cols.map((col) => {
-        const key = (col as { accessorKey?: string }).accessorKey ?? col.id;
-        if (!key || !(key in columnOverrides)) return col;
-        const overrideFn = columnOverrides[key as keyof T];
+        const accessorKey = (col as { accessorKey?: string }).accessorKey;
+        // Skip columns without accessorKey (e.g., selection, actions, group columns)
+        if (!accessorKey || !(accessorKey in columnOverrides)) return col;
+        const overrideFn = columnOverrides[accessorKey as keyof T];
         if (!overrideFn) return col;
         return {
           ...col,
           cell: ({ getValue, row }: { getValue: () => unknown; row: { original: T } }) => {
-            // tableContext is built below — we use a ref-like approach via closure
-            // We'll pass it via a wrapper that reads from the mutable ref
             return overrideFn({
               value: getValue() as T[keyof T],
               row: row.original,
@@ -378,16 +376,54 @@ export function DataTable<T extends Record<string, unknown>>({
     [onRowClick]
   );
 
+  // ─── Table container ref ───
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // ─── Table instance ref (for keyboard navigation) ───
+  const tableRef = useRef<ReturnType<typeof useReactTable<T>> | null>(null);
+
   // ─── Keyboard navigation ───
   const handleKeyDown = useCallback(
-    createKeyboardNavigationHandler(
-      // Will be assigned once table is created — use a ref
-      null as unknown as ReturnType<typeof useReactTable>,
-      onRowClick
-        ? (rowData: unknown, rowIndex: number) =>
-          onRowClick(rowData as T, rowIndex)
-        : undefined
-    ),
+    (e: React.KeyboardEvent) => {
+      if (!tableRef.current) return;
+      const table = tableRef.current;
+      if (
+        (e.key === " " || e.key === "Enter") &&
+        !(e.target as HTMLElement).matches(
+          'input, button, [role="button"], [contenteditable="true"]'
+        )
+      ) {
+        e.preventDefault();
+
+        const focusedElement = document.activeElement;
+        if (
+          focusedElement &&
+          (focusedElement.getAttribute("role") === "row" ||
+            focusedElement.getAttribute("role") === "gridcell")
+        ) {
+          const rowElement =
+            focusedElement.getAttribute("role") === "row"
+              ? focusedElement
+              : focusedElement.closest('[role="row"]');
+
+          if (rowElement) {
+            const rowId =
+              rowElement.getAttribute("data-row-index") || rowElement.id;
+            if (rowId) {
+              const rowIndex = Number.parseInt(rowId.replace(/^row-/, ""), 10);
+              const row = table.getRowModel().rows[rowIndex];
+              if (row) {
+                if (e.key === " ") {
+                  row.toggleSelected();
+                } else if (e.key === "Enter" && onRowClick) {
+                  onRowClick(row.original as T, rowIndex);
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     [onRowClick]
   );
 
@@ -453,6 +489,9 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const table = useReactTable<T>(tableOptions);
 
+  // Update table ref for keyboard navigation
+  tableRef.current = table;
+
   // ─── Column sizing init ───
   useEffect(() => {
     initializeColumnSizes(
@@ -475,9 +514,6 @@ export function DataTable<T extends Record<string, unknown>>({
   useEffect(() => {
     table.setSorting(sorting);
   }, [table, sorting]);
-
-  // ─── Table container ref ───
-  const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // ─── Skeleton headers (for preserving column widths during loading) ───
   const skeletonHeaders = table.getHeaderGroups()[0]?.headers ?? [];

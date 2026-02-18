@@ -134,8 +134,10 @@ export function formatResponse(
       const r = { ...row };
       for (const field of numericFields) {
         if (field in r && typeof r[field] === 'string') {
-          const num = Number(r[field]);
-          if (!Number.isNaN(num)) {
+          const strVal = r[field] as string;
+          if (strVal.trim() === '') continue;
+          const num = Number(strVal);
+          if (Number.isFinite(num)) {
             r[field] = num;
           }
         }

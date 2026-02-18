@@ -33,13 +33,3 @@ export function createTenantsAdapter(options: {
     table: 'tenants',
   });
 }
-
-export async function tenantsAdapter(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<DataAdapter<TenantsRow>> {
-  return createTableCraftAdapter<TenantsRow>({
-    ...options,
-    table: 'tenants',
-  });
-}

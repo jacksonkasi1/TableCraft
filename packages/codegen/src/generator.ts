@@ -113,23 +113,11 @@ function generateAdapterFunction(
   apiName: string
 ): string {
   const pascalName = toPascalCase(tableName);
-  const camelName = toCamelCase(tableName) + 'Adapter';
-  const functionName = `create${pascalName}Adapter`;
 
-  return `export function ${functionName}(options: {
+  return `export function create${pascalName}Adapter(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
 }): DataAdapter<${pascalName}Row> {
-  return createTableCraftAdapter<${pascalName}Row>({
-    ...options,
-    table: '${apiName}',
-  });
-}
-
-export async function ${camelName}(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<DataAdapter<${pascalName}Row>> {
   return createTableCraftAdapter<${pascalName}Row>({
     ...options,
     table: '${apiName}',

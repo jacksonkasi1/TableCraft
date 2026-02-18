@@ -21,7 +21,7 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background flex flex-col">
         {/* Header */}
         <header className="border-b">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -52,7 +52,7 @@ function App() {
 
             <div className="flex items-center space-x-4">
               <a
-                href="https://github.com/yourusername/tablecraft"
+                href="https://github.com/jacksonkasi1/TableCraft"
                 target="_blank"
                 rel="noopener noreferrer"
               >

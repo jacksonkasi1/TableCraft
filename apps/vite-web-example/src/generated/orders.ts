@@ -45,13 +45,3 @@ export function createOrdersAdapter(options: {
     table: 'orders',
   });
 }
-
-export async function ordersAdapter(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<DataAdapter<OrdersRow>> {
-  return createTableCraftAdapter<OrdersRow>({
-    ...options,
-    table: 'orders',
-  });
-}

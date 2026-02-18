@@ -33,13 +33,3 @@ export function createUsersAdapter(options: {
     table: 'users',
   });
 }
-
-export async function usersAdapter(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<DataAdapter<UsersRow>> {
-  return createTableCraftAdapter<UsersRow>({
-    ...options,
-    table: 'users',
-  });
-}

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { DataTable, createTableCraftAdapter, hiddenColumns, defineColumnOverrides } from '@tablecraft/table';
 import type { ProductsRow, ProductsColumn } from '../generated';
 import {
@@ -12,10 +13,10 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 
 export function ProductsPage() {
-  const adapter = createTableCraftAdapter<ProductsRow>({
+  const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
     baseUrl: '/api/engine',
     table: 'products',
-  });
+  }), []);
 
   return (
     <div className="p-8 space-y-8">
