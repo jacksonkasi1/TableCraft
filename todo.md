@@ -44,13 +44,26 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [ ] Create `docs/custom-adapter.md` | 🔴 P0 | ⭐⭐ | Pending |
+| - [x] Create `docs/custom-adapter.md` | 🔴 P0 | ⭐⭐ | ✅ Done |
 | - [ ] Document `DataAdapter` interface | 🔴 P0 | ⭐ | Pending |
 | - [ ] Example: REST API adapter | 🔴 P0 | ⭐⭐ | Pending |
 | - [ ] Example: GraphQL adapter | 🟡 P2 | ⭐⭐⭐ | Pending |
 | - [ ] Example: Supabase adapter | 🟡 P2 | ⭐⭐ | Pending |
 | - [ ] Example: Firebase/Firestore adapter | 🟢 P3 | ⭐⭐⭐ | Pending |
 | - [ ] Adapter testing patterns | 🟡 P2 | ⭐⭐ | Pending |
+
+### 2.1 Axios Support for Client
+
+> **Why:** Many projects use axios with interceptors, auth logic, etc.
+
+| Task | Priority | Difficulty | Status |
+|------|----------|------------|--------|
+| - [x] Add `axios` option to `ClientOptions` | 🔴 P0 | ⭐ | ✅ Done |
+| - [x] Create internal axios-to-fetch adapter | 🔴 P0 | ⭐ | ✅ Done |
+| - [x] Add axios as optional peer dependency | 🟠 P1 | ⭐ | ✅ Done |
+| - [x] Document axios usage in client-sdk.md | 🔴 P0 | ⭐ | ✅ Done |
+| - [x] Add tests for axios adapter | 🟠 P1 | ⭐⭐ | ✅ Done |
+| - [x] Add axios example in vite-web-example | 🟠 P1 | ⭐⭐ | ✅ Done |
 
 ### 3. FAQ & Troubleshooting
 
@@ -254,11 +267,11 @@
 
 | Category | Total Tasks | Done | Pending |
 |----------|-------------|------|---------|
-| Action Plan | 35 | 7 | 28 |
+| Action Plan | 35 | 13 | 22 |
 | Future Plan | 34 | 0 | 34 |
 | Long-term Vision | 11 | 0 | 11 |
 | Seeking Contributors | 14 | 0 | 14 |
-| **Total** | **94** | **7** | **87** |
+| **Total** | **94** | **13** | **81** |
 
 ---
 
@@ -286,3 +299,7 @@
 - ✅ Added Vue, Svelte, and vanilla JS examples
 - ✅ Added TypeScript integration guide
 - ✅ Added error handling patterns
+- ✅ Added axios instance support to `@tablecraft/client`
+- ✅ Added axios instance support to `@tablecraft/table` adapter
+- ✅ Added 6 tests for axios adapter
+- ✅ Added axios example page in `apps/vite-web-example`
