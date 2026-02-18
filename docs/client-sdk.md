@@ -834,3 +834,60 @@ $: loading = $tableStore.loading;
 ```
 
 Interested? Open an issue on [GitHub](https://github.com/jacksonkasi1/TableCraft/issues) to discuss!
+
+---
+
+## FAQ
+
+### Does axios support increase my bundle size?
+
+**No!** Axios is an **optional peer dependency**. If you don't use it, it won't be installed or bundled.
+
+```json
+// How we configured it
+{
+  "peerDependencies": {
+    "axios": ">=0.21.0"
+  },
+  "peerDependenciesMeta": {
+    "axios": { "optional": true }
+  }
+}
+```
+
+| Your Choice | Bundle Size Impact |
+|-------------|-------------------|
+| Use fetch (default) | **0 bytes** - no axios code included |
+| Use axios | ~13KB - only if you explicitly install axios |
+
+The axios adapter code is lazy-loaded - it only runs when you pass `axios` option. Tree-shaking removes it if unused.
+
+### When should I use axios vs fetch?
+
+| Use fetch (default) when | Use axios when |
+|--------------------------|----------------|
+| You want minimal dependencies | You already have axios in your project |
+| Simple API calls | You need request/response interceptors |
+| Fastest bundle size | You use axios features (timeouts, retries, etc.) |
+| Modern browsers/server | You have complex auth/token refresh logic |
+
+### Can I use other HTTP libraries?
+
+Currently only `fetch` (native) and `axios` are supported. For other libraries, you can create a custom adapter by wrapping them to match the fetch API:
+
+```typescript
+const customFetch = async (url: string, options?: RequestInit) => {
+  // Call your HTTP library
+  const response = await yourLibrary.get(url, { headers: options?.headers });
+  
+  // Return fetch-like Response object
+  return {
+    ok: response.status >= 200 && response.status < 300,
+    status: response.status,
+    json: async () => response.data,
+    text: async () => JSON.stringify(response.data),
+  } as Response;
+};
+
+const tc = createClient({ baseUrl: '/api', fetch: customFetch });
+```
