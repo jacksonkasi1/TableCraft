@@ -4,6 +4,8 @@
 // @tablecraft-table: tenants
 // Generated: 2026-02-15T15:05:49.745Z
 
+import { createTableCraftAdapter, type DataAdapter } from '@tablecraft/table';
+
 export interface TenantsRow extends Record<string, unknown> {
   id: number;
   name: string;
@@ -25,20 +27,7 @@ export type TenantsColumn = 'id' | 'name' | 'slug' | 'plan' | 'createdAt';
 export function createTenantsAdapter(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): import('@tablecraft/table').DataAdapter<TenantsRow> {
-  return import('@tablecraft/table').then(({ createTableCraftAdapter }) =>
-    createTableCraftAdapter<TenantsRow>({
-      ...options,
-      table: 'tenants',
-    })
-  ) as any;
-}
-
-export async function tenantsAdapter(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<import('@tablecraft/table').DataAdapter<TenantsRow>> {
-  const { createTableCraftAdapter } = await import('@tablecraft/table');
+}): DataAdapter<TenantsRow> {
   return createTableCraftAdapter<TenantsRow>({
     ...options,
     table: 'tenants',

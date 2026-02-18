@@ -26,6 +26,7 @@ interface DataTableViewOptionsProps<TData> {
   columnMapping?: Record<string, string>;
   size?: "sm" | "default" | "lg";
   tableId?: string;
+  hiddenColumns?: string[];
 }
 
 export function DataTableViewOptions<TData>({
@@ -33,12 +34,15 @@ export function DataTableViewOptions<TData>({
   columnMapping,
   size = "default",
   tableId,
+  hiddenColumns,
 }: DataTableViewOptionsProps<TData>) {
   const isLoading = table.options.meta?.isLoadingColumns ?? false;
 
   const columns = table.getAllColumns().filter(
     (column) =>
-      typeof column.accessorFn !== "undefined" && column.getCanHide()
+      typeof column.accessorFn !== "undefined" &&
+      column.getCanHide() &&
+      !hiddenColumns?.includes(column.id)
   );
 
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);

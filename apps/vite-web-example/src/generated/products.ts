@@ -4,6 +4,8 @@
 // @tablecraft-table: products
 // Generated: 2026-02-15T15:05:49.750Z
 
+import { createTableCraftAdapter, type DataAdapter } from '@tablecraft/table';
+
 export interface ProductsRow extends Record<string, unknown> {
   id: number;
   tenantId: number;
@@ -27,20 +29,7 @@ export type ProductsColumn = 'id' | 'tenantId' | 'name' | 'description' | 'price
 export function createProductsAdapter(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): import('@tablecraft/table').DataAdapter<ProductsRow> {
-  return import('@tablecraft/table').then(({ createTableCraftAdapter }) =>
-    createTableCraftAdapter<ProductsRow>({
-      ...options,
-      table: 'products',
-    })
-  ) as any;
-}
-
-export async function productsAdapter(options: {
-  baseUrl: string;
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<import('@tablecraft/table').DataAdapter<ProductsRow>> {
-  const { createTableCraftAdapter } = await import('@tablecraft/table');
+}): DataAdapter<ProductsRow> {
   return createTableCraftAdapter<ProductsRow>({
     ...options,
     table: 'products',

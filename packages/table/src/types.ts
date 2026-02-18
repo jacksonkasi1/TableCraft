@@ -1,4 +1,5 @@
 import type { ColumnDef, RowData } from "@tanstack/react-table";
+import type { ReactNode } from "react";
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
@@ -185,6 +186,120 @@ export interface TableMetadata {
 }
 
 // ─────────────────────────────────────────────
+// Table Context — shared by columnOverrides & actions
+// ─────────────────────────────────────────────
+
+/**
+ * Rich context object passed to columnOverrides and actions render functions.
+ * Gives access to selection state, search, date range, and current page data.
+ */
+export interface TableContext<T> {
+  /** Rows selected on the current page (and cross-page if queryByIds was used) */
+  selectedRows: T[];
+  /** IDs of all selected rows (string keys from idField) */
+  selectedIds: string[];
+  /** Total number of selected rows */
+  totalSelected: number;
+  /** Current search query string */
+  search: string;
+  /** Current date range filter */
+  dateRange: { from: string; to: string };
+  /** All rows on the current page */
+  allData: T[];
+}
+
+// ─────────────────────────────────────────────
+// Column Overrides — type-safe per-column renderers
+// ─────────────────────────────────────────────
+
+/**
+ * Type-safe map of column rendering overrides.
+ *
+ * Keys are constrained to `keyof T` — TypeScript will error on non-existent column names.
+ * Use `defineColumnOverrides<T>()` for full per-key value type inference at the call site.
+ *
+ * @example
+ * // With helper — value is precisely typed per column:
+ * columnOverrides={defineColumnOverrides<ProductsRow>()({
+ *   price: ({ value }) => <span>${value.toFixed(2)}</span>,  // value: number ✓
+ *   name:  ({ value }) => <strong>{value}</strong>,          // value: string ✓
+ * })}
+ *
+ * // Inline — value is `unknown`, use Number()/String() etc:
+ * columnOverrides={{ price: ({ value }) => <span>{Number(value).toFixed(2)}</span> }}
+ */
+export type ColumnOverrides<T> = {
+  [K in keyof T]?: (ctx: {
+    /** The column value — use defineColumnOverrides<T>() for precise per-key typing */
+    value: unknown;
+    /** The full row data, typed as T */
+    row: T;
+    /** Table context: selection, search, all current page data */
+    table: TableContext<T>;
+  }) => ReactNode;
+};
+
+/**
+ * Helper function for type-safe column overrides with full per-key value inference.
+ *
+ * TypeScript's variance rules require `value: unknown` in the stored `ColumnOverrides<T>` type.
+ * This curried identity function infers `value` as `T[K]` for each key at the call site,
+ * then widens the result to `ColumnOverrides<T>` — giving you precise types while writing,
+ * without the variance error.
+ *
+ * Pattern: `defineColumnOverrides<T>()({ ... })` — the double-call is intentional:
+ * the first call fixes `T`, the second call infers each key's value type.
+ *
+ * @example
+ * columnOverrides={defineColumnOverrides<ProductsRow>()({
+ *   price:      ({ value }) => <span>${value.toFixed(2)}</span>,  // value: number ✓
+ *   name:       ({ value }) => <strong>{value.toUpperCase()}</strong>, // value: string ✓
+ *   isArchived: ({ value }) => <Badge>{value ? 'Yes' : 'No'}</Badge>,  // value: boolean ✓
+ * })}
+ */
+export function defineColumnOverrides<T>() {
+  return function <K extends keyof T>(
+    overrides: {
+      [P in K]?: (ctx: {
+        value: T[P];
+        row: T;
+        table: TableContext<T>;
+      }) => ReactNode;
+    }
+  ): ColumnOverrides<T> {
+    return overrides as ColumnOverrides<T>;
+  };
+}
+
+
+// Actions Column — optional last column
+// ─────────────────────────────────────────────
+
+/**
+ * Render function for the optional "Actions" column (last column in the table).
+ * Receives the current row and full table context.
+ *
+ * @example
+ * actions={({ row, table }) => (
+ *   <DropdownMenu>
+ *     <DropdownMenuTrigger asChild>
+ *       <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+ *     </DropdownMenuTrigger>
+ *     <DropdownMenuContent align="end">
+ *       <DropdownMenuItem onClick={() => edit(row.id)}>Edit</DropdownMenuItem>
+ *       <DropdownMenuItem>Selected: {table.totalSelected}</DropdownMenuItem>
+ *     </DropdownMenuContent>
+ *   </DropdownMenu>
+ * )}
+ */
+export type ActionsRender<T> = (ctx: {
+  /** The full row data, typed as T */
+  row: T;
+  /** Table context: selection, search, all current page data */
+  table: TableContext<T>;
+}) => ReactNode;
+
+// ─────────────────────────────────────────────
 // Cell Renderer
 // ─────────────────────────────────────────────
 
@@ -255,6 +370,36 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   className?: string;
   /** Custom page size options */
   pageSizeOptions?: number[];
+  /**
+   * Type-safe per-column rendering overrides.
+   * Keys must be valid column names from T — TypeScript errors on non-existent keys.
+   * Each override receives { value, row, table } where value is typed to the column's type.
+   *
+   * @example
+   * columnOverrides={{
+   *   price: ({ value, row }) => <span>${value.toFixed(2)}</span>,
+   *   status: ({ value, table }) => <Badge>{value} ({table.totalSelected} selected)</Badge>,
+   * }}
+   */
+  columnOverrides?: ColumnOverrides<T>;
+  /**
+   * Adds a fixed "Actions" column as the last column in the table.
+   * Receives { row, table } — row is typed as T, table has selection/search context.
+   * By default the column is not shown; it only appears when this prop is provided.
+   *
+   * @example
+   * actions={({ row, table }) => (
+   *   <DropdownMenu>
+   *     <DropdownMenuTrigger asChild>
+   *       <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+   *     </DropdownMenuTrigger>
+   *     <DropdownMenuContent align="end">
+   *       <DropdownMenuItem onClick={() => handleEdit(row.id)}>Edit</DropdownMenuItem>
+   *     </DropdownMenuContent>
+   *   </DropdownMenu>
+   * )}
+   */
+  actions?: ActionsRender<T>;
 }
 
 export interface ToolbarContext<T> {

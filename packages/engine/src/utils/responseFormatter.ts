@@ -122,7 +122,36 @@ export function formatResponse(
     });
   }
 
-  // 2. Apply JS transforms
+  // 2. Coerce numeric columns from string → number
+  // SQL drivers (via Drizzle) return decimal/numeric columns as strings to preserve
+  // precision. We convert them here so JSON responses match the generated TS types.
+  //
+  // Note: This coercion uses JavaScript's Number type (IEEE 754 float64), which
+  // loses precision for values with more than ~15 significant digits. For financial
+  // or scientific applications requiring exact decimal precision, consider using
+  // a Decimal library or keeping the string representation on the frontend.
+  const numericFields = config.columns
+    .filter((c) => c.type === 'number' && !c.hidden)
+    .map((c) => c.name);
+
+  if (numericFields.length > 0) {
+    processed = processed.map((row) => {
+      const r = { ...row };
+      for (const field of numericFields) {
+        if (field in r && typeof r[field] === 'string') {
+          const strVal = r[field] as string;
+          if (strVal.trim() === '') continue;
+          const num = Number(strVal);
+          if (Number.isFinite(num)) {
+            r[field] = num;
+          }
+        }
+      }
+      return r;
+    });
+  }
+
+  // 3. Apply JS transforms
   processed = applyJsTransforms(processed, config);
 
   return {

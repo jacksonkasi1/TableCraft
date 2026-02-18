@@ -21,7 +21,7 @@ import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
 import { cn } from "./utils/cn";
 
-import type { DataTableProps, ExportableData } from "./types";
+import type { DataTableProps, ExportableData, TableContext } from "./types";
 import { useTableConfig } from "./core/table-config";
 import { useTableData } from "./core/use-table-data";
 import { useTableColumnResize } from "./core/use-column-resize";
@@ -29,7 +29,6 @@ import { useAutoColumns } from "./auto/use-auto-columns";
 import { DataTablePagination } from "./pagination";
 import { DataTableToolbar } from "./toolbar";
 import { DataTableResizer } from "./resizer";
-import { createKeyboardNavigationHandler } from "./utils/keyboard-navigation";
 import {
   initializeColumnSizes,
   trackColumnResizing,
@@ -50,6 +49,8 @@ export function DataTable<T extends Record<string, unknown>>({
   renderToolbar,
   className,
   pageSizeOptions: pageSizeOptionsProp,
+  columnOverrides,
+  actions,
 }: DataTableProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
@@ -100,39 +101,96 @@ export function DataTable<T extends Record<string, unknown>>({
     enableDateFilter: dateFilterEnabled,
   }), [tableConfig, dateFilterEnabled]);
 
-  // Add selection column if row selection is enabled
+  // ─── Table context ref (for column override & action closures) ───
+  // Using a ref so memoized column cells always read the latest context
+  // without needing to be in the dependency array.
+  const tableContextRef = useRef<TableContext<T>>({
+    selectedRows: [],
+    selectedIds: [],
+    totalSelected: 0,
+    search: "",
+    dateRange: { from: "", to: "" },
+    allData: [],
+  });
+
+  // ─── Apply column overrides & inject action column ───
   const resolvedColumns = useMemo(() => {
-    if (!tableConfig.enableRowSelection) return autoColumns;
+    // Start with auto-generated or manual columns
+    let cols = [...autoColumns];
 
-    const selectColumn: ColumnDef<T, unknown> = {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-          className="translate-y-[2px]"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-          className="translate-y-[2px]"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-      size: 40,
-      maxSize: 40,
-    };
+    // Apply columnOverrides: replace cell renderer for matching columns
+    if (columnOverrides) {
+      cols = cols.map((col) => {
+        const accessorKey = (col as { accessorKey?: string }).accessorKey;
+        // Skip columns without accessorKey (e.g., selection, actions, group columns)
+        if (!accessorKey || !(accessorKey in columnOverrides)) return col;
+        const overrideFn = columnOverrides[accessorKey as keyof T];
+        if (!overrideFn) return col;
+        return {
+          ...col,
+          cell: ({ getValue, row }: { getValue: () => unknown; row: { original: T } }) => {
+            return overrideFn({
+              value: getValue() as T[keyof T],
+              row: row.original,
+              table: tableContextRef.current,
+            });
+          },
+        };
+      });
+    }
 
-    return [selectColumn, ...autoColumns];
-  }, [autoColumns, tableConfig.enableRowSelection]);
+    // Prepend selection column if enabled
+    if (tableConfig.enableRowSelection) {
+      const selectColumn: ColumnDef<T, unknown> = {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+            className="translate-y-[2px]"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            className="translate-y-[2px]"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        size: 40,
+        maxSize: 40,
+      };
+      cols = [selectColumn, ...cols];
+    }
+
+    // Append action column if actions prop is provided
+    if (actions) {
+      const actionColumn: ColumnDef<T, unknown> = {
+        id: "__actions",
+        header: () => null,
+        cell: ({ row }) =>
+          actions({
+            row: row.original,
+            table: tableContextRef.current,
+          }),
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        size: 48,
+        maxSize: 48,
+      };
+      cols = [...cols, actionColumn];
+    }
+
+    return cols;
+  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions]);
 
   // ─── Column resize ───
   const { columnSizing, setColumnSizing, resetColumnSizing } =
@@ -237,9 +295,9 @@ export function DataTable<T extends Record<string, unknown>>({
       updaterOrValue:
         | { pageIndex: number; pageSize: number }
         | ((prev: { pageIndex: number; pageSize: number }) => {
-            pageIndex: number;
-            pageSize: number;
-          })
+          pageIndex: number;
+          pageSize: number;
+        })
     ) => {
       const newPagination =
         typeof updaterOrValue === "function"
@@ -318,16 +376,54 @@ export function DataTable<T extends Record<string, unknown>>({
     [onRowClick]
   );
 
+  // ─── Table container ref ───
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  // ─── Table instance ref (for keyboard navigation) ───
+  const tableRef = useRef<ReturnType<typeof useReactTable<T>> | null>(null);
+
   // ─── Keyboard navigation ───
   const handleKeyDown = useCallback(
-    createKeyboardNavigationHandler(
-      // Will be assigned once table is created — use a ref
-      null as unknown as ReturnType<typeof useReactTable>,
-      onRowClick
-        ? (rowData: unknown, rowIndex: number) =>
-            onRowClick(rowData as T, rowIndex)
-        : undefined
-    ),
+    (e: React.KeyboardEvent) => {
+      if (!tableRef.current) return;
+      const table = tableRef.current;
+      if (
+        (e.key === " " || e.key === "Enter") &&
+        !(e.target as HTMLElement).matches(
+          'input, button, [role="button"], [contenteditable="true"]'
+        )
+      ) {
+        e.preventDefault();
+
+        const focusedElement = document.activeElement;
+        if (
+          focusedElement &&
+          (focusedElement.getAttribute("role") === "row" ||
+            focusedElement.getAttribute("role") === "gridcell")
+        ) {
+          const rowElement =
+            focusedElement.getAttribute("role") === "row"
+              ? focusedElement
+              : focusedElement.closest('[role="row"]');
+
+          if (rowElement) {
+            const rowId =
+              rowElement.getAttribute("data-row-index") || rowElement.id;
+            if (rowId) {
+              const rowIndex = Number.parseInt(rowId.replace(/^row-/, ""), 10);
+              const row = table.getRowModel().rows[rowIndex];
+              if (row) {
+                if (e.key === " ") {
+                  row.toggleSelected();
+                } else if (e.key === "Enter" && onRowClick) {
+                  onRowClick(row.original as T, rowIndex);
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     [onRowClick]
   );
 
@@ -393,6 +489,9 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const table = useReactTable<T>(tableOptions);
 
+  // Update table ref for keyboard navigation
+  tableRef.current = table;
+
   // ─── Column sizing init ───
   useEffect(() => {
     initializeColumnSizes(
@@ -416,19 +515,39 @@ export function DataTable<T extends Record<string, unknown>>({
     table.setSorting(sorting);
   }, [table, sorting]);
 
-  // ─── Table container ref ───
-  const tableContainerRef = useRef<HTMLDivElement>(null);
+  // ─── Skeleton headers (for preserving column widths during loading) ───
+  const skeletonHeaders = table.getHeaderGroups()[0]?.headers ?? [];
 
   // ─── Render toolbar content ───
+  const selectedRows = useMemo(
+    () => data.filter((item) => rowSelection[String(item[idField])]),
+    [data, rowSelection, idField]
+  );
+  const selectedIds = useMemo(
+    () => Object.keys(rowSelection),
+    [rowSelection]
+  );
+
   const toolbarContext = {
-    selectedRows: data.filter((item) => rowSelection[String(item[idField])]),
-    selectedIds: Object.keys(rowSelection),
+    selectedRows,
+    selectedIds,
     totalSelected: totalSelectedItems,
     clearSelection,
     search,
     setSearch,
     dateRange,
     setDateRange,
+  };
+
+  // ─── Keep tableContextRef in sync every render ───
+  // This runs synchronously before render, so column cells always see fresh values.
+  tableContextRef.current = {
+    selectedRows,
+    selectedIds,
+    totalSelected: totalSelectedItems,
+    search,
+    dateRange,
+    allData: data,
   };
 
   const customToolbar = renderToolbar
@@ -485,6 +604,7 @@ export function DataTable<T extends Record<string, unknown>>({
           resetColumnOrder={resetColumnOrder}
           customToolbarContent={customToolbar}
           startToolbarContent={resolvedStartToolbarContent}
+          hiddenColumns={hiddenColumns as string[]}
         />
       )}
 
@@ -524,9 +644,9 @@ export function DataTable<T extends Record<string, unknown>>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                       {tableConfig.enableColumnResizing &&
                         header.column.getCanResize() && (
                           <DataTableResizer header={header} table={table} />
@@ -545,17 +665,16 @@ export function DataTable<T extends Record<string, unknown>>({
                     data-slot="table-row"
                     className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
                   >
-                    {Array.from({ length: resolvedColumns.length }).map(
-                      (_, j) => (
-                        <td
-                          key={`skeleton-${i}-${j}`}
-                          data-slot="table-cell"
-                          className="align-middle whitespace-nowrap px-4 py-2 text-left"
-                        >
-                          <div className="h-6 w-full animate-pulse rounded bg-muted" />
-                        </td>
-                      )
-                    )}
+                    {skeletonHeaders.map((header) => (
+                      <td
+                        key={`skeleton-${i}-${header.id}`}
+                        data-slot="table-cell"
+                        className="align-middle whitespace-nowrap px-4 py-2 text-left"
+                        style={{ width: header.getSize() }}
+                      >
+                        <div className="h-6 w-full animate-pulse rounded bg-muted" />
+                      </td>
+                    ))}
                   </tr>
                 ))
               ) : table.getRowModel().rows?.length ? (
