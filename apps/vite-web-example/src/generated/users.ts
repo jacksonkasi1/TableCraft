@@ -4,6 +4,8 @@
 // @tablecraft-table: users
 // Generated: 2026-02-15T15:05:49.749Z
 
+import { createTableCraftAdapter, type DataAdapter } from '@tablecraft/table';
+
 export interface UsersRow extends Record<string, unknown> {
   id: number;
   email: string;
@@ -25,20 +27,17 @@ export type UsersColumn = 'id' | 'email' | 'role' | 'isActive' | 'createdAt';
 export function createUsersAdapter(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): import('@tablecraft/table').DataAdapter<UsersRow> {
-  return import('@tablecraft/table').then(({ createTableCraftAdapter }) =>
-    createTableCraftAdapter<UsersRow>({
-      ...options,
-      table: 'users',
-    })
-  ) as any;
+}): DataAdapter<UsersRow> {
+  return createTableCraftAdapter<UsersRow>({
+    ...options,
+    table: 'users',
+  });
 }
 
 export async function usersAdapter(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<import('@tablecraft/table').DataAdapter<UsersRow>> {
-  const { createTableCraftAdapter } = await import('@tablecraft/table');
+}): Promise<DataAdapter<UsersRow>> {
   return createTableCraftAdapter<UsersRow>({
     ...options,
     table: 'users',

@@ -42,11 +42,11 @@ function generateRowInterface(
   columns: ColumnMeta[]
 ): string {
   const interfaceName = `${toPascalCase(tableName)}Row`;
-  
+
   const fields = columns
     .filter(col => !col.hidden)
     .map(col => {
-      const tsType = col.options 
+      const tsType = col.options
         ? generateEnumType(col.options)
         : mapColumnType(col.type);
       const nullable = col.type === 'date' && !col.computed ? ' | null' : '';
@@ -70,22 +70,22 @@ function generateFiltersInterface(
 
   const fields = filters.map(f => {
     const col = columns.find(c => c.name === f.field);
-    const valueType = col?.options 
+    const valueType = col?.options
       ? generateEnumType(col.options)
       : mapColumnType(f.type);
 
     const operators = f.operators.filter(op => !['isNull', 'isNotNull'].includes(op));
-    
+
     if (operators.length === 0) {
       return `  ${f.field}?: { operator: 'isNull' | 'isNotNull' };`;
     }
 
     const operatorUnion = operators.map(op => `'${op}'`).join(' | ');
-    
+
     if (f.type === 'date' || f.type === 'number') {
       return `  ${f.field}?: { operator: ${operatorUnion}; value: ${valueType} | [${valueType}, ${valueType}] };`;
     }
-    
+
     if (['in', 'notIn'].some(op => operators.includes(op))) {
       return `  ${f.field}?: { operator: ${operatorUnion}; value: ${valueType} | ${valueType}[] };`;
     }
@@ -116,11 +116,10 @@ function generateAdapterFunction(
   const camelName = toCamelCase(tableName) + 'Adapter';
   const functionName = `create${pascalName}Adapter`;
 
-  return `export async function ${functionName}(options: {
+  return `export function ${functionName}(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<import('@tablecraft/table').DataAdapter<${pascalName}Row>> {
-  const { createTableCraftAdapter } = await import('@tablecraft/table');
+}): DataAdapter<${pascalName}Row> {
   return createTableCraftAdapter<${pascalName}Row>({
     ...options,
     table: '${apiName}',
@@ -130,8 +129,7 @@ function generateAdapterFunction(
 export async function ${camelName}(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-}): Promise<import('@tablecraft/table').DataAdapter<${pascalName}Row>> {
-  const { createTableCraftAdapter } = await import('@tablecraft/table');
+}): Promise<DataAdapter<${pascalName}Row>> {
   return createTableCraftAdapter<${pascalName}Row>({
     ...options,
     table: '${apiName}',
@@ -152,6 +150,8 @@ export function generateTableFile(
 // @tablecraft-version: ${version}
 // @tablecraft-table: ${name}
 // Generated: ${new Date().toISOString()}
+
+import { createTableCraftAdapter, type DataAdapter } from '@tablecraft/table';
 
 `;
 
