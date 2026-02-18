@@ -13,12 +13,7 @@ type ThemeProviderState = {
     setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
-    theme: "system",
-    setTheme: () => null,
-}
-
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+const ThemeProviderContext = createContext<ThemeProviderState | undefined>(undefined)
 
 function isValidTheme(value: unknown): value is Theme {
     return value === "dark" || value === "light" || value === "system"
@@ -58,9 +53,9 @@ export function ThemeProvider({
 
     const value = useMemo(() => ({
         theme,
-        setTheme: (theme: Theme) => {
-            localStorage.setItem(storageKey, theme)
-            setTheme(theme)
+        setTheme: (newTheme: Theme) => {
+            localStorage.setItem(storageKey, newTheme)
+            setTheme(newTheme)
         },
     }), [theme, storageKey])
 

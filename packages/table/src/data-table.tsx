@@ -519,8 +519,14 @@ export function DataTable<T extends Record<string, unknown>>({
   const skeletonHeaders = table.getHeaderGroups()[0]?.headers ?? [];
 
   // ─── Render toolbar content ───
-  const selectedRows = data.filter((item) => rowSelection[String(item[idField])]);
-  const selectedIds = Object.keys(rowSelection);
+  const selectedRows = useMemo(
+    () => data.filter((item) => rowSelection[String(item[idField])]),
+    [data, rowSelection, idField]
+  );
+  const selectedIds = useMemo(
+    () => Object.keys(rowSelection),
+    [rowSelection]
+  );
 
   const toolbarContext = {
     selectedRows,

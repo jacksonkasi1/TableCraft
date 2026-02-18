@@ -199,14 +199,15 @@ export const users = defineTable(schema.users)
 Customize how column values are displayed in the table using `columnOverrides`. This allows you to transform data presentation without modifying the backend.
 
 ```tsx
+import { useMemo } from 'react';
 import { DataTable, createTableCraftAdapter, defineColumnOverrides, hiddenColumns } from '@tablecraft/table';
 import type { ProductsRow, ProductsColumn } from '../generated';
 
 function ProductsPage() {
-  const adapter = createTableCraftAdapter<ProductsRow>({
+  const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
     baseUrl: '/api/engine',
     table: 'products',
-  });
+  }), []);
 
   return (
     <DataTable<ProductsRow>
@@ -244,7 +245,9 @@ function ProductsPage() {
 Add row-level actions (Edit, Delete, etc.) using the `actions` prop. This renders an action menu for each row.
 
 ```tsx
+import { useMemo } from 'react';
 import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
+import type { ProductsRow } from '../generated';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -257,10 +260,10 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 
 function ProductsPage() {
-  const adapter = createTableCraftAdapter({ baseUrl: '/api/engine', table: 'products' });
+  const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({ baseUrl: '/api/engine', table: 'products' }), []);
 
   return (
-    <DataTable
+    <DataTable<ProductsRow>
       adapter={adapter}
       actions={({ row, table }) => (
         <DropdownMenu>

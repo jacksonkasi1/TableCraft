@@ -7,7 +7,14 @@ export function ModeToggle() {
     const { theme, setTheme } = useTheme()
 
     const toggleTheme = () => {
-        setTheme(theme === "dark" ? "light" : "dark")
+        let currentTheme = theme
+        if (theme === "system") {
+            currentTheme = typeof window !== "undefined" && 
+                window.matchMedia("(prefers-color-scheme: dark)").matches 
+                ? "dark" 
+                : "light"
+        }
+        setTheme(currentTheme === "dark" ? "light" : "dark")
     }
 
     return (
