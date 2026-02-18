@@ -1,5 +1,15 @@
-import { DataTable, createTableCraftAdapter, hiddenColumns } from '@tablecraft/table';
+import { DataTable, createTableCraftAdapter, hiddenColumns, defineColumnOverrides } from '@tablecraft/table';
 import type { ProductsRow, ProductsColumn } from '../generated';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal } from 'lucide-react';
 
 export function ProductsPage() {
   const adapter = createTableCraftAdapter<ProductsRow>({
@@ -26,6 +36,52 @@ export function ProductsPage() {
           defaultPageSize: 10,
           pageSizeOptions: [5, 10, 20, 50],
         }}
+        columnOverrides={defineColumnOverrides<ProductsRow>()({
+          price: ({ value }) => (
+            <span className="font-mono font-semibold text-emerald-500">
+              ${value.toFixed(2)}
+            </span>
+          ),
+          isArchived: ({ value }) => (
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${value
+                ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                }`}
+            >
+              {value ? 'Archived' : 'Active'}
+            </span>
+          ),
+        })}
+        actions={({ row, table }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(String(row.id))}
+              >
+                Copy ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Edit product</DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => {
+                  // table.totalSelected gives count of selected rows
+                  console.log('Delete', row.name, '| Selected:', table.totalSelected);
+                }}
+              >
+                Delete product
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       />
     </div>
   );
