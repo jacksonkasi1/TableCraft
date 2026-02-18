@@ -21,7 +21,7 @@ import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
 import { cn } from "./utils/cn";
 
-import type { DataTableProps, ExportableData } from "./types";
+import type { DataTableProps, ExportableData, TableContext } from "./types";
 import { useTableConfig } from "./core/table-config";
 import { useTableData } from "./core/use-table-data";
 import { useTableColumnResize } from "./core/use-column-resize";
@@ -50,6 +50,8 @@ export function DataTable<T extends Record<string, unknown>>({
   renderToolbar,
   className,
   pageSizeOptions: pageSizeOptionsProp,
+  columnOverrides,
+  actions,
 }: DataTableProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
@@ -100,39 +102,97 @@ export function DataTable<T extends Record<string, unknown>>({
     enableDateFilter: dateFilterEnabled,
   }), [tableConfig, dateFilterEnabled]);
 
-  // Add selection column if row selection is enabled
+  // ─── Table context ref (for column override & action closures) ───
+  // Using a ref so memoized column cells always read the latest context
+  // without needing to be in the dependency array.
+  const tableContextRef = useRef<TableContext<T>>({
+    selectedRows: [],
+    selectedIds: [],
+    totalSelected: 0,
+    search: "",
+    dateRange: { from: "", to: "" },
+    allData: [],
+  });
+
+  // ─── Apply column overrides & inject action column ───
   const resolvedColumns = useMemo(() => {
-    if (!tableConfig.enableRowSelection) return autoColumns;
+    // Start with auto-generated or manual columns
+    let cols = [...autoColumns];
 
-    const selectColumn: ColumnDef<T, unknown> = {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-          className="translate-y-[2px]"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-          className="translate-y-[2px]"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-      size: 40,
-      maxSize: 40,
-    };
+    // Apply columnOverrides: replace cell renderer for matching columns
+    if (columnOverrides) {
+      cols = cols.map((col) => {
+        const key = (col as { accessorKey?: string }).accessorKey ?? col.id;
+        if (!key || !(key in columnOverrides)) return col;
+        const overrideFn = columnOverrides[key as keyof T];
+        if (!overrideFn) return col;
+        return {
+          ...col,
+          cell: ({ getValue, row }: { getValue: () => unknown; row: { original: T } }) => {
+            // tableContext is built below — we use a ref-like approach via closure
+            // We'll pass it via a wrapper that reads from the mutable ref
+            return overrideFn({
+              value: getValue() as T[keyof T],
+              row: row.original,
+              table: tableContextRef.current,
+            });
+          },
+        };
+      });
+    }
 
-    return [selectColumn, ...autoColumns];
-  }, [autoColumns, tableConfig.enableRowSelection]);
+    // Prepend selection column if enabled
+    if (tableConfig.enableRowSelection) {
+      const selectColumn: ColumnDef<T, unknown> = {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+            className="translate-y-[2px]"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            className="translate-y-[2px]"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        size: 40,
+        maxSize: 40,
+      };
+      cols = [selectColumn, ...cols];
+    }
+
+    // Append action column if actions prop is provided
+    if (actions) {
+      const actionColumn: ColumnDef<T, unknown> = {
+        id: "__actions",
+        header: () => null,
+        cell: ({ row }) =>
+          actions({
+            row: row.original,
+            table: tableContextRef.current,
+          }),
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        size: 48,
+        maxSize: 48,
+      };
+      cols = [...cols, actionColumn];
+    }
+
+    return cols;
+  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions]);
 
   // ─── Column resize ───
   const { columnSizing, setColumnSizing, resetColumnSizing } =
@@ -423,15 +483,29 @@ export function DataTable<T extends Record<string, unknown>>({
   const skeletonHeaders = table.getHeaderGroups()[0]?.headers ?? [];
 
   // ─── Render toolbar content ───
+  const selectedRows = data.filter((item) => rowSelection[String(item[idField])]);
+  const selectedIds = Object.keys(rowSelection);
+
   const toolbarContext = {
-    selectedRows: data.filter((item) => rowSelection[String(item[idField])]),
-    selectedIds: Object.keys(rowSelection),
+    selectedRows,
+    selectedIds,
     totalSelected: totalSelectedItems,
     clearSelection,
     search,
     setSearch,
     dateRange,
     setDateRange,
+  };
+
+  // ─── Keep tableContextRef in sync every render ───
+  // This runs synchronously before render, so column cells always see fresh values.
+  tableContextRef.current = {
+    selectedRows,
+    selectedIds,
+    totalSelected: totalSelectedItems,
+    search,
+    dateRange,
+    allData: data,
   };
 
   const customToolbar = renderToolbar

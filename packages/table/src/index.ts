@@ -82,4 +82,9 @@ export type {
   ExportConfig,
   DataTableProps,
   ToolbarContext,
+  TableContext,
+  ColumnOverrides,
+  ActionsRender,
 } from "./types";
+
+export { defineColumnOverrides } from "./types";
