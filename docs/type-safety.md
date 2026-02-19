@@ -18,6 +18,7 @@ Generates a `CASE WHEN` statement safely.
 
 ```typescript
 import { caseWhen } from '@tablecraft/engine';
+import { sql } from 'drizzle-orm';
 
 // ❌ Risky: Raw SQL string
 .computed('status', sql`CASE WHEN ${s.users.role} = 'admin' THEN 1 ELSE 0 END`)

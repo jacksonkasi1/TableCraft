@@ -28,7 +28,7 @@ export function createAxiosFetchAdapter(axios: AxiosLike) {
         method,
         headers,
         data: options?.body,
-        signal: options?.signal,
+        signal: options?.signal ?? undefined,
       });
       
       return {

@@ -20,9 +20,10 @@
 
 ## Features
 
-* [All Features](features.md)
+* [Features](features.md)
 * [Date Filtering](date-filtering.md)
 * [Type Generation](codegen.md)
+* [FAQ & Troubleshooting](faq.md)
 
 ## API Reference
 
@@ -34,6 +35,7 @@
 ## Guides
 
 * [Type Safety](type-safety.md)
+* [Performance Guide](performance.md)
 * [Examples](examples.md)
 
 ## Integrations & Adapters

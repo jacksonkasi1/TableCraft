@@ -209,6 +209,8 @@ defineTable(schema.orders)
 Create virtual columns with SQL expressions.
 
 ```typescript
+import { sql } from 'drizzle-orm';
+
 defineTable(schema.users)
   .computed('fullName', sql`CONCAT(first, ' ', last)`)
 ```

@@ -595,7 +595,7 @@ The client throws errors with additional properties:
 ```typescript
 try {
   const result = await users.query();
-} catch (error) {
+} catch (error: any) {
   console.log(error.message);    // Error message
   console.log(error.status);     // HTTP status code (e.g., 404)
   console.log(error.code);       // Error code (e.g., 'NOT_FOUND')

@@ -20,12 +20,12 @@ describe('isDatePreset', () => {
 
 describe('resolveDatePreset', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-06-15T12:00:00Z'));
   });
 
   afterEach(() => {
-    vi.useRealTimers();
+    // @ts-ignore
+    vi.setSystemTime();
   });
 
   it('today should return start of today to start of tomorrow (half-open interval)', () => {

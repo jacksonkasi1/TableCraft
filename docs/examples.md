@@ -59,6 +59,9 @@ function ProductsPage() {
 A comprehensive user configuration with security, search, and transforms.
 
 ```typescript
+import { defineTable, concat } from '@tablecraft/engine';
+import { schema } from '../db/schema';
+
 export const users = defineTable(schema.users)
   .as('users')
   // Security
@@ -297,3 +300,93 @@ function ProductsPage() {
 {% hint style="info" %}
 The `actions` callback receives `{ row, table }` where `row` is the current row data and `table` provides utilities like `table.totalSelected` for bulk operations.
 {% endhint %}
+
+## 13. E-commerce Dashboard
+
+A comprehensive e-commerce dashboard example demonstrating nested relations, total counts, and advanced column overrides.
+
+{% tabs %}
+{% tab title="Backend" %}
+```typescript
+import { defineTable } from '@tablecraft/engine';
+import { sql } from 'drizzle-orm';
+import { orders, orderItems, products } from '../db/schema';
+
+// Define the complex order table with nested relations
+export const dashboardOrders = defineTable(orders)
+  .as('dashboard-orders')
+  .search('orderNumber', 'customerEmail')
+  .sort('-createdAt')
+  // Include nested line items and their specific product details
+  .include(orderItems, {
+    foreignKey: 'orderId',
+    as: 'items',
+    include: [{
+      table: 'products',
+      foreignKey: 'id',
+      localKey: 'productId',
+      as: 'product',
+      columns: ['name', 'sku', 'price', 'imageUrl']
+    }]
+  })
+  // Calculate total items in order dynamically
+  .computed('itemCount', sql`COUNT(${orderItems.id})`)
+  .toConfig();
+```
+{% endtab %}
+
+{% tab title="Frontend" %}
+```tsx
+import { useMemo } from 'react';
+import { DataTable, createTableCraftAdapter, defineColumnOverrides } from '@tablecraft/table';
+import { Badge } from '@/components/ui/badge';
+import type { DashboardOrdersRow } from '../generated';
+
+function OrdersDashboard() {
+  const adapter = useMemo(() => createTableCraftAdapter<DashboardOrdersRow>({
+    baseUrl: '/api/engine',
+    table: 'dashboard-orders',
+  }), []);
+
+  return (
+    <DataTable<DashboardOrdersRow>
+      adapter={adapter}
+      columnOverrides={defineColumnOverrides<DashboardOrdersRow>()({
+        // Format the total price dynamically
+        totalAmount: ({ value }) => (
+          <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+            ${(value / 100).toFixed(2)}
+          </span>
+        ),
+        // Render order status with colored badges
+        status: ({ value }) => {
+          if (!value) return null;
+          const variants = {
+            pending: 'bg-yellow-100 text-yellow-800',
+            processing: 'bg-blue-100 text-blue-800',
+            shipped: 'bg-purple-100 text-purple-800',
+            delivered: 'bg-green-100 text-green-800',
+            cancelled: 'bg-red-100 text-red-800',
+          };
+          return (
+            <Badge className={variants[value as keyof typeof variants] || 'bg-gray-100'}>
+              {String(value).charAt(0).toUpperCase() + String(value).slice(1)}
+            </Badge>
+          );
+        },
+        // Display nested item count
+        itemCount: ({ value, row }) => (
+          <div className="flex flex-col">
+            <span className="font-medium">{value} items</span>
+            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+              {row.items?.map(i => i.product?.name).join(', ')}
+            </span>
+          </div>
+        )
+      })}
+    />
+  );
+}
+```
+{% endtab %}
+{% endtabs %}
