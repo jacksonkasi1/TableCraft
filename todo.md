@@ -46,12 +46,12 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [x] Create `docs/custom-adapter.md` | 🔴 P0 | ⭐⭐ | ✅ Done |
-| - [ ] Document `DataAdapter` interface | 🔴 P0 | ⭐ | Pending |
-| - [ ] Example: REST API adapter | 🔴 P0 | ⭐⭐ | Pending |
-| - [ ] Example: GraphQL adapter | 🟡 P2 | ⭐⭐⭐ | Pending |
-| - [ ] Example: Supabase adapter | 🟡 P2 | ⭐⭐ | Pending |
-| - [ ] Example: Firebase/Firestore adapter | 🟢 P3 | ⭐⭐⭐ | Pending |
+| - [x] Create `docs/custom-adapter.md` (now `adapters/`) | 🔴 P0 | ⭐⭐ | ✅ Done |
+| - [x] Document `DataAdapter` interface | 🔴 P0 | ⭐ | ✅ Done |
+| - [x] Example: REST API adapter | 🔴 P0 | ⭐⭐ | ✅ Done |
+| - [x] Example: GraphQL adapter | 🟡 P2 | ⭐⭐⭐ | ✅ Done |
+| - [x] Example: Supabase adapter | 🟡 P2 | ⭐⭐ | ✅ Done |
+| - [x] Example: Firebase/Firestore adapter | 🟢 P3 | ⭐⭐⭐ | ✅ Done |
 | - [ ] Adapter testing patterns | 🟡 P2 | ⭐⭐ | Pending |
 
 ### 2.1 Axios Support for Client

@@ -35,3 +35,11 @@
 
 * [Type Safety](type-safety.md)
 * [Examples](examples.md)
+
+## Integrations & Adapters
+
+* [Overview & Custom Adapters](adapters/overview.md)
+* [REST & Axios](adapters/rest.md)
+* [Supabase](adapters/supabase.md)
+* [Firebase](adapters/firebase.md)
+* [GraphQL](adapters/graphql.md)
