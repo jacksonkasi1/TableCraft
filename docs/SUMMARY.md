@@ -27,6 +27,7 @@
 ## API Reference
 
 * [API Reference](api-reference.md)
+* [Client SDK](client-sdk.md)
 * [Metadata API](metadata-api.md)
 * [OpenAPI](openapi.md)
 

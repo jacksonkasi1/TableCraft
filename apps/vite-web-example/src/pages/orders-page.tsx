@@ -7,14 +7,9 @@ export function OrdersPage() {
   });
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-        <p className="text-muted-foreground">
-          Track and manage customer orders with real-time filtering
-        </p>
-      </div>
-
+    <div className="p-8 space-y-4">
+      <h1 className="text-2xl font-bold">Orders</h1>
+      
       <DataTable<OrdersRow>
         adapter={adapter}
         config={{

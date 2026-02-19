@@ -10,18 +10,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal } from 'lucide-react';
+import { axiosInstance } from '@/lib/api-client-axios';
 
-export function ProductsPage() {
+export function ProductsAxiosPage() {
   const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
     baseUrl: '/api/engine',
     table: 'products',
+    axios: axiosInstance,
   }), []);
 
   return (
     <div className="p-8 space-y-4">
-      <h1 className="text-2xl font-bold">Products</h1>
-      
+      <div className="flex items-center gap-2">
+        <h1 className="text-2xl font-bold">Products</h1>
+        <Badge variant="secondary">Axios Client</Badge>
+      </div>
+
       <DataTable<ProductsRow>
         adapter={adapter}
         hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}

@@ -128,3 +128,154 @@ describe('createClient', () => {
     expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer dynamic');
   });
 });
+
+describe('createClient with axios', () => {
+  it('should work with axios instance', async () => {
+    const mockResponse = {
+      data: [{ id: 1, name: 'Alice', email: 'alice@example.com' }],
+      meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+    };
+
+    const mockAxios = {
+      request: vi.fn().mockResolvedValue({
+        data: mockResponse,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+      }),
+      get: vi.fn(),
+    };
+
+    const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
+    const result = await tc.table('users').query();
+
+    expect(mockAxios.request).toHaveBeenCalledTimes(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].name).toBe('Alice');
+  });
+
+  it('should pass headers to axios', async () => {
+    const mockAxios = {
+      request: vi.fn().mockResolvedValue({
+        data: { data: [], meta: {} },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+      }),
+      get: vi.fn(),
+    };
+
+    const tc = createClient({
+      baseUrl: '/api/data',
+      axios: mockAxios as any,
+      headers: { Authorization: 'Bearer token123' },
+    });
+
+    await tc.table('users').query();
+
+    expect(mockAxios.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          authorization: 'Bearer token123',
+        }),
+      })
+    );
+  });
+
+  it('should handle axios error responses', async () => {
+    const mockAxios = {
+      request: vi.fn().mockRejectedValue({
+        response: {
+          data: { error: 'Not found', code: 'NOT_FOUND' },
+          status: 404,
+          statusText: 'Not Found',
+          headers: {},
+        },
+      }),
+      get: vi.fn(),
+    };
+
+    const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
+
+    await expect(tc.table('users').query()).rejects.toThrow('Not found');
+  });
+
+  it('should handle axios errors without response', async () => {
+    const mockAxios = {
+      request: vi.fn().mockRejectedValue({
+        message: 'Network error',
+      }),
+      get: vi.fn(),
+    };
+
+    const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
+
+    await expect(tc.table('users').query()).rejects.toThrow('Network error');
+  });
+
+  it('should fetch metadata with axios', async () => {
+    const mockMeta = {
+      name: 'users',
+      columns: [
+        { name: 'id', type: 'number', label: 'ID', hidden: false, sortable: true, filterable: true, operators: ['eq'] },
+        { name: 'name', type: 'string', label: 'Name', hidden: false, sortable: true, filterable: true, operators: ['eq', 'contains'] },
+      ],
+      capabilities: {
+        search: true,
+        searchFields: ['name'],
+        export: true,
+        exportFormats: ['csv', 'json'],
+        pagination: { enabled: true, defaultPageSize: 10, maxPageSize: 100, cursor: false },
+        sort: { enabled: true, defaultSort: [] },
+        groupBy: false,
+        groupByFields: [],
+        recursive: false,
+      },
+      filters: [],
+      aggregations: [],
+      includes: [],
+      staticFilters: [],
+    };
+
+    const mockAxios = {
+      request: vi.fn().mockResolvedValue({
+        data: mockMeta,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+      }),
+      get: vi.fn(),
+    };
+
+    const tc = createClient({ baseUrl: '/api/data', axios: mockAxios as any });
+    const meta = await tc.table('users').meta();
+
+    expect(meta.name).toBe('users');
+    expect(meta.columns).toHaveLength(2);
+  });
+
+  it('should prefer axios over fetch when both provided', async () => {
+    const mockAxios = {
+      request: vi.fn().mockResolvedValue({
+        data: { data: [{ id: 1 }], meta: {} },
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+      }),
+      get: vi.fn(),
+    };
+
+    const mockFetch = vi.fn();
+
+    const tc = createClient({
+      baseUrl: '/api/data',
+      axios: mockAxios as any,
+      fetch: mockFetch as any,
+    });
+
+    await tc.table('users').query();
+
+    expect(mockAxios.request).toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});

@@ -6,13 +6,24 @@ import type {
   QueryResult,
   TableMetadata,
 } from './types';
+import { createAxiosFetchAdapter, isAxiosInstance } from './axios-adapter';
+import type { MinimalResponse } from './axios-adapter';
 
 /**
  * Creates a type-safe client for TableCraft APIs.
  */
 export function createClient(options: ClientOptions): TableCraftClient {
   const { baseUrl } = options;
-  const customFetch = options.fetch ?? globalThis.fetch;
+  
+  let customFetch: (url: string, options?: RequestInit) => Promise<MinimalResponse | Response>;
+  
+  if (options.axios && isAxiosInstance(options.axios)) {
+    customFetch = createAxiosFetchAdapter(options.axios);
+  } else if (options.fetch) {
+    customFetch = options.fetch;
+  } else {
+    customFetch = globalThis.fetch;
+  }
 
   async function resolveHeaders(): Promise<Record<string, string>> {
     if (!options.headers) return {};

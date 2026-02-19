@@ -1,4 +1,5 @@
 import type { DataAdapter, QueryParams, QueryResult, TableMetadata } from "../types";
+import { isAxiosInstance, createAxiosFetchAdapter, type MinimalResponse } from "@tablecraft/client";
 
 export interface TableCraftAdapterOptions {
   /** Base URL of your TableCraft API. Example: "/api/data" */
@@ -9,6 +10,8 @@ export interface TableCraftAdapterOptions {
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   /** Custom fetch function. Defaults to global fetch. */
   fetch?: typeof fetch;
+  /** Axios instance (or any compatible object). If provided, takes precedence over fetch. */
+  axios?: unknown;
 }
 
 /**
@@ -28,7 +31,16 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
   options: TableCraftAdapterOptions
 ): DataAdapter<T> {
   const { baseUrl, table: tableName } = options;
-  const customFetch = options.fetch ?? globalThis.fetch;
+  
+  let customFetch: (url: string, options?: RequestInit) => Promise<MinimalResponse | Response>;
+  
+  if (options.axios && isAxiosInstance(options.axios)) {
+    customFetch = createAxiosFetchAdapter(options.axios);
+  } else if (options.fetch) {
+    customFetch = options.fetch;
+  } else {
+    customFetch = globalThis.fetch;
+  }
 
   const tableUrl = `${baseUrl.replace(/\/$/, "")}/${tableName}`;
 
