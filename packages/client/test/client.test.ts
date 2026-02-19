@@ -176,7 +176,7 @@ describe('createClient with axios', () => {
     expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: 'Bearer token123',
+          authorization: 'Bearer token123',
         }),
       })
     );

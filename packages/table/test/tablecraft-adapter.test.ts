@@ -172,4 +172,76 @@ describe('createTableCraftAdapter with axios', () => {
     expect(mockAxios.request).toHaveBeenCalled();
     expect(mockFetch).not.toHaveBeenCalled();
   });
+
+  it('should fetch metadata with axios and cache it', async () => {
+    const mockMeta = {
+      name: 'users',
+      columns: [],
+      capabilities: {},
+      filters: [],
+    };
+
+    const mockAxios = {
+      request: vi.fn().mockResolvedValue({
+        data: mockMeta,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+      }),
+      get: vi.fn(),
+    };
+
+    const adapter = createTableCraftAdapter({ baseUrl: '/api/data', table: 'users', axios: mockAxios as any });
+    
+    // First call should hit the network
+    const meta1 = await adapter.meta!();
+    expect(meta1.name).toBe('users');
+    expect(mockAxios.request).toHaveBeenCalledTimes(1);
+
+    // Second call should use cached metadata
+    const meta2 = await adapter.meta!();
+    expect(meta2).toBe(meta1);
+    expect(mockAxios.request).toHaveBeenCalledTimes(1);
+  });
+
+  it('should export data with axios', async () => {
+    const mockAxios = {
+      request: vi.fn().mockImplementation(({ url }: { url: string }) => {
+        if (url && url.endsWith('/_meta')) {
+          return Promise.resolve({
+            data: { name: 'users', columns: [], capabilities: {}, filters: [] },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+          });
+        }
+        return Promise.resolve({
+          data: 'id,name\n1,Alice',
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+        });
+      }),
+      get: vi.fn(),
+    };
+
+    const adapter = createTableCraftAdapter({
+      baseUrl: '/api/data',
+      table: 'users',
+      axios: mockAxios as any,
+      headers: { Authorization: 'Bearer test' },
+    });
+
+    const result = await adapter.export!('csv', { page: 1, pageSize: 10 });
+    
+    expect(result).toBe('id,name\n1,Alice');
+    
+    // Verify export call args (second call, since first is _meta)
+    expect(mockAxios.request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('export=csv'),
+        headers: expect.objectContaining({ Authorization: 'Bearer test' }),
+      })
+    );
+  });
 });

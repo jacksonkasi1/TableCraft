@@ -5,7 +5,7 @@ export function isAxiosInstance(value: unknown): value is AxiosLike {
     typeof value === 'object' &&
     value !== null &&
     typeof (value as any).request === 'function' &&
-    typeof (value as any).interceptors === 'object'
+    typeof (value as any).get === 'function'
   );
 }
 
@@ -28,7 +28,7 @@ export function createAxiosFetchAdapter(axios: AxiosLike) {
         method,
         headers,
         data: options?.body,
-        signal: options?.signal ?? undefined,
+        signal: options?.signal,
       });
       
       return {
