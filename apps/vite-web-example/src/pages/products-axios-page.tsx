@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal } from 'lucide-react';
 import { axiosInstance } from '@/lib/api-client-axios';
 
@@ -24,9 +25,7 @@ export function ProductsAxiosPage() {
     <div className="p-8 space-y-4">
       <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold">Products</h1>
-        <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full">
-          Axios Client
-        </span>
+        <Badge variant="secondary">Axios Client</Badge>
       </div>
 
       <DataTable<ProductsRow>
@@ -60,6 +59,7 @@ export function ProductsAxiosPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
+                <span className="sr-only">More options</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

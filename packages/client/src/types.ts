@@ -1,10 +1,29 @@
+export interface AxiosLike {
+  request<T = unknown>(config: {
+    url?: string;
+    method?: string;
+    headers?: Record<string, string>;
+    params?: Record<string, unknown>;
+    data?: unknown;
+    signal?: AbortSignal;
+  }): Promise<{ data: T; status: number; statusText: string; headers: Record<string, string> }>;
+  get<T = unknown>(
+    url: string,
+    config?: {
+      headers?: Record<string, string>;
+      params?: Record<string, unknown>;
+      signal?: AbortSignal;
+    }
+  ): Promise<{ data: T; status: number; statusText: string; headers: Record<string, string> }>;
+}
+
 export interface ClientOptions {
   /** Base URL of your API. Example: "/api/data" or "https://api.example.com/data" */
   baseUrl: string;
   /** Custom fetch function. Defaults to global fetch. */
   fetch?: typeof fetch;
-  /** Axios instance. If provided, takes precedence over fetch. */
-  axios?: unknown;
+  /** Axios instance (or any compatible object). If provided, takes precedence over fetch. */
+  axios?: AxiosLike;
   /** Default headers for every request (auth tokens, etc.) */
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
 }

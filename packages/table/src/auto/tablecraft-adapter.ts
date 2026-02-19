@@ -1,69 +1,5 @@
 import type { DataAdapter, QueryParams, QueryResult, TableMetadata } from "../types";
-
-interface AxiosRequestConfig {
-  url?: string;
-  method?: string;
-  headers?: Record<string, string>;
-  data?: unknown;
-  signal?: AbortSignal;
-}
-
-interface AxiosResponse<T = unknown> {
-  data: T;
-  status: number;
-  statusText: string;
-  headers: Record<string, string>;
-}
-
-interface AxiosInstance {
-  request<T = unknown>(config: AxiosRequestConfig): Promise<AxiosResponse<T>>;
-  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>>;
-}
-
-function isAxiosInstance(value: unknown): value is AxiosInstance {
-  return typeof value === 'object' && value !== null && typeof (value as AxiosInstance).request === 'function';
-}
-
-function createAxiosFetchAdapter(axios: AxiosInstance) {
-  return async (url: string, options?: RequestInit): Promise<Response> => {
-    const headers = options?.headers as Record<string, string> | undefined;
-    const method = options?.method || 'GET';
-    
-    try {
-      const response = await axios.request({
-        url,
-        method,
-        headers,
-        data: options?.body,
-        signal: options?.signal ?? undefined,
-      });
-      
-      return {
-        ok: response.status >= 200 && response.status < 300,
-        status: response.status,
-        statusText: response.statusText,
-        headers: new Headers(response.headers),
-        json: async () => response.data,
-        text: async () => typeof response.data === 'string' ? response.data : JSON.stringify(response.data),
-      } as Response;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: AxiosResponse<{ error?: string; code?: string; details?: unknown }>; message?: string };
-      
-      if (axiosError.response) {
-        return {
-          ok: false,
-          status: axiosError.response.status,
-          statusText: axiosError.response.statusText,
-          headers: new Headers(axiosError.response.headers),
-          json: async () => axiosError.response?.data ?? { error: 'Request failed' },
-          text: async () => JSON.stringify(axiosError.response?.data ?? { error: 'Request failed' }),
-        } as Response;
-      }
-      
-      throw new Error(axiosError.message ?? 'Request failed');
-    }
-  };
-}
+import { isAxiosInstance, createAxiosFetchAdapter, type MinimalResponse } from "@tablecraft/client";
 
 export interface TableCraftAdapterOptions {
   /** Base URL of your TableCraft API. Example: "/api/data" */
@@ -74,7 +10,7 @@ export interface TableCraftAdapterOptions {
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   /** Custom fetch function. Defaults to global fetch. */
   fetch?: typeof fetch;
-  /** Axios instance. If provided, takes precedence over fetch. */
+  /** Axios instance (or any compatible object). If provided, takes precedence over fetch. */
   axios?: unknown;
 }
 
@@ -96,7 +32,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>>(
 ): DataAdapter<T> {
   const { baseUrl, table: tableName } = options;
   
-  let customFetch: (url: string, options?: RequestInit) => Promise<Response>;
+  let customFetch: (url: string, options?: RequestInit) => Promise<MinimalResponse | Response>;
   
   if (options.axios && isAxiosInstance(options.axios)) {
     customFetch = createAxiosFetchAdapter(options.axios);

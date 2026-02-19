@@ -20,6 +20,7 @@
 | ⭐⭐ Medium | 2-8 hours, moderate complexity |
 | ⭐⭐⭐ Hard | > 8 hours, requires research/planning |
 | ⭐⭐⭐⭐ Very Hard | > 2 weeks, major feature |
+| ⭐⭐⭐⭐ Very Hard | > 2 weeks, major feature |
 
 ---
 
@@ -193,6 +194,41 @@
 
 ---
 
+## 🔮 Long-term Vision
+
+### 12. Internationalization (i18n)
+
+> **Why:** Global user base support
+
+| Task | Priority | Difficulty | Status |
+|------|----------|------------|--------|
+| - [ ] Create `docs/i18n.md` | 🟢 P3 | ⭐⭐⭐ | Pending |
+| - [ ] Multi-language support | 🟢 P3 | ⭐⭐⭐ | Pending |
+| - [ ] Date/number formatting locales | 🟢 P3 | ⭐⭐ | Pending |
+| - [ ] RTL language support | 🟢 P3 | ⭐⭐⭐ | Pending |
+
+### 13. API Versioning Strategy
+
+> **Why:** Backward compatibility management
+
+| Task | Priority | Difficulty | Status |
+|------|----------|------------|--------|
+| - [ ] Document versioning approach | 🟢 P3 | ⭐⭐⭐ | Pending |
+| - [ ] Breaking change policy | 🟢 P3 | ⭐⭐ | Pending |
+| - [ ] Deprecation timeline | 🟢 P3 | ⭐⭐ | Pending |
+
+### 14. Database Migration Strategy
+
+> **Why:** Schema evolution support
+
+| Task | Priority | Difficulty | Status |
+|------|----------|------------|--------|
+| - [ ] Drizzle schema change guide | 🟢 P3 | ⭐⭐ | Pending |
+| - [ ] Zero-downtime migrations | 🟢 P3 | ⭐⭐⭐ | Pending |
+| - [ ] Config migration helpers | 🟢 P3 | ⭐⭐⭐ | Pending |
+
+---
+
 ## 🤝 Seeking Contributors
 
 > **Help wanted!** These features need community contributions to become reality.
@@ -229,50 +265,15 @@
 
 ---
 
-## 🔮 Long-term Vision
-
-### 12. Internationalization (i18n)
-
-> **Why:** Global user base support
-
-| Task | Priority | Difficulty | Status |
-|------|----------|------------|--------|
-| - [ ] Create `docs/i18n.md` | 🟢 P3 | ⭐⭐⭐ | Pending |
-| - [ ] Multi-language support | 🟢 P3 | ⭐⭐⭐ | Pending |
-| - [ ] Date/number formatting locales | 🟢 P3 | ⭐⭐ | Pending |
-| - [ ] RTL language support | 🟢 P3 | ⭐⭐⭐ | Pending |
-
-### 13. API Versioning Strategy
-
-> **Why:** Backward compatibility management
-
-| Task | Priority | Difficulty | Status |
-|------|----------|------------|--------|
-| - [ ] Document versioning approach | 🟢 P3 | ⭐⭐⭐ | Pending |
-| - [ ] Breaking change policy | 🟢 P3 | ⭐⭐ | Pending |
-| - [ ] Deprecation timeline | 🟢 P3 | ⭐⭐ | Pending |
-
-### 14. Database Migration Strategy
-
-> **Why:** Schema evolution support
-
-| Task | Priority | Difficulty | Status |
-|------|----------|------------|--------|
-| - [ ] Drizzle schema change guide | 🟢 P3 | ⭐⭐ | Pending |
-| - [ ] Zero-downtime migrations | 🟢 P3 | ⭐⭐⭐ | Pending |
-| - [ ] Config migration helpers | 🟢 P3 | ⭐⭐⭐ | Pending |
-
----
-
 ## 📊 Summary
 
 | Category | Total Tasks | Done | Pending |
 |----------|-------------|------|---------|
-| Action Plan | 35 | 13 | 22 |
-| Future Plan | 34 | 0 | 34 |
-| Long-term Vision | 11 | 0 | 11 |
+| Action Plan | 45 | 14 | 31 |
+| Future Plan | 33 | 4 | 29 |
+| Long-term Vision | 10 | 0 | 10 |
 | Seeking Contributors | 14 | 0 | 14 |
-| **Total** | **94** | **13** | **81** |
+| **Total** | **102** | **18** | **84** |
 
 ---
 

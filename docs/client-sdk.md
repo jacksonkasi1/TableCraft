@@ -69,14 +69,15 @@ console.log(metadata.capabilities); // Search, export, pagination settings
 Creates a new TableCraft client instance.
 
 ```typescript
-import { createClient } from '@tablecraft/client';
+import { createClient, type ClientOptions } from '@tablecraft/client';
 
-const tc = createClient({
-  baseUrl: string;
-  fetch?: typeof fetch;          // Custom fetch function (optional)
-  axios?: unknown;               // Axios instance (optional)
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
-});
+const options: ClientOptions = {
+  baseUrl: '/api/engine',
+  // fetch: customFetch,
+  // axios: axiosInstance,
+  // headers: { 'Authorization': 'Bearer ...' },
+};
+const tc = createClient(options);
 ```
 
 #### Options
@@ -458,8 +459,8 @@ function UsersTable() {
         <button onClick={() => setPage(meta.page - 1)} disabled={meta.page === 1}>
           Previous
         </button>
-        <span>Page {meta.page} of {meta.totalPages}</span>
-        <button onClick={() => setPage(meta.page + 1)} disabled={meta.page >= meta.totalPages}>
+        <span>Page {meta.page} of {meta.totalPages ?? '—'}</span>
+        <button onClick={() => setPage(meta.page + 1)} disabled={meta.totalPages !== null && meta.page >= meta.totalPages}>
           Next
         </button>
       </div>
@@ -784,8 +785,6 @@ async function getUsersMeta() {
 
 ---
 
----
-
 ## Contributing
 
 We're actively seeking contributors to expand framework support!
@@ -862,7 +861,7 @@ Interested? Open an issue on [GitHub](https://github.com/jacksonkasi1/TableCraft
 | Use fetch (default) | **0 bytes** - no axios code included |
 | Use axios | ~13KB - only if you explicitly install axios |
 
-The axios adapter code is lazy-loaded - it only runs when you pass `axios` option. Tree-shaking removes it if unused.
+The axios adapter avoids a static import of the axios library (so axios itself won't be bundled if you don't use it), but the `createAxiosFetchAdapter` function will still be included in consumer bundles.
 
 ### When should I use axios vs fetch?
 

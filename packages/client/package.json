@@ -23,7 +23,7 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "axios": ">=0.21.0"
+    "axios": "^1.7.0"
   },
   "peerDependenciesMeta": {
     "axios": {

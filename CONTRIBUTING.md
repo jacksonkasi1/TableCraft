@@ -66,7 +66,7 @@ bun run typecheck
 
 ## Project Structure
 
-```
+```text
 TableCraft/
 ├── packages/
 │   ├── engine/           # Core query building engine
@@ -186,7 +186,7 @@ import { MAX_PAGE_SIZE } from './constants';
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<scope>): <description>
 
 [optional body]
@@ -233,7 +233,7 @@ chore(deps): update dependencies
 
 Use the same format as commit messages:
 
-```
+```text
 feat(table): add column resize persistence
 ```
 
