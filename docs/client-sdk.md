@@ -231,6 +231,7 @@ await users.query({
 ```
 
 **Available Operators:**
+
 | Operator | Description |
 |----------|-------------|
 | `eq` | Equal (default) |
