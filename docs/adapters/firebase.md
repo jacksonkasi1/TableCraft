@@ -26,11 +26,12 @@ import {
 import { db } from "../firebase-config"; // Your initialized Firestore db
 import type { DataAdapter, QueryParams } from '@tablecraft/table';
 
-export function createFirestoreAdapter<T>(collectionName: string): DataAdapter<T> {
-  // We need to store the cursor state outside the query function
-  // so we know where to start the NEXT page.
-  let lastVisibleDocs: Record<number, QueryDocumentSnapshot> = {};
-
+export function createFirestoreAdapter<T>(
+  collectionName: string,
+  // We accept a reference to a mutable cursor object from the caller.
+  // This ensures SSR safety and instance-level isolation.
+  cursorState: { lastVisibleDocs: Record<number, QueryDocumentSnapshot> }
+): DataAdapter<T> {
   return {
     async query(params: QueryParams) {
       // 1. Base Query reference
@@ -53,7 +54,7 @@ export function createFirestoreAdapter<T>(collectionName: string): DataAdapter<T
       // 4. Map Pagination (Cursor + Limit)
       // If we are on page > 0, we need the cursor from the PREVIOUS page
       if (params.page > 0) {
-        const lastVisible = lastVisibleDocs[params.page - 1];
+        const lastVisible = cursorState.lastVisibleDocs[params.page - 1];
         if (lastVisible) {
           q = query(q, startAfter(lastVisible));
         }
@@ -73,7 +74,7 @@ export function createFirestoreAdapter<T>(collectionName: string): DataAdapter<T
       // 6. Save the Cursor for the NEXT page
       // Store the last document in our dictionary mapped to the CURRENT page index
       if (snapshot.docs.length > 0) {
-        lastVisibleDocs[params.page] = snapshot.docs[snapshot.docs.length - 1];
+        cursorState.lastVisibleDocs[params.page] = snapshot.docs[snapshot.docs.length - 1];
       }
 
       // 7. Return TableCraft QueryResult shape
@@ -93,8 +94,18 @@ export function createFirestoreAdapter<T>(collectionName: string): DataAdapter<T
 }
 
 // Usage in React:
-// const adapter = createFirestoreAdapter<User>('users');
-// <DataTable adapter={adapter} />
+// import { useRef, useMemo } from 'react';
+// 
+// function MyTable() {
+//   // Keep the cursor state isolated to this specific component instance
+//   const cursorRef = useRef({ lastVisibleDocs: {} });
+//   
+//   const adapter = useMemo(() => {
+//     return createFirestoreAdapter<User>('users', cursorRef.current);
+//   }, []);
+//   
+//   return <DataTable adapter={adapter} />;
+// }
 ```
 
 ---

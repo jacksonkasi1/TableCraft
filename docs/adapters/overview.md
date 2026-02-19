@@ -130,7 +130,7 @@ If you don't know the total pages, your adapter should return:
   }
 }
 ```
-TableCraft's `<DataTable>` will automatically adjust its pagination UI. Instead of showing "Page 1 of 50", it will gracefully fallback to simple "Previous" and "Next" buttons, disabling "Next" if the returned `data` array is smaller than `pageSize`.
+TableCraft's `<DataTable>` will automatically adjust its pagination UI. Instead of showing "Page 1 of 50", it will gracefully fall back to simple "Previous" and "Next" buttons, disabling "Next" if the returned `data` array is smaller than `pageSize`.
 
 ### Q: How do I handle authentication (JWTs) with my custom adapter?
 You handle authentication when you *instantiate* the adapter. For example, pass headers into your factory function, or rely on a pre-configured `axios` instance with interceptors:

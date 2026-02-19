@@ -89,7 +89,17 @@ export function createDynamicGraphQLAdapter<T>(
     async query(params: QueryParams) {
       
       // Prevent querying without fields
-      if (visibleFields.length === 0) return { data: [], meta: { total: 0, page: 0, pageSize: 0, totalPages: 0 } };
+      if (visibleFields.length === 0) {
+        return { 
+          data: [], 
+          meta: { 
+            total: 0, 
+            page: params.page, 
+            pageSize: params.pageSize, 
+            totalPages: 0 
+          } 
+        };
+      }
 
       // 1. Construct the fields string dynamically
       const fieldsString = visibleFields.join('\n');

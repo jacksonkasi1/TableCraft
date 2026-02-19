@@ -45,7 +45,7 @@ This is a robust example of connecting TableCraft to a generic REST API using th
 import { createRestAdapter } from '@tablecraft/table';
 import type { QueryParams } from '@tablecraft/table';
 
-export function createMyFetchAdapter<T>(baseUrl: string) {
+export function createMyFetchAdapter<T>(baseUrl: string, getToken: () => string | null) {
   return createRestAdapter<T>({
     queryFn: async (params: QueryParams) => {
       const url = new URL(baseUrl);
@@ -54,28 +54,14 @@ export function createMyFetchAdapter<T>(baseUrl: string) {
       url.searchParams.set('page', String(params.page + 1));
       url.searchParams.set('limit', String(params.pageSize));
 
-      // 2. Map Sorting
-      if (params.sort) {
-        url.searchParams.set('sortBy', params.sort);
-        url.searchParams.set('sortOrder', params.sortOrder); // 'asc' | 'desc'
-      }
+      // ... map sorting, searching, and filtering
 
-      // 3. Map Global Search
-      if (params.search) {
-        url.searchParams.set('q', params.search);
-      }
+      // 5. Fetch the Data (Inject token via function argument)
+      const token = getToken();
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      // 4. Map Column Filtering (Assuming standard key-value pairs)
-      if (params.filters) {
-        Object.entries(params.filters).forEach(([key, value]) => {
-          url.searchParams.set(key, String(value));
-        });
-      }
-
-      // 5. Fetch the Data
-      const response = await fetch(url.toString(), {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      const response = await fetch(url.toString(), { headers });
 
       if (!response.ok) throw new Error('Failed to fetch data');
       
@@ -97,7 +83,8 @@ export function createMyFetchAdapter<T>(baseUrl: string) {
 }
 
 // Usage in React:
-// const adapter = createMyFetchAdapter('/api/users');
+// const getToken = () => localStorage.getItem('token'); // Safe for CSR, modify for SSR
+// const adapter = createMyFetchAdapter('/api/users', getToken);
 // <DataTable adapter={adapter} />
 ```
 
@@ -107,7 +94,7 @@ export function createMyFetchAdapter<T>(baseUrl: string) {
 
 Many enterprise applications use `axios` because it allows you to configure global instances with interceptors. You can easily wrap your existing Axios setup in a `DataAdapter`.
 
-First, you might have an Axios instance setup in your project:
+First, you might have an Axios instance set up in your project:
 
 ```typescript
 // src/api/client.ts
