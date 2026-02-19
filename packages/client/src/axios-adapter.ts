@@ -1,14 +1,25 @@
 import type { AxiosLike } from './types';
 
 export function isAxiosInstance(value: unknown): value is AxiosLike {
-  return typeof value === 'object' && value !== null && typeof (value as AxiosLike).request === 'function';
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as any).request === 'function' &&
+    typeof (value as any).interceptors === 'object'
+  );
 }
 
 export type MinimalResponse = Pick<Response, 'ok' | 'status' | 'statusText' | 'headers' | 'json' | 'text'>;
 
 export function createAxiosFetchAdapter(axios: AxiosLike) {
   return async (url: string, options?: RequestInit): Promise<MinimalResponse> => {
-    const headers = options?.headers as Record<string, string> | undefined;
+    let headers: Record<string, string> | undefined = undefined;
+    if (options?.headers) {
+      headers = {};
+      new Headers(options.headers as HeadersInit).forEach((value, key) => {
+        headers![key] = value;
+      });
+    }
     const method = options?.method || 'GET';
     
     try {

@@ -23,11 +23,21 @@ describe('createTableCraftAdapter with axios', () => {
     };
 
     const mockAxios = {
-      request: vi.fn().mockResolvedValue({
-        data: mockResponse,
-        status: 200,
-        statusText: 'OK',
-        headers: {},
+      request: vi.fn().mockImplementation(({ url }: { url: string }) => {
+        if (url && url.endsWith('/_meta')) {
+          return Promise.resolve({
+            data: { name: 'users', columns: [], capabilities: {}, filters: [] },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+          });
+        }
+        return Promise.resolve({
+          data: mockResponse,
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+        });
       }),
       get: vi.fn(),
     };
@@ -47,11 +57,21 @@ describe('createTableCraftAdapter with axios', () => {
 
   it('should pass headers to axios', async () => {
     const mockAxios = {
-      request: vi.fn().mockResolvedValue({
-        data: { data: [], meta: { total: 0, page: 1, pageSize: 10, totalPages: 0 } },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
+      request: vi.fn().mockImplementation(({ url }: { url: string }) => {
+        if (url && url.endsWith('/_meta')) {
+          return Promise.resolve({
+            data: { name: 'users', columns: [], capabilities: {}, filters: [] },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+          });
+        }
+        return Promise.resolve({
+          data: { data: [], meta: { total: 0, page: 1, pageSize: 10, totalPages: 0 } },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+        });
       }),
       get: vi.fn(),
     };
@@ -93,7 +113,9 @@ describe('createTableCraftAdapter with axios', () => {
       axios: mockAxios as any,
     });
 
+    // Both _meta and query requests will fail; adapter swallows _meta error, surfaces query error
     await expect(adapter.query({ page: 1, pageSize: 10, search: '', sort: '', sortOrder: 'asc', filters: {}, dateRange: { from: '', to: '' } })).rejects.toThrow('Not found');
+    expect(mockAxios.request).toHaveBeenCalledTimes(2);
   });
 
   it('should handle axios errors without response', async () => {
@@ -110,16 +132,28 @@ describe('createTableCraftAdapter with axios', () => {
       axios: mockAxios as any,
     });
 
+    // Both _meta and query requests will fail; adapter swallows _meta error, surfaces query error
     await expect(adapter.query({ page: 1, pageSize: 10, search: '', sort: '', sortOrder: 'asc', filters: {}, dateRange: { from: '', to: '' } })).rejects.toThrow('Network error');
+    expect(mockAxios.request).toHaveBeenCalledTimes(2);
   });
 
   it('should prefer axios over fetch when both provided', async () => {
     const mockAxios = {
-      request: vi.fn().mockResolvedValue({
-        data: { data: [{ id: 1 }], meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 } },
-        status: 200,
-        statusText: 'OK',
-        headers: {},
+      request: vi.fn().mockImplementation(({ url }: { url: string }) => {
+        if (url && url.endsWith('/_meta')) {
+          return Promise.resolve({
+            data: { name: 'users', columns: [], capabilities: {}, filters: [] },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+          });
+        }
+        return Promise.resolve({
+          data: { data: [{ id: 1 }], meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 } },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+        });
       }),
       get: vi.fn(),
     };
