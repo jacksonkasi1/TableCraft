@@ -12,6 +12,28 @@ This usually means your client is pointing to an endpoint that does not exist or
 If the server crashes complaining about missing tables or columns during startup:
 * **Solution:** Ensure you are passing the actual Drizzle schema objects (like `schema.users`) to `defineTable()`, and that your database migrations have been applied.
 
+## How do I handle Codegen if my server has authentication?
+
+If your TableCraft API requires authentication (e.g., JWT, session cookies, API keys), the `tablecraft-codegen` CLI will fail to fetch metadata unless you provide credentials.
+
+You can securely pass any required authentication headers using the `--header` or `-H` flag:
+
+**Using a Bearer Token:**
+```bash
+npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H "Authorization: Bearer <your-token>"
+```
+
+**Using Session Cookies:**
+If your backend uses standard cookie-based sessions, you can pass the session cookie directly via the `Cookie` header:
+```bash
+npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H "Cookie: session_id=<your-session-cookie>"
+```
+
+**Using Custom API Keys or Multiple Headers:**
+```bash
+npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H "x-api-key: <your-key>" -H "x-tenant-id: <tenant>"
+```
+
 ## Why is my filter not working?
 
 There are a few reasons why a global search or column filter might not be taking effect:
