@@ -1,5 +1,12 @@
 import type { AxiosLike } from './types';
 
+/**
+ * Type guard to check if a given value is an Axios-like instance.
+ * It checks for the presence of 'request' and 'get' methods.
+ * 
+ * @param value - The value to check
+ * @returns True if the value looks like an Axios instance
+ */
 export function isAxiosInstance(value: unknown): value is AxiosLike {
   return (
     typeof value === 'object' &&
@@ -9,8 +16,20 @@ export function isAxiosInstance(value: unknown): value is AxiosLike {
   );
 }
 
+/**
+ * A minimal representation of the standard fetch API's Response object.
+ * Used to normalize responses from different HTTP clients.
+ */
 export type MinimalResponse = Pick<Response, 'ok' | 'status' | 'statusText' | 'headers' | 'json' | 'text'>;
 
+/**
+ * Creates an adapter that wraps an Axios instance to behave like the native fetch API.
+ * This allows TableCraft's client to use an existing Axios setup (with interceptors, etc.)
+ * without needing to bundle Axios statically.
+ * 
+ * @param axios - The Axios instance to wrap
+ * @returns A function compatible with the native fetch signature
+ */
 export function createAxiosFetchAdapter(axios: AxiosLike) {
   return async (url: string, options?: RequestInit): Promise<MinimalResponse> => {
     let headers: Record<string, string> | undefined = undefined;
@@ -28,7 +47,7 @@ export function createAxiosFetchAdapter(axios: AxiosLike) {
         method,
         headers,
         data: options?.body,
-        signal: options?.signal,
+        signal: options?.signal ?? undefined,
       });
       
       return {

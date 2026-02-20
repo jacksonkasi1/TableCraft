@@ -20,9 +20,10 @@
 
 ## Features
 
-* [All Features](features.md)
+* [Features](features.md)
 * [Date Filtering](date-filtering.md)
 * [Type Generation](codegen.md)
+* [FAQ & Troubleshooting](faq.md)
 
 ## API Reference
 
@@ -34,4 +35,13 @@
 ## Guides
 
 * [Type Safety](type-safety.md)
+* [Performance Guide](performance.md)
 * [Examples](examples.md)
+
+## Integrations & Adapters
+
+* [Overview & Custom Adapters](adapters/overview.md)
+* [REST & Axios](adapters/rest.md)
+* [Supabase](adapters/supabase.md)
+* [Firebase](adapters/firebase.md)
+* [GraphQL](adapters/graphql.md)

@@ -595,11 +595,17 @@ The client throws errors with additional properties:
 ```typescript
 try {
   const result = await users.query();
-} catch (error) {
-  console.log(error.message);    // Error message
-  console.log(error.status);     // HTTP status code (e.g., 404)
-  console.log(error.code);       // Error code (e.g., 'NOT_FOUND')
-  console.log(error.details);    // Additional details
+} catch (error: unknown) {
+  if (error instanceof Error) {
+    console.log(error.message);    // Error message
+  } else {
+    console.log(String(error));
+  }
+  
+  const errObj = error as Record<string, any>;
+  if (errObj.status != null) console.log(errObj.status);     // HTTP status code (e.g., 404)
+  if (errObj.code != null) console.log(errObj.code);       // Error code (e.g., 'NOT_FOUND')
+  if (errObj.details != null) console.log(errObj.details);    // Additional details
 }
 ```
 

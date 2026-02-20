@@ -46,12 +46,12 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [x] Create `docs/custom-adapter.md` | 🔴 P0 | ⭐⭐ | ✅ Done |
-| - [ ] Document `DataAdapter` interface | 🔴 P0 | ⭐ | Pending |
-| - [ ] Example: REST API adapter | 🔴 P0 | ⭐⭐ | Pending |
-| - [ ] Example: GraphQL adapter | 🟡 P2 | ⭐⭐⭐ | Pending |
-| - [ ] Example: Supabase adapter | 🟡 P2 | ⭐⭐ | Pending |
-| - [ ] Example: Firebase/Firestore adapter | 🟢 P3 | ⭐⭐⭐ | Pending |
+| - [x] Create `docs/custom-adapter.md` (now `adapters/`) | 🔴 P0 | ⭐⭐ | ✅ Done |
+| - [x] Document `DataAdapter` interface | 🔴 P0 | ⭐ | ✅ Done |
+| - [x] Example: REST API adapter | 🔴 P0 | ⭐⭐ | ✅ Done |
+| - [x] Example: GraphQL adapter | 🟡 P2 | ⭐⭐⭐ | ✅ Done |
+| - [x] Example: Supabase adapter | 🟡 P2 | ⭐⭐ | ✅ Done |
+| - [x] Example: Firebase/Firestore adapter | 🟢 P3 | ⭐⭐⭐ | ✅ Done |
 | - [ ] Adapter testing patterns | 🟡 P2 | ⭐⭐ | Pending |
 
 ### 2.1 Axios Support for Client
@@ -73,13 +73,13 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [ ] Create `docs/faq.md` | 🟠 P1 | ⭐ | Pending |
-| - [ ] Add common errors section | 🟠 P1 | ⭐ | Pending |
-| - [ ] Add debugging tips | 🟠 P1 | ⭐ | Pending |
+| - [x] Create `docs/faq.md` | 🟠 P1 | ⭐ | ✅ Done |
+| - [x] Add common errors section | 🟠 P1 | ⭐ | ✅ Done |
+| - [x] Add debugging tips | 🟠 P1 | ⭐ | ✅ Done |
 | - [ ] Add performance troubleshooting | 🟡 P2 | ⭐⭐ | Pending |
-| - [ ] Add "Why is my query slow?" section | 🟡 P2 | ⭐ | Pending |
-| - [ ] Add "Why is filter not working?" section | 🟠 P1 | ⭐ | Pending |
-| - [ ] Add TypeScript error solutions | 🟡 P2 | ⭐ | Pending |
+| - [x] Add "Why is my query slow?" section | 🟡 P2 | ⭐ | ✅ Done |
+| - [x] Add "Why is filter not working?" section | 🟠 P1 | ⭐ | ✅ Done |
+| - [x] Add TypeScript error solutions | 🟡 P2 | ⭐ | ✅ Done |
 
 ### 4. Performance Guide
 
@@ -87,11 +87,11 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [ ] Create `docs/performance.md` | 🟠 P1 | ⭐⭐ | Pending |
-| - [ ] Document cursor vs offset pagination | 🟠 P1 | ⭐ | Pending |
-| - [ ] Document large dataset handling (100k+ rows) | 🟠 P1 | ⭐⭐ | Pending |
-| - [ ] Document caching strategies | 🟠 P1 | ⭐⭐ | Pending |
-| - [ ] Document bundle size optimization | 🟡 P2 | ⭐ | Pending |
+| - [x] Create `docs/performance.md` | 🟠 P1 | ⭐⭐ | ✅ Done |
+| - [x] Document cursor vs offset pagination | 🟠 P1 | ⭐ | ✅ Done |
+| - [x] Document large dataset handling (100k+ rows) | 🟠 P1 | ⭐⭐ | ✅ Done |
+| - [x] Document caching strategies | 🟠 P1 | ⭐⭐ | ✅ Done |
+| - [x] Document bundle size optimization | 🟡 P2 | ⭐ | ✅ Done |
 | - [ ] Add performance benchmarks | 🟢 P3 | ⭐⭐⭐ | Pending |
 | - [ ] Document memory usage patterns | 🟢 P3 | ⭐⭐ | Pending |
 
@@ -101,8 +101,8 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [ ] Expand `docs/examples.md` | 🟠 P1 | ⭐⭐ | Pending |
-| - [ ] Add e-commerce dashboard example | 🟠 P1 | ⭐⭐ | Pending |
+| - [x] Expand `docs/examples.md` | 🟠 P1 | ⭐⭐ | ✅ Done |
+| - [x] Add e-commerce dashboard example | 🟠 P1 | ⭐⭐ | ✅ Done |
 | - [ ] Add admin panel example | 🟡 P2 | ⭐⭐ | Pending |
 | - [ ] Add multi-tenant SaaS example | 🟡 P2 | ⭐⭐⭐ | Pending |
 | - [ ] Add real-time data example (WebSocket) | 🟢 P3 | ⭐⭐⭐ | Pending |
@@ -114,8 +114,8 @@
 
 | Task | Priority | Difficulty | Status |
 |------|----------|------------|--------|
-| - [ ] Create `CHANGELOG.md` in root | 🟠 P1 | ⭐ | Pending |
-| - [ ] Document v0.1.0 release | 🟠 P1 | ⭐ | Pending |
+| - [x] Create `CHANGELOG.md` in root | 🟠 P1 | ⭐ | ✅ Done |
+| - [x] Document v0.1.0 release | 🟠 P1 | ⭐ | ✅ Done |
 | - [ ] Add breaking changes format | 🟡 P2 | ⭐ | Pending |
 | - [ ] Add deprecation notice format | 🟡 P2 | ⭐ | Pending |
 | - [ ] Setup automatic changelog generation | 🟢 P3 | ⭐⭐ | Pending |
