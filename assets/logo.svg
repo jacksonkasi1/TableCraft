@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Clean dark background (Zinc 950) -->
+  <rect width="512" height="512" rx="112" fill="#09090b" />
+  
+  <g transform="translate(116, 108)">
+    <!-- Top row of the T (Header) -->
+    <rect x="0" y="0" width="80" height="64" rx="16" fill="#fafafa" />
+    <rect x="100" y="0" width="80" height="64" rx="16" fill="#fafafa" />
+    <rect x="200" y="0" width="80" height="64" rx="16" fill="#fafafa" />
+
+    <!-- Stem of the T -->
+    <rect x="100" y="84" width="80" height="64" rx="16" fill="#fafafa" opacity="0.9" />
+    <rect x="100" y="168" width="80" height="64" rx="16" fill="#fafafa" opacity="0.7" />
+    <rect x="100" y="252" width="80" height="64" rx="16" fill="#fafafa" opacity="0.4" />
+
+    <!-- Other grid cells faintly in the background to show it's a table -->
+    <rect x="0" y="84" width="80" height="64" rx="16" fill="#27272a" />
+    <rect x="0" y="168" width="80" height="64" rx="16" fill="#27272a" />
+    <rect x="0" y="252" width="80" height="64" rx="16" fill="#27272a" />
+
+    <rect x="200" y="84" width="80" height="64" rx="16" fill="#27272a" />
+    <rect x="200" y="168" width="80" height="64" rx="16" fill="#27272a" />
+    <rect x="200" y="252" width="80" height="64" rx="16" fill="#27272a" />
+  </g>
+</svg>
