@@ -62,7 +62,14 @@ npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/gener
 
 {% tab title="Authenticated" %}
 ```bash
+# With a Bearer Token
 npx @tablecraft/codegen --url https://api.example.com/engine --out ./src/generated -H "Authorization: Bearer token"
+
+# With a Session Cookie
+npx @tablecraft/codegen --url https://api.example.com/engine --out ./src/generated -H "Cookie: session_id=your_cookie_value"
+
+# With multiple headers
+npx @tablecraft/codegen --url https://api.example.com/engine --out ./src/generated -H "Authorization: Bearer token" -H "x-tenant-id: acme"
 ```
 {% endtab %}
 {% endtabs %}
