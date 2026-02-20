@@ -1,10 +1,10 @@
-# Features Overview
+# Features
 
 TableCraft provides a comprehensive set of features for building data tables quickly and efficiently.
 
 {% columns %}
 {% column %}
-## 🏗️ Auto Columns
+### 🏗️ Auto Columns
 
 Columns are automatically generated from your Drizzle schema. No manual column definitions needed.
 
@@ -16,7 +16,7 @@ const users = defineTable(schema.users)
 {% endcolumn %}
 
 {% column %}
-## 🔍 Global Search
+### 🔍 Global Search
 
 Full-text search across specified columns with operator support.
 
@@ -30,7 +30,7 @@ defineTable(schema.users)
 
 {% columns %}
 {% column %}
-## 📅 Date Filters
+### 📅 Date Filters
 
 Smart date range filtering with auto-detection.
 
@@ -42,7 +42,7 @@ defineTable(schema.orders)
 {% endcolumn %}
 
 {% column %}
-## 📤 Export
+### 📤 Export
 
 Export data to CSV or Excel.
 
@@ -57,7 +57,7 @@ Export data to CSV or Excel.
 
 {% columns %}
 {% column %}
-## 📊 Sorting
+### 📊 Sorting
 
 Multi-column sorting with URL synchronization.
 
@@ -68,7 +68,7 @@ defineTable(schema.users)
 {% endcolumn %}
 
 {% column %}
-## 📑 Pagination
+### 📑 Pagination
 
 Cursor or offset-based pagination.
 
@@ -119,18 +119,20 @@ defineTable(schema.users)
 
 {% tab title="URL Sync" %}
 All table state stored in URL for shareable links:
-*   Search query
-*   Filters & Sort
-*   Page & PageSize
-*   Column visibility
-*   Date range
+
+* Search query
+* Filters & Sort
+* Page & PageSize
+* Column visibility
+* Date range
 {% endtab %}
 
 {% tab title="Keyboard" %}
 Full keyboard accessibility:
-*   Arrow keys: Navigate cells
-*   Enter: Activate
-*   Escape: Close
+
+* Arrow keys: Navigate cells
+* Enter: Activate
+* Escape: Close
 {% endtab %}
 {% endtabs %}
 
@@ -138,7 +140,8 @@ Full keyboard accessibility:
 
 {% columns %}
 {% column %}
-### Role-Based Access
+#### Role-Based Access
+
 Control column visibility by user role.
 
 ```typescript
@@ -149,10 +152,11 @@ defineTable(schema.users)
 {% endcolumn %}
 
 {% column %}
-### Data Protection
-*   Hide sensitive columns (passwords, tokens)
-*   Tenant isolation
-*   Soft delete support
+#### Data Protection
+
+* Hide sensitive columns (passwords, tokens)
+* Tenant isolation
+* Soft delete support
 
 ```typescript
 defineTable(schema.users)
@@ -167,7 +171,8 @@ defineTable(schema.users)
 
 {% columns %}
 {% column %}
-### Caching Plugin
+#### Caching Plugin
+
 Cache query results with multiple backends (Redis, Upstash, Memory).
 
 ```typescript
@@ -180,15 +185,16 @@ plugins: [
 {% endcolumn %}
 
 {% column %}
-### Backend Adapters
+#### Backend Adapters
+
 Support for major frameworks:
 
-| Adapter | Framework |
-|---------|-----------|
-| `@tablecraft/adapter-hono` | Hono.js |
-| `@tablecraft/adapter-express` | Express |
-| `@tablecraft/adapter-next` | Next.js |
-| `@tablecraft/adapter-elysia` | Elysia (Bun) |
+| Adapter                       | Framework    |
+| ----------------------------- | ------------ |
+| `@tablecraft/adapter-hono`    | Hono.js      |
+| `@tablecraft/adapter-express` | Express      |
+| `@tablecraft/adapter-next`    | Next.js      |
+| `@tablecraft/adapter-elysia`  | Elysia (Bun) |
 {% endcolumn %}
 {% endcolumns %}
 
@@ -219,5 +225,5 @@ defineTable(schema.users)
 
 ## 🛠 Developer Tools
 
-*   **Type Generation:** `npx @tablecraft/codegen`
-*   **OpenAPI Specs:** Auto-generate Swagger/OpenAPI 3.0 specs
+* **Type Generation:** `npx @tablecraft/codegen`
+* **OpenAPI Specs:** Auto-generate Swagger/OpenAPI 3.0 specs

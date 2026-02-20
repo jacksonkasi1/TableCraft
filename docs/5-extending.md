@@ -1,4 +1,4 @@
-# 5. Extending & Raw SQL
+# Extending
 
 The TableCraft Engine is designed to handle 90% of your API needs (CRUD, filtering, sorting, joins). However, for complex analytics, CTEs, window functions, or highly specific database optimizations, you might need to drop down to raw Drizzle or SQL.
 
@@ -6,7 +6,7 @@ You don't have to lose the benefits of TableCraft (pagination, consistent respon
 
 ## 1. Using `manualResult`
 
-The `manualResult` utility allows you to write *any* Drizzle query you want, and then format the output exactly like a standard Engine response. This ensures your API remains consistent across the entire application.
+The `manualResult` utility allows you to write _any_ Drizzle query you want, and then format the output exactly like a standard Engine response. This ensures your API remains consistent across the entire application.
 
 ### Example: Complex Analytics Report
 
@@ -14,7 +14,7 @@ Suppose you need a report with `GROUP BY`, `HAVING`, and a subquery—features t
 
 {% stepper %}
 {% step %}
-## Define Formatting Config
+### Define Formatting Config
 
 Define a config just for formatting (labels, hidden fields). This doesn't control the query, just the output shape.
 
@@ -30,7 +30,7 @@ export const reportConfig = defineTable(orders)
 {% endstep %}
 
 {% step %}
-## Write the Route Handler
+### Write the Route Handler
 
 Use full control with raw Drizzle/SQL features.
 
@@ -107,7 +107,7 @@ const csv = manualExport(data, 'csv', reportConfig);
 
 ## 3. Hybrid Approach: Wrapping the Engine
 
-Sometimes you don't need a full manual query, but you want to inject custom logic *before* or *after* the standard engine execution. You can wrap the engine instance.
+Sometimes you don't need a full manual query, but you want to inject custom logic _before_ or _after_ the standard engine execution. You can wrap the engine instance.
 
 ```typescript
 import { createTableEngine } from '@tablecraft/engine';

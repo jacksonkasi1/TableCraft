@@ -1,4 +1,4 @@
-# Metadata API — Auto-Generated Frontend Schema
+# Metadata API
 
 The `_meta` endpoint returns everything your frontend needs to build a data table **without** hardcoding column names, types, or capabilities.
 
@@ -6,16 +6,18 @@ The `_meta` endpoint returns everything your frontend needs to build a data tabl
 
 {% columns %}
 {% column %}
-### Without Metadata
-*   Read backend config files to know which columns exist
-*   Manually define column types, labels, and widths
-*   Hardcode sortable/filterable columns
-*   Guess filter operators
-*   Manually build enum dropdowns
+#### Without Metadata
+
+* Read backend config files to know which columns exist
+* Manually define column types, labels, and widths
+* Hardcode sortable/filterable columns
+* Guess filter operators
+* Manually build enum dropdowns
 {% endcolumn %}
 
 {% column %}
-### With Metadata
+#### With Metadata
+
 The frontend just calls one endpoint:
 
 ```typescript
@@ -30,7 +32,7 @@ const meta = await fetch('/api/data/orders/_meta')
 
 {% stepper %}
 {% step %}
-### Backend: Define the Table
+#### Backend: Define the Table
 
 ```typescript
 // app/api/data/[table]/route.ts
@@ -59,7 +61,7 @@ export const ordersConfig = defineTable(orders)
 {% endstep %}
 
 {% step %}
-### Frontend: Fetch Metadata
+#### Frontend: Fetch Metadata
 
 ```typescript
 const meta = await fetch('/api/data/orders/_meta').then(r => r.json());
@@ -221,6 +223,7 @@ function OrdersTable() {
 Different users see different columns based on their roles.
 
 **Backend:**
+
 ```typescript
 export const employees = defineTable(schema.employees)
   .visibleTo('salary', ['admin', 'hr'])
@@ -228,20 +231,19 @@ export const employees = defineTable(schema.employees)
   .visibleTo('performanceReview', ['admin', 'manager']);
 ```
 
-**Frontend:**
-The metadata endpoint respects the requesting user's roles (passed via context). Admin sees all columns; regular users see neither salary nor SSN.
+**Frontend:** The metadata endpoint respects the requesting user's roles (passed via context). Admin sees all columns; regular users see neither salary nor SSN.
 
 ### Date Presets
 
 Instead of forcing the frontend to calculate date ranges, the backend supports shortcuts.
 
 **Backend:**
+
 ```typescript
 .datePresets('createdAt', ['today', 'last7days', 'thisMonth'])
 ```
 
-**Frontend:**
-Renders a dropdown with these presets. Selecting "last7days" sends `?filter[createdAt]=last7days`.
+**Frontend:** Renders a dropdown with these presets. Selecting "last7days" sends `?filter[createdAt]=last7days`.
 
 ### Raw SQL Columns
 
@@ -282,18 +284,3 @@ defineTable(schema.orders)
 ```
 
 ## FAQ
-
-{% details %}
-<summary>Does metadata respect user roles?</summary>
-**Yes.** Metadata is context-aware. Pass the user's roles in `getContext()` and the `_meta` endpoint filters columns based on `visibleTo`.
-{% enddetails %}
-
-{% details %}
-<summary>Is metadata cached?</summary>
-**No.** Metadata is always fresh. Even if you wrap the engine with `withCache()`, `getMetadata()` is never cached to ensure security rules apply correctly.
-{% enddetails %}
-
-{% details %}
-<summary>What if I use raw SQL for everything?</summary>
-Use `.columnMeta()` to manually describe your columns so the frontend still knows how to render them.
-{% enddetails %}

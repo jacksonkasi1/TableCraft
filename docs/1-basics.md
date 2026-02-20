@@ -1,12 +1,12 @@
-# 1. Basics: Defining Your First Table
+# Basics
 
 The core of the TableCraft Engine is the `defineTable` function. It takes your Drizzle schema and creates a rich configuration object that the engine uses to build queries automatically.
 
 {% stepper %}
 {% step %}
-## Define a Table
+### Define a Table
 
-Instead of writing `SELECT` queries manually, you define *how* a table should be accessed.
+Instead of writing `SELECT` queries manually, you define _how_ a table should be accessed.
 
 ```typescript
 // src/config/products.ts
@@ -34,7 +34,7 @@ export const productConfig = defineTable(products)
 {% endstep %}
 
 {% step %}
-## Create the Engine
+### Create the Engine
 
 Once you have a config, you create an engine instance. This is usually done once per request (or cached) to handle context like the current user or tenant.
 
@@ -60,7 +60,7 @@ app.get('/products', async (c) => {
 {% endstep %}
 
 {% step %}
-## Querying the API
+### Querying the API
 
 Now your API automatically supports a powerful query syntax. You don't need to write any extra code to handle these.
 
@@ -84,19 +84,16 @@ You can also use operators (if your adapter supports parsing them, or pass them 
 {% tab title="Sorting" %}
 Use `sort` with a field name. Prefix with `-` for descending.
 
-*   `GET /products?sort=-price` (High to Low)
-*   `GET /products?sort=name` (A-Z)
+* `GET /products?sort=-price` (High to Low)
+* `GET /products?sort=name` (A-Z)
 {% endtab %}
 
 {% tab title="Pagination" %}
 The engine supports both **Offset-based** and **Cursor-based** pagination.
 
-**Offset (Default):**
-`GET /products?page=2&pageSize=50`
+**Offset (Default):** `GET /products?page=2&pageSize=50`
 
-**Cursor (Performance):**
-For infinite scrolling or large datasets.
-`GET /products?cursor=eyJpZCI6MTB9&pageSize=50`
+**Cursor (Performance):** For infinite scrolling or large datasets. `GET /products?cursor=eyJpZCI6MTB9&pageSize=50`
 {% endtab %}
 
 {% tab title="Select Fields" %}
@@ -116,8 +113,7 @@ Hidden fields cannot be selected. The `id` field is always returned if available
 
 To filter by a date range (e.g., "orders created between Jan 1st and Jan 31st"), use the `gte` (Greater Than or Equal) and `lte` (Less Than or Equal) operators.
 
-**1. Configure:**
-Ensure the date column is marked as filterable.
+**1. Configure:** Ensure the date column is marked as filterable.
 
 ```typescript
 export const orders = defineTable(schema.orders)
@@ -125,8 +121,7 @@ export const orders = defineTable(schema.orders)
   .toConfig();
 ```
 
-**2. Request:**
-`GET /orders?filter[createdAt][gte]=2024-01-01&filter[createdAt][lte]=2024-01-31`
+**2. Request:** `GET /orders?filter[createdAt][gte]=2024-01-01&filter[createdAt][lte]=2024-01-31`
 
 This generates: `WHERE "createdAt" >= '2024-01-01' AND "createdAt" <= '2024-01-31'`
 
@@ -156,4 +151,4 @@ The engine returns a standardized JSON structure:
 
 ## Next Steps
 
-Now that you have a basic table working, learn how to [Join Related Tables](./2-relationships.md).
+Now that you have a basic table working, learn how to [Join Related Tables](2-relationships.md).

@@ -1,4 +1,4 @@
-# OpenAPI Spec Generation
+# OpenAPI
 
 TableCraft can **automatically generate OpenAPI 3.0 specifications** from your table configurations.
 
@@ -6,7 +6,7 @@ TableCraft can **automatically generate OpenAPI 3.0 specifications** from your t
 
 {% stepper %}
 {% step %}
-### Generate Spec from Config
+#### Generate Spec from Config
 
 ```typescript
 import { generateOpenApiSpec } from '@tablecraft/engine';
@@ -19,11 +19,12 @@ console.log(JSON.stringify(spec, null, 2));
 {% endstep %}
 
 {% step %}
-### Serve as JSON Endpoint
+#### Serve as JSON Endpoint
 
 Create an endpoint that serves the spec.
 
 **Next.js Example:**
+
 ```typescript
 // app/api/docs/[table]/route.ts
 import { generateOpenApiSpec } from '@tablecraft/engine';
@@ -48,7 +49,7 @@ export async function GET(
 {% endstep %}
 
 {% step %}
-### Combine Multiple Tables
+#### Combine Multiple Tables
 
 Generate a unified spec for all your tables.
 
@@ -241,12 +242,14 @@ openapi-generator-cli generate \
 ## What Gets Included
 
 ### ✅ Automatically Generated
-*   **Paths**: One per table (`/api/{tableName}`)
-*   **Query Parameters**: Pagination, Sorting, Filtering, Search, Export
-*   **Response Schema**: `data[]`, `meta`, `aggregations`
-*   **Security**: Bearer auth (if `access` is configured)
+
+* **Paths**: One per table (`/api/{tableName}`)
+* **Query Parameters**: Pagination, Sorting, Filtering, Search, Export
+* **Response Schema**: `data[]`, `meta`, `aggregations`
+* **Security**: Bearer auth (if `access` is configured)
 
 ### ❌ Not Included
-*   **POST/PUT/DELETE**: Only GET endpoints (TableCraft is read-only)
-*   **Nested includes**: Doesn't document nested relations
-*   **Raw SQL columns**: Included but type may be generic
+
+* **POST/PUT/DELETE**: Only GET endpoints (TableCraft is read-only)
+* **Nested includes**: Doesn't document nested relations
+* **Raw SQL columns**: Included but type may be generic

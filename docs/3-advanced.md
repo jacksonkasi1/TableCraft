@@ -1,6 +1,6 @@
-# 3. Advanced Configuration: Logic & Transforms
+# Advanced
 
-Sometimes raw database columns aren't enough. You might need to combine fields (FirstName + LastName), calculate values (Price * Tax), or format dates before sending them to the frontend.
+Sometimes raw database columns aren't enough. You might need to combine fields (FirstName + LastName), calculate values (Price \* Tax), or format dates before sending them to the frontend.
 
 ## 1. Computed Columns (SQL Expressions)
 
@@ -26,8 +26,7 @@ export const userConfig = defineTable(users)
 ```
 
 {% hint style="success" %}
-**API Request:**
-`GET /users?sort=age&filter[age][gte]=18`
+**API Request:** `GET /users?sort=age&filter[age][gte]=18`
 {% endhint %}
 
 ## 2. Custom Search Logic
@@ -65,7 +64,7 @@ You often need to format data before sending it to the client.
 
 {% tabs %}
 {% tab title="Database Transforms" %}
-Use SQL functions to transform the data *before* it leaves the database.
+Use SQL functions to transform the data _before_ it leaves the database.
 
 ```typescript
 // Always return lowercase emails
@@ -77,7 +76,7 @@ Use SQL functions to transform the data *before* it leaves the database.
 {% endtab %}
 
 {% tab title="JavaScript Transforms" %}
-Use JavaScript functions to transform the data *after* fetching it.
+Use JavaScript functions to transform the data _after_ fetching it.
 
 ```typescript
 // Clean up metadata object
@@ -112,7 +111,8 @@ Working with dates in SQL can be tricky. We provide type-safe helpers to make co
 
 {% columns %}
 {% column %}
-### Relative Time (`ago`)
+#### Relative Time (`ago`)
+
 Filter for records within a relative time range (e.g., "last 30 days").
 
 ```typescript
@@ -130,7 +130,8 @@ export const recentOrders = defineTable(orders)
 {% endcolumn %}
 
 {% column %}
-### Date Truncation (`dateTrunc`)
+#### Date Truncation (`dateTrunc`)
+
 Group data by time periods (day, month, year).
 
 ```typescript
@@ -147,4 +148,4 @@ export const monthlySales = defineTable(orders)
 
 ## Next Steps
 
-Learn how to handle [Security & Access Control](./4-security.md) to protect sensitive data.
+Learn how to handle [Security & Access Control](4-security.md) to protect sensitive data.

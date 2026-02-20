@@ -4,7 +4,7 @@ Get up and running with TableCraft in 5 minutes.
 
 {% stepper %}
 {% step %}
-## Installation
+### Installation
 
 Install the core engine, frontend components, and the adapter for your backend framework.
 
@@ -52,7 +52,7 @@ pnpm add -D @tablecraft/codegen
 {% endstep %}
 
 {% step %}
-## Define Your Table
+### Define Your Table
 
 Create a table configuration file. This defines how your table behaves, including search, sort, and filter capabilities.
 
@@ -76,7 +76,7 @@ Make sure your database schema is already defined. TableCraft works with your ex
 {% endstep %}
 
 {% step %}
-## Create API Routes
+### Create API Routes
 
 Mount the TableCraft engine at `/api/engine`. Choose your framework below:
 
@@ -167,7 +167,7 @@ const app = new Elysia()
 {% endstep %}
 
 {% step %}
-## Generate Types
+### Generate Types
 
 Run the codegen tool to introspect your API and generate type-safe client adapters.
 
@@ -181,7 +181,7 @@ Ensure your backend server is running before executing this command, as it needs
 {% endstep %}
 
 {% step %}
-## Create DataTable Page
+### Create DataTable Page
 
 Import the generated adapter and use it with the `DataTable` component.
 
@@ -215,34 +215,4 @@ export function ProductsPage() {
 
 Explore more features to customize your tables.
 
-<table data-view="cards">
-    <thead>
-        <tr>
-            <th>Topic</th>
-            <th>Description</th>
-            <th data-card-target data-type="content-ref">Link</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>Advanced Config</td>
-            <td>Learn about custom cells, actions, and detailed configuration.</td>
-            <td><a href="3-advanced.md">3-advanced.md</a></td>
-        </tr>
-        <tr>
-            <td>Relationships</td>
-            <td>Display data from related tables (joins).</td>
-            <td><a href="2-relationships.md">2-relationships.md</a></td>
-        </tr>
-        <tr>
-            <td>Metadata API</td>
-            <td>Understand the underlying metadata API.</td>
-            <td><a href="metadata-api.md">metadata-api.md</a></td>
-        </tr>
-        <tr>
-            <td>Security</td>
-            <td>Implement Role-Based Access Control (RBAC).</td>
-            <td><a href="4-security.md">4-security.md</a></td>
-        </tr>
-    </tbody>
-</table>
+<table data-view="cards"><thead><tr><th>Topic</th><th>Description</th><th data-card-target data-type="content-ref">Link</th></tr></thead><tbody><tr><td>Advanced Config</td><td>Learn about custom cells, actions, and detailed configuration.</td><td><a href="3-advanced.md">3-advanced.md</a></td></tr><tr><td>Relationships</td><td>Display data from related tables (joins).</td><td><a href="2-relationships.md">2-relationships.md</a></td></tr><tr><td>Metadata API</td><td>Understand the underlying metadata API.</td><td><a href="metadata-api.md">metadata-api.md</a></td></tr><tr><td>Security</td><td>Implement Role-Based Access Control (RBAC).</td><td><a href="4-security.md">4-security.md</a></td></tr></tbody></table>

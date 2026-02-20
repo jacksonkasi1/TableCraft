@@ -1,4 +1,4 @@
-# 2. Relationships: Joining Tables
+# Relationships
 
 Data is rarely stored in a single table. You often need to fetch `Orders` with their `User`, or `Products` with their `Category`.
 
@@ -6,7 +6,7 @@ The TableCraft Engine makes joining tables simple and type-safe.
 
 {% stepper %}
 {% step %}
-## Basic Join
+### Basic Join
 
 To join another table, use the `.join()` method.
 
@@ -30,7 +30,7 @@ When you query `orders`, the response will include `users.email` and `users.name
 {% endstep %}
 
 {% step %}
-## Filtering by Related Data
+### Filtering by Related Data
 
 Once joined, you can filter the main table based on the related table's columns.
 
@@ -45,14 +45,13 @@ export const orderConfig = defineTable(orders)
   .toConfig();
 ```
 
-**API Request:**
-`GET /orders?filter[users.email]=jane@example.com`
+**API Request:** `GET /orders?filter[users.email]=jane@example.com`
 
 This will return only the orders belonging to Jane.
 {% endstep %}
 
 {% step %}
-## Sorting by Related Data
+### Sorting by Related Data
 
 You can also sort the main list based on a column in the joined table.
 
@@ -67,8 +66,9 @@ export const orderConfig = defineTable(orders)
 ```
 
 **API Request:**
-*   `GET /orders?sort=users.name` (A-Z by Customer Name)
-*   `GET /orders?sort=-users.name` (Z-A)
+
+* `GET /orders?sort=users.name` (A-Z by Customer Name)
+* `GET /orders?sort=-users.name` (Z-A)
 {% endstep %}
 {% endstepper %}
 
@@ -107,4 +107,4 @@ The `on` clause supports standard SQL strings.
 
 ## Next Steps
 
-Learn how to use [Advanced Configuration](./3-advanced.md) like computed columns and custom transforms.
+Learn how to use [Advanced Configuration](3-advanced.md) like computed columns and custom transforms.
