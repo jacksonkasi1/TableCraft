@@ -16,3 +16,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Server Adapters:** Native adapters for major backend frameworks including Hono, Next.js, Express, and Elysia.
 - **UI Components:** Extensible `DataTable` component built on top of Shadcn UI (`@tablecraft/table`).
 - **Documentation:** Initial release of comprehensive documentation including setup, guides, and custom adapter tutorials.
+
+[0.1.0]: https://github.com/jacksonkasi1/TableCraft/releases/tag/v0.1.0

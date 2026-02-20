@@ -101,8 +101,9 @@ export function createDynamicGraphQLAdapter<T>(
         };
       }
 
-      // 1. Construct the fields string dynamically
-      const fieldsString = visibleFields.join('\n');
+      // 1. Construct the fields string dynamically (avoiding duplicate 'id')
+      const uniqueFields = new Set(['id', ...visibleFields]);
+      const fieldsString = Array.from(uniqueFields).join('\n              ');
 
       // 2. Build the query
       const dynamicQuery = `
@@ -110,7 +111,6 @@ export function createDynamicGraphQLAdapter<T>(
           dataset(limit: $limit, offset: $offset) {
             count
             items {
-              id
               ${fieldsString}
             }
           }
@@ -128,7 +128,11 @@ export function createDynamicGraphQLAdapter<T>(
         body: JSON.stringify({ query: dynamicQuery, variables }),
       });
 
-      const { data } = await response.json();
+      const { data, errors } = await response.json();
+
+      if (errors) {
+        throw new Error(errors[0].message);
+      }
 
       return {
         data: data.dataset.items,

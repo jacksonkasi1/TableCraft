@@ -329,8 +329,8 @@ export const dashboardOrders = defineTable(orders)
       columns: ['name', 'sku', 'price', 'imageUrl']
     }]
   })
-  // Calculate total items in order dynamically
-  .computed('itemCount', sql`COUNT(${orderItems.id})`)
+  // Calculate total items in order dynamically using a correlated subquery
+  .computed('itemCount', sql`(SELECT COUNT(*) FROM ${orderItems} WHERE ${orderItems.orderId} = ${orders.id})`)
   .toConfig();
 ```
 {% endtab %}
@@ -340,18 +340,18 @@ export const dashboardOrders = defineTable(orders)
 import { useMemo } from 'react';
 import { DataTable, createTableCraftAdapter, defineColumnOverrides } from '@tablecraft/table';
 import { Badge } from '@/components/ui/badge';
-import type { DashboardOrdersRow } from '../generated';
+import type { OrdersRow } from '../generated';
 
 function OrdersDashboard() {
-  const adapter = useMemo(() => createTableCraftAdapter<DashboardOrdersRow>({
+  const adapter = useMemo(() => createTableCraftAdapter<OrdersRow>({
     baseUrl: '/api/engine',
     table: 'dashboard-orders',
   }), []);
 
   return (
-    <DataTable<DashboardOrdersRow>
+    <DataTable<OrdersRow>
       adapter={adapter}
-      columnOverrides={defineColumnOverrides<DashboardOrdersRow>()({
+      columnOverrides={defineColumnOverrides<OrdersRow>()({
         // Format the total price dynamically
         totalAmount: ({ value }) => (
           <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
@@ -374,13 +374,11 @@ function OrdersDashboard() {
             </Badge>
           );
         },
-        // Display nested item count
-        itemCount: ({ value, row }) => (
+        // Display nested item count (note: to access nested relations like row.items, 
+        // you must cast the query result or change codegen to include relations)
+        itemCount: ({ value }) => (
           <div className="flex flex-col">
             <span className="font-medium">{value} items</span>
-            <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-              {row.items?.map(i => i.product?.name).join(', ')}
-            </span>
           </div>
         )
       })}
