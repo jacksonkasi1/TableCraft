@@ -595,7 +595,7 @@ The client throws errors with additional properties:
 ```typescript
 try {
   const result = await users.query();
-} catch (error: any) {
+} catch (error: unknown) {
   if (error instanceof Error) {
     console.log(error.message);    // Error message
   } else {

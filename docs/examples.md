@@ -353,7 +353,7 @@ function OrdersDashboard() {
       adapter={adapter}
       columnOverrides={defineColumnOverrides<OrdersRow>()({
         // Format the total price dynamically
-        totalAmount: ({ value }) => (
+        total: ({ value }) => (
           <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
             ${(value / 100).toFixed(2)}
           </span>

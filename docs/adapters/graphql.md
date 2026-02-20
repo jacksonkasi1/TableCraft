@@ -33,7 +33,7 @@ export function createGraphQLAdapter<T>(endpoint: string): DataAdapter<T> {
       // 1. Map Pagination and Sorting to GraphQL variables
       const variables = {
         first: params.pageSize,
-        offset: params.page * params.pageSize,
+        offset: (params.page - 1) * params.pageSize, // Using 1-based index conversion
         orderBy: params.sort ? `${params.sort}_${params.sortOrder.toUpperCase()}` : null,
       };
 
@@ -119,7 +119,7 @@ export function createDynamicGraphQLAdapter<T>(
 
       const variables = {
         limit: params.pageSize,
-        offset: params.page * params.pageSize,
+        offset: (params.page - 1) * params.pageSize, // Using 1-based index conversion
       };
 
       const response = await fetch(endpoint, {
