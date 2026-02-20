@@ -21,7 +21,9 @@ import {
   startAfter, 
   getDocs,
   where,
-  QueryDocumentSnapshot 
+  QueryDocumentSnapshot,
+  Query,
+  DocumentData
 } from "firebase/firestore";
 import { db } from "../firebase-config"; // Your initialized Firestore db
 import type { DataAdapter, QueryParams } from '@tablecraft/table';
@@ -30,12 +32,28 @@ export function createFirestoreAdapter<T>(
   collectionName: string,
   // We accept a reference to a mutable cursor object from the caller.
   // This ensures SSR safety and instance-level isolation.
-  cursorState: { lastVisibleDocs: Record<number, QueryDocumentSnapshot> }
+  cursorState: { 
+    lastVisibleDocs: Record<number, QueryDocumentSnapshot>;
+    lastParamKey?: string;
+  }
 ): DataAdapter<T> {
   return {
     async query(params: QueryParams) {
+      // Reset cursors if anything besides the page has changed
+      const paramKey = JSON.stringify({ 
+        filters: params.filters, 
+        sort: params.sort, 
+        sortOrder: params.sortOrder, 
+        search: params.search 
+      });
+      
+      if (paramKey !== cursorState.lastParamKey) {
+        cursorState.lastVisibleDocs = {};
+        cursorState.lastParamKey = paramKey;
+      }
+
       // 1. Base Query reference
-      let q = collection(db, collectionName);
+      let q: Query<DocumentData> = collection(db, collectionName);
 
       // 2. Map Column Filtering (Where clauses)
       if (params.filters) {

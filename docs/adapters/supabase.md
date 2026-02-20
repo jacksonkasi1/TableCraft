@@ -62,10 +62,10 @@ export function createSupabaseAdapter<T>(tableName: string): DataAdapter<T> {
       return {
         data: data as T[],
         meta: {
-          total: count || 0,
+          total: count ?? 0,
           page: params.page,
           pageSize: params.pageSize,
-          totalPages: count ? Math.ceil(count / params.pageSize) : null,
+          totalPages: count !== null && count !== undefined ? Math.ceil(count / params.pageSize) : null,
           countMode: 'exact' // Tell TableCraft this is a reliable total count
         }
       };

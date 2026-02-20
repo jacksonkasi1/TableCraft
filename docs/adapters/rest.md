@@ -128,12 +128,12 @@ export function createAxiosTableAdapter<T>(endpoint: string) {
         // Axios makes parameter mapping clean
         const response = await apiClient.get(endpoint, {
           params: {
+            ...params.filters, // Spreading filters first so explicit params always win
             page: params.page + 1,
             limit: params.pageSize,
             sortBy: params.sort,
             sortOrder: params.sortOrder,
             search: params.search,
-            ...params.filters // Spreading simple key/value filters
           }
         });
 
