@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./assets/og-image.png" alt="TableCraft - Complex table setup in 5 minutes" width="100%" />
+</p>
+
 # TableCraft
 
 🚀 Drizzle table query builder engine + Shadcn + Airtable = Complex table setup in 5 minutes instead of 1 hour.

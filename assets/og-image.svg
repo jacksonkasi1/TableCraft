@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <!-- Clean dark background (Zinc 950) -->
+  <rect width="1200" height="630" fill="#09090b" />
+  
+  <!-- Subtle Grid Pattern -->
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#27272a" stroke-width="1" opacity="0.4"/>
+    </pattern>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="100%">
+      <stop offset="0%" stop-color="#09090b" stop-opacity="0" />
+      <stop offset="100%" stop-color="#09090b" stop-opacity="1" />
+    </linearGradient>
+    <linearGradient id="textGradient" x1="0" y1="0" x2="100%" y2="0">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#a1a1aa" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="1200" height="630" fill="url(#grid)" />
+  <rect width="1200" height="630" fill="url(#fade)" />
+
+  <g transform="translate(190, 190)">
+    <!-- Logo -->
+    <g transform="scale(0.7)">
+      <!-- Top row of the T (Header) -->
+      <rect x="0" y="0" width="80" height="64" rx="16" fill="#fafafa" />
+      <rect x="100" y="0" width="80" height="64" rx="16" fill="#fafafa" />
+      <rect x="200" y="0" width="80" height="64" rx="16" fill="#fafafa" />
+
+      <!-- Stem of the T -->
+      <rect x="100" y="84" width="80" height="64" rx="16" fill="#fafafa" opacity="0.9" />
+      <rect x="100" y="168" width="80" height="64" rx="16" fill="#fafafa" opacity="0.7" />
+      <rect x="100" y="252" width="80" height="64" rx="16" fill="#fafafa" opacity="0.4" />
+
+      <!-- Other grid cells -->
+      <rect x="0" y="84" width="80" height="64" rx="16" fill="#27272a" />
+      <rect x="0" y="168" width="80" height="64" rx="16" fill="#27272a" />
+      <rect x="0" y="252" width="80" height="64" rx="16" fill="#27272a" />
+
+      <rect x="200" y="84" width="80" height="64" rx="16" fill="#27272a" />
+      <rect x="200" y="168" width="80" height="64" rx="16" fill="#27272a" />
+      <rect x="200" y="252" width="80" height="64" rx="16" fill="#27272a" />
+    </g>
+
+    <!-- Text Content -->
+    <text x="270" y="100" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="100" font-weight="bold" fill="url(#textGradient)" letter-spacing="-3">TableCraft</text>
+    
+    <text x="275" y="165" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="34" font-weight="500" fill="#a1a1aa" letter-spacing="-0.5">Complex table setup in 5 minutes.</text>
+    
+    <!-- Technology Tags -->
+    <g transform="translate(275, 210)">
+      <!-- Drizzle Tag -->
+      <rect x="0" y="0" width="135" height="44" rx="22" fill="#18181b" stroke="#27272a" stroke-width="2" />
+      <text x="67.5" y="28" font-family="-apple-system, sans-serif" font-size="18" font-weight="600" fill="#e4e4e7" text-anchor="middle">Drizzle ORM</text>
+      
+      <!-- Shadcn Tag -->
+      <rect x="155" y="0" width="110" height="44" rx="22" fill="#18181b" stroke="#27272a" stroke-width="2" />
+      <text x="210" y="28" font-family="-apple-system, sans-serif" font-size="18" font-weight="600" fill="#e4e4e7" text-anchor="middle">Shadcn</text>
+      
+      <!-- React Tag -->
+      <rect x="285" y="0" width="100" height="44" rx="22" fill="#18181b" stroke="#27272a" stroke-width="2" />
+      <text x="335" y="28" font-family="-apple-system, sans-serif" font-size="18" font-weight="600" fill="#e4e4e7" text-anchor="middle">React</text>
+    </g>
+  </g>
+</svg>
