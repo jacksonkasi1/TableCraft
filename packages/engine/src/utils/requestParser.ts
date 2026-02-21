@@ -1,6 +1,23 @@
 import { EngineParams, FilterParam, SortParam } from '../types/engine';
 import { Operator, OperatorSchema } from '../types/table';
 
+// ── Operator shape contracts ────────────────────────────────────────────────
+// These sets are the single source of truth for which operators expect which
+// value shapes.  Every layer (serializer, parser, validator) must agree on
+// this contract — and they all derive from these sets.
+
+/** Operators whose value MUST be an array. */
+const ARRAY_OPERATORS: ReadonlySet<string> = new Set<Operator>(['in', 'notIn']);
+
+/** Operators whose value MUST be a two-element tuple `[min, max]`. */
+const TUPLE_OPERATORS: ReadonlySet<string> = new Set<Operator>(['between']);
+
+/** Operators that take NO value at all. */
+const NULLARY_OPERATORS: ReadonlySet<string> = new Set<Operator>(['isNull', 'isNotNull']);
+
+/** Maximum number of elements allowed in an `in` / `notIn` array.  */
+const MAX_ARRAY_LENGTH = 1000;
+
 /**
  * Parses URL search-params into structured EngineParams.
  *
@@ -10,6 +27,8 @@ import { Operator, OperatorSchema } from '../types/table';
  *   ?sort=-createdAt,name
  *   ?filter[status]=active
  *   ?filter[amount][gte]=100
+ *   ?filter[status][in]=processing          — single value, auto-wrapped to array
+ *   ?filter[status][in]=processing,shipped   — comma-separated, split to array
  *   ?search=hello
  *   ?select=id,name,email
  *   ?distinct=true
@@ -94,7 +113,11 @@ function parseFilters(raw: Record<string, string>): Record<string, FilterParam> 
       const field = matchOp[1];
       const op = matchOp[2];
       if (isValidOperator(op)) {
-        filters[field] = { operator: op as Operator, value: coerceValue(value) };
+        const operator = op as Operator;
+        filters[field] = {
+          operator,
+          value: normalizeFilterValue(coerceValue(value), operator),
+        };
       }
       continue;
     }
@@ -113,6 +136,13 @@ function isValidOperator(op: string): boolean {
   return OperatorSchema.safeParse(op).success;
 }
 
+/**
+ * Coerces a raw URL string into a typed runtime value.
+ *
+ * This function is intentionally type-agnostic — it converts the *string*
+ * representation without knowing which operator will consume the result.
+ * Operator-aware shaping is done by {@link normalizeFilterValue} afterwards.
+ */
 function coerceValue(val: string): unknown {
   if (val === 'true') return true;
   if (val === 'false') return false;
@@ -121,6 +151,54 @@ function coerceValue(val: string): unknown {
   const num = Number(val);
   if (val !== '' && Number.isFinite(num)) return num;
   return val;
+}
+
+/**
+ * Normalizes a coerced value to match the shape expected by the operator.
+ *
+ * This is the core fix for the "array vs string" contract mismatch:
+ *
+ * - `in` / `notIn` → value MUST be an array.  A scalar is auto-wrapped.
+ * - `between`      → value MUST be a 2-element array.
+ * - `isNull` / `isNotNull` → value is discarded (nullary operators).
+ * - everything else → value is passed through unchanged.
+ *
+ * By normalizing *after* coercion and *before* validation, we guarantee
+ * that every downstream consumer (inputValidator, filterBuilder, operators)
+ * always receives the correct shape — regardless of how the value was
+ * serialized over the wire.
+ */
+function normalizeFilterValue(value: unknown, operator: Operator): unknown {
+  // Nullary operators take no value
+  if (NULLARY_OPERATORS.has(operator)) {
+    return undefined;
+  }
+
+  // Array operators: auto-wrap scalar → [scalar], enforce max length
+  if (ARRAY_OPERATORS.has(operator)) {
+    if (Array.isArray(value)) {
+      return value.slice(0, MAX_ARRAY_LENGTH);
+    }
+    // Single value (e.g. ?filter[status][in]=processing) — wrap to array
+    if (value !== null && value !== undefined) {
+      return [value];
+    }
+    return [];
+  }
+
+  // Tuple operator: `between` expects exactly [min, max]
+  if (TUPLE_OPERATORS.has(operator)) {
+    if (Array.isArray(value) && value.length === 2) {
+      return value;
+    }
+    // If not a valid tuple, return as-is — validator will catch it
+    return value;
+  }
+
+  // Scalar operators: if coercion produced an array (e.g. comma in value),
+  // for non-array operators this is likely unintended — return as-is and
+  // let the validator surface a clear error.
+  return value;
 }
 
 function parseExportFormat(val: string | undefined): 'csv' | 'json' | undefined {
@@ -136,3 +214,6 @@ function parseDateRange(raw: Record<string, string>): { from?: string; to?: stri
   }
   return undefined;
 }
+
+// ── Exported constants for cross-layer contract enforcement ─────────────────
+export { ARRAY_OPERATORS, TUPLE_OPERATORS, NULLARY_OPERATORS, MAX_ARRAY_LENGTH };

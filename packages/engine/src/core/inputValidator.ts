@@ -63,7 +63,14 @@ function validateValueType(field: string, colType: string, filter: FilterParam):
   // For array operators, validate each element
   if (filter.operator === 'in' || filter.operator === 'notIn') {
     if (!Array.isArray(value)) {
-      throw new ValidationError(field, 'array', value);
+      // Defensive: requestParser should have already wrapped scalars into arrays.
+      // If we still get a scalar here, it means someone called the engine directly
+      // without going through parseRequest — give a clear, actionable error.
+      throw new ValidationError(
+        field,
+        `array (for '${filter.operator}' operator). If passing a single value, wrap it in an array: [${JSON.stringify(value)}]`,
+        value
+      );
     }
     for (const item of value) {
       validateSingleValue(field, colType, item);
