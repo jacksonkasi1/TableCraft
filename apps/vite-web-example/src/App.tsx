@@ -3,6 +3,7 @@ import { ProductsPage } from "@/pages/products-page";
 import { ProductsAxiosPage } from "@/pages/products-axios-page";
 import { OrdersPage } from "@/pages/orders-page";
 import { Orders2Page } from "@/pages/orders2-page";
+import { Orders3Page } from "@/pages/orders3-page";
 import { UsersPage } from "@/pages/users-page";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ function App() {
     { to: "/products-axios", label: "Axios", icon: Cable },
     { to: "/orders", label: "Orders", icon: ShoppingCart },
     { to: "/orders-advanced", label: "Orders (Filters)", icon: Filter },
+    { to: "/orders-complex", label: "Orders (Complex)", icon: Filter },
     { to: "/users", label: "Users", icon: Users },
   ];
 
@@ -78,6 +80,7 @@ function App() {
             <Route path="/products-axios" element={<ProductsAxiosPage />} />
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/orders-advanced" element={<Orders2Page />} />
+            <Route path="/orders-complex" element={<Orders3Page />} />
             <Route path="/users" element={<UsersPage />} />
           </Routes>
         </main>

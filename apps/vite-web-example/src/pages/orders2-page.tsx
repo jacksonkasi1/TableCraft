@@ -1,5 +1,5 @@
 // ** import core packages
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 // ** import table
 import { DataTable, hiddenColumns, useUrlState, defineColumnOverrides } from '@tablecraft/table';
@@ -80,6 +80,23 @@ export function Orders2Page() {
   const [minTotal, setMinTotal]           = useUrlState<number>('min_total', 0);
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
 
+  // ── Local state for debounce ─────────────────────────────────────────────
+  const [localTotal, setLocalTotal] = useState<string>(minTotal > 0 ? String(minTotal) : '');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setMinTotal(Number(localTotal) || 0);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [localTotal, setMinTotal]);
+
+  useEffect(() => {
+    const currentNum = Number(localTotal) || 0;
+    if (currentNum !== minTotal) {
+      setLocalTotal(minTotal > 0 ? String(minTotal) : '');
+    }
+  }, [minTotal]); // localTotal is excluded intentionally to avoid sync loops
+
   // ── Adapter ──────────────────────────────────────────────────────────────
   const adapter = useMemo(() => createOrdersAdapter({
     baseUrl: '/api/engine',
@@ -100,7 +117,7 @@ export function Orders2Page() {
         value={status || ALL}
         onValueChange={(v) => setStatus(v === ALL ? '' : v)}
       >
-        <SelectTrigger className="h-9 w-[160px]">
+        <SelectTrigger className="h-8 w-[160px]">
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
@@ -117,7 +134,7 @@ export function Orders2Page() {
         value={role || ALL}
         onValueChange={(v) => setRole(v === ALL ? '' : v)}
       >
-        <SelectTrigger className="h-9 w-[140px]">
+        <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="All roles" />
         </SelectTrigger>
         <SelectContent>
@@ -132,14 +149,14 @@ export function Orders2Page() {
       {/* Min total */}
       <div className="relative">
         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-        <input
-          type="number"
-          min={0}
-          placeholder="Min total"
-          value={minTotal || ''}
-          onChange={(e) => setMinTotal(Number(e.target.value) || 0)}
-          className="h-9 w-[120px] rounded-md border border-input bg-background pl-6 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        />
+          <input
+            type="number"
+            min={0}
+            placeholder="Min total"
+            value={localTotal}
+            onChange={(e) => setLocalTotal(e.target.value)}
+            className="h-8 w-[120px] rounded-md border border-input bg-background pl-6 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
       </div>
 
       {/* Include deleted */}
@@ -176,6 +193,7 @@ export function Orders2Page() {
           defaultPageSize: 10,
           pageSizeOptions: [5, 10, 20, 50],
           columnResizingTableId: 'orders2',
+          size: 'sm',
         }}
       />
     </div>
