@@ -79,6 +79,10 @@ Use `filter[field]=value` for exact matches.
 You can also use operators (if your adapter supports parsing them, or pass them manually):
 
 `GET /products?filter[price][gte]=100`
+
+`GET /products?filter[status][in]=active,pending`
+
+`GET /products?filter[deletedAt][isNotNull]=true`
 {% endtab %}
 
 {% tab title="Sorting" %}
