@@ -6,6 +6,7 @@ import {
   TableConfig,
   ConfigInput,
   EngineContext,
+  TableCraftError,
 } from '@tablecraft/engine';
 
 export interface NextHandlerOptions {
@@ -139,6 +140,9 @@ export function createNextHandler(options: NextHandlerOptions) {
         },
       });
     } catch (err: unknown) {
+      if (err instanceof TableCraftError) {
+        return Response.json({ error: err.message }, { status: err.statusCode });
+      }
       const message = err instanceof Error ? err.message : 'Internal server error';
       console.error('[tablecraft/next]', err);
       return Response.json({ error: message }, { status: 500 });

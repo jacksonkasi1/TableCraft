@@ -8,6 +8,7 @@ import {
   TableConfig,
   ConfigInput,
   EngineContext,
+  TableCraftError,
 } from '@tablecraft/engine';
 
 export interface ExpressAdapterOptions {
@@ -112,8 +113,12 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
       const result = await engine.query(params, context);
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
-    } catch (err) {
-      next(err);
+    } catch (err: unknown) {
+      if (err instanceof TableCraftError) {
+        res.status(err.statusCode).json({ error: err.message });
+      } else {
+        next(err);
+      }
     }
   };
 }
@@ -173,8 +178,12 @@ export function createExpressHandler(options: {
       const result = await engine.query(params, context);
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
-    } catch (err) {
-      next(err);
+    } catch (err: unknown) {
+      if (err instanceof TableCraftError) {
+        res.status(err.statusCode).json({ error: err.message });
+      } else {
+        next(err);
+      }
     }
   };
 }
