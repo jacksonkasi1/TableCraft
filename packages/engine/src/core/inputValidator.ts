@@ -126,9 +126,34 @@ function validateSortFields(params: EngineParams, config: TableConfig): void {
     config.columns.filter((c) => c.sortable).map((c) => c.name)
   );
 
+  // Also collect sortable fields from joins (same pattern as FilterBuilder
+  // uses collectFilterableJoinFields for filterable fields)
+  collectSortableJoinFields(config.joins, sortable);
+
   for (const s of params.sort) {
     if (!sortable.has(s.field)) {
       throw new FieldError(s.field, 'is not sortable. Sortable: ' + [...sortable].join(', '));
+    }
+  }
+}
+
+/** Recursively collects sortable column names from join configs. */
+function collectSortableJoinFields(
+  joins: TableConfig['joins'],
+  sortable: Set<string>
+): void {
+  if (!joins?.length) return;
+  for (const join of joins) {
+    if (join.columns) {
+      for (const col of join.columns) {
+        if (col.sortable !== false) {
+          sortable.add(col.name);
+        }
+      }
+    }
+    // Recurse into nested joins
+    if (join.joins) {
+      collectSortableJoinFields(join.joins, sortable);
     }
   }
 }

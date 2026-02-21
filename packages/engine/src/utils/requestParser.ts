@@ -43,13 +43,17 @@ function normalise(
 ): Record<string, string> {
   if (input instanceof URLSearchParams) {
     const obj: Record<string, string> = {};
+    // URLSearchParams.forEach visits each entry; for duplicate keys, last value wins.
+    // This is the correct behaviour for filter params (one value per field).
     input.forEach((v, k) => { obj[k] = v; });
     return obj;
   }
   const obj: Record<string, string> = {};
   for (const [k, v] of Object.entries(input)) {
     if (v !== undefined) {
-      obj[k] = Array.isArray(v) ? v[0] : v;
+      // For array values (e.g. from Hono's c.req.queries()), use the last entry
+      // to be consistent with URLSearchParams behaviour above.
+      obj[k] = Array.isArray(v) ? v[v.length - 1] : v;
     }
   }
   return obj;
