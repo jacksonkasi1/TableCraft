@@ -96,14 +96,23 @@ export function createClient(options: ClientOptions): TableCraftClient {
           if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
             // { operator: 'gte', value: 100 }
             const filter = value as { operator?: string; value?: unknown };
+            const filterValue = filter.value;
+            // Serialize arrays as comma-separated (the backend parser splits on comma
+            // and auto-wraps scalars for array operators like `in`/`notIn`)
+            const serialized = Array.isArray(filterValue)
+              ? filterValue.join(',')
+              : String(filterValue ?? filter);
             if (filter.operator && filter.operator !== 'eq') {
-              url.searchParams.set(`filter[${field}][${filter.operator}]`, String(filter.value));
+              url.searchParams.set(`filter[${field}][${filter.operator}]`, serialized);
             } else {
-              url.searchParams.set(`filter[${field}]`, String(filter.value ?? filter));
+              url.searchParams.set(`filter[${field}]`, serialized);
             }
           } else {
-            // Simple: { status: 'active' }
-            url.searchParams.set(`filter[${field}]`, String(value));
+            // Simple: { status: 'active' } or array
+            const serialized = Array.isArray(value)
+              ? value.join(',')
+              : String(value);
+            url.searchParams.set(`filter[${field}]`, serialized);
           }
         }
       }
