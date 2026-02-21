@@ -89,7 +89,6 @@ export function useUrlState<T>(
     };
   }, [enabled]);
 
-  const isUpdatingUrl = useRef(false);
   const lastSetValue = useRef<T>(defaultValue);
 
   const serialize =
@@ -164,20 +163,20 @@ export function useUrlState<T>(
 
   // Sync state from URL changes
   useEffect(() => {
-    if (isUpdatingUrl.current) {
-      isUpdatingUrl.current = false;
-      return;
-    }
-
     const searchParamsString = searchParams.toString();
+
+    // Always track the last seen params to avoid re-processing the same URL twice
     if (
       prevSearchParamsRef.current &&
       prevSearchParamsRef.current.toString() === searchParamsString
     ) {
       return;
     }
-
     prevSearchParamsRef.current = new URLSearchParams(searchParamsString);
+
+    // Guard against reverting state to a URL value we just wrote ourselves.
+    // lastSetValue tracks the last value we intentionally set; if the URL now
+    // reflects that same value, no React state update is needed.
     const newValue = getValueFromUrl();
 
     if (
@@ -192,11 +191,9 @@ export function useUrlState<T>(
   const updateUrlNow = useCallback(
     (params: URLSearchParams) => {
       if (!enabled) {
-        isUpdatingUrl.current = false;
         return Promise.resolve(params);
       }
       replaceCurrentUrlSearchParams(params);
-      isUpdatingUrl.current = false;
       return Promise.resolve(params);
     },
     [enabled]
@@ -228,7 +225,6 @@ export function useUrlState<T>(
       });
 
       setValue(resolvedValue);
-      isUpdatingUrl.current = true;
 
       // Reset page to 1 when pageSize changes
       if (key === "pageSize") {
@@ -258,8 +254,11 @@ export function useUrlState<T>(
       }
 
       return new Promise<URLSearchParams>((resolve) => {
+        let processed = false;
         const processBatch = () => {
           if (currentBatchId !== batchState.batchId) return;
+          if (processed) return;
+          processed = true;
 
           const currentParams = getCurrentSearchParams();
           const params = new URLSearchParams(currentParams.toString());

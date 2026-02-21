@@ -12,7 +12,7 @@ export { ExpandIcon } from "./expand-icon";
 
 // ─── Adapters ───
 export { createTableCraftAdapter } from "./auto/tablecraft-adapter";
-export type { TableCraftAdapterOptions } from "./auto/tablecraft-adapter";
+export type { TableCraftAdapterOptions, CustomFilterValue, CustomFilters } from "./auto/tablecraft-adapter";
 export { createRestAdapter } from "./auto/rest-adapter";
 export type { RestAdapterOptions } from "./auto/rest-adapter";
 export { createStaticAdapter } from "./auto/static-adapter";
