@@ -1,5 +1,5 @@
 <p align="center">
-  <video src="./assets/demo.mp4" autoplay loop muted playsinline width="100%"></video>
+  <img src="./assets/demo.gif" alt="TableCraft - Complex table setup in 5 minutes" width="100%" />
 </p>
 
 # TableCraft
