@@ -185,12 +185,22 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
           // Skip if the filter value itself is null/undefined
           if (filterValue === null || filterValue === undefined) continue;
           if (filter.operator && filter.operator !== "eq") {
-            url.searchParams.set(`filter[${field}][${filter.operator}]`, String(filterValue));
+            // Serialize arrays as comma-separated (the backend parser splits on comma)
+            const serialized = Array.isArray(filterValue)
+              ? filterValue.join(",")
+              : String(filterValue);
+            url.searchParams.set(`filter[${field}][${filter.operator}]`, serialized);
           } else {
-            url.searchParams.set(`filter[${field}]`, String(filterValue));
+            const serialized = Array.isArray(filterValue)
+              ? filterValue.join(",")
+              : String(filterValue);
+            url.searchParams.set(`filter[${field}]`, serialized);
           }
         } else {
-          url.searchParams.set(`filter[${field}]`, String(value));
+          const serialized = Array.isArray(value)
+            ? value.join(",")
+            : String(value);
+          url.searchParams.set(`filter[${field}]`, serialized);
         }
       }
     }
