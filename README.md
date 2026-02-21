@@ -107,6 +107,12 @@ For full guides, API reference, and examples:
 
 ---
 
+## 🌟 Related Projects
+
+- [**tnks-data-table**](https://github.com/jacksonkasi1/tnks-data-table): An example application exploring the capabilities of TableCraft's data table component.
+
+---
+
 ## 📄 License
 
 MIT
