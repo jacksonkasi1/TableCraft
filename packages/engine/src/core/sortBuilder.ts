@@ -6,7 +6,7 @@ import {
   desc,
   Column,
 } from 'drizzle-orm';
-import { TableConfig, JoinConfig, ColumnConfig } from '../types/table';
+import { TableConfig, JoinConfig } from '../types/table';
 import { SortParam } from '../types/engine';
 
 export class SortBuilder {
@@ -101,7 +101,7 @@ export class SortBuilder {
     if (!config.joins) return undefined;
 
     for (const join of config.joins) {
-      const joinColConfig = (join.columns as ColumnConfig[] | undefined)?.find(
+      const joinColConfig = join.columns?.find(
         (c) => c.name === fieldName
       );
 
@@ -143,7 +143,7 @@ export class SortBuilder {
 function collectSortableJoinFields(joins: JoinConfig[], out: Set<string>): void {
   for (const join of joins) {
     if (join.columns) {
-      for (const col of join.columns as ColumnConfig[]) {
+      for (const col of join.columns) {
         if (col.sortable !== false) {
           out.add(col.name);
         }

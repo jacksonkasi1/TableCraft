@@ -6,22 +6,22 @@ By passing a `customFilters` object to the `createTableCraftAdapter`, TableCraft
 
 ## 1. The Basics
 
-When defining `customFilters`, the adapter automatically ignores falsy values (`null`, `undefined`, `false`, `""`, `0`). This means you don't need to write complex `if` statements to conditionally add filters—just pass the raw UI state directly.
+When defining `customFilters`, the adapter automatically ignores falsy values (`null`, `undefined`, `false`). This means you don't need to write complex `if` statements to conditionally add filters—just pass the raw UI state directly. (Note: `0` and `""` are treated as valid values and will be sent to the API).
 
 ```tsx
 import { useMemo, useState } from 'react';
 import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
 
 function BasicFiltersPage() {
-  const [status, setStatus] = useState<string>('');
-  const [role, setRole] = useState<string>('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   const adapter = useMemo(() => {
     return createTableCraftAdapter({
       baseUrl: '/api/engine',
       table: 'users',
       customFilters: {
-        // If status is '' (falsy), TableCraft ignores it
+        // If status is null (falsy), TableCraft ignores it
         status: status,
         role: role,
       },
@@ -30,7 +30,7 @@ function BasicFiltersPage() {
 
   return (
     <div>
-      <select value={status} onChange={(e) => setStatus(e.target.value)}>
+      <select value={status ?? ''} onChange={(e) => setStatus(e.target.value || null)}>
         <option value="">All Statuses</option>
         <option value="active">Active</option>
       </select>

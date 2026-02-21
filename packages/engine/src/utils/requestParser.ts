@@ -72,7 +72,11 @@ function normalise(
     if (v !== undefined) {
       // For array values (e.g. from Hono's c.req.queries()), use the last entry
       // to be consistent with URLSearchParams behaviour above.
-      obj[k] = Array.isArray(v) ? v[v.length - 1] : v;
+      if (Array.isArray(v)) {
+        if (v.length > 0) obj[k] = v[v.length - 1];
+      } else {
+        obj[k] = v;
+      }
     }
   }
   return obj;
@@ -104,8 +108,8 @@ function parseSelect(val: string | undefined): string[] | undefined {
 
 function parseFilters(raw: Record<string, string>): Record<string, FilterParam> | undefined {
   const filters: Record<string, FilterParam> = {};
-  const filterRegexSimple = /^filter\[(\w+)]$/;
-  const filterRegexOperator = /^filter\[(\w+)]\[(\w+)]$/;
+  const filterRegexSimple = /^filter\[([\w.-]+)]$/;
+  const filterRegexOperator = /^filter\[([\w.-]+)]\[(\w+)]$/;
 
   for (const [key, value] of Object.entries(raw)) {
     const matchOp = filterRegexOperator.exec(key);

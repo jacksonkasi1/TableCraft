@@ -14,6 +14,7 @@ import {
   between,
   isNull,
   isNotNull,
+  sql,
 } from 'drizzle-orm';
 import { Operator } from '../types/table';
 
@@ -69,11 +70,15 @@ export function applyOperator(
     case 'in':
       // Auto-wrap scalar → [scalar] for resilience (requestParser should
       // have already done this, but direct engine callers may not).
-      if (Array.isArray(dbValue)) return inArray(column, dbValue);
+      if (Array.isArray(dbValue)) {
+        return dbValue.length > 0 ? inArray(column, dbValue) : sql`1=0`;
+      }
       if (dbValue !== null && dbValue !== undefined) return inArray(column, [dbValue]);
       return undefined;
     case 'notIn':
-      if (Array.isArray(dbValue)) return notInArray(column, dbValue);
+      if (Array.isArray(dbValue)) {
+        return dbValue.length > 0 ? notInArray(column, dbValue) : sql`1=1`;
+      }
       if (dbValue !== null && dbValue !== undefined) return notInArray(column, [dbValue]);
       return undefined;
     case 'between':

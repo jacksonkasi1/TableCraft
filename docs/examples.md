@@ -18,22 +18,14 @@ export const productsConfig = defineTable(products)
   .toConfig();
 ```
 {% endtab %}
-
-{% tab title="Frontend" %}
-```tsx
-import { DataTable, createTableCraftAdapter } from '@tablecraft/table';
-
-function ProductsPage() {
-  const adapter = createTableCraftAdapter({
-    baseUrl: '/api/engine',
-    table: 'products',
-  });
-  
-  return <DataTable adapter={adapter} />;
-}
-```
-{% endtab %}
 {% endtabs %}
+
+## 14. Advanced Custom Filters with URL State
+
+Build complex UI filters (multi-select, dynamic operators, checkboxes) synced directly to the URL. The engine supports operators like `in`, `isNotNull`, `gte`, and automatically drops falsy values.
+
+[Learn more about building Custom Filters →](custom-filters.md)
+
 
 ## 2. Type-Safe with Codegen
 

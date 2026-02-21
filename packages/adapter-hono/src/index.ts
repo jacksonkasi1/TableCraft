@@ -195,8 +195,9 @@ export function createHonoHandler(options: {
       c.header('X-Total-Count', String(result.meta.total));
       return c.json(result);
     } catch (err: unknown) {
+      const statusCode = err instanceof TableCraftError ? err.statusCode : 500;
       const message = err instanceof Error ? err.message : 'Internal server error';
-      return c.json({ error: message }, 500);
+      return c.json({ error: message }, statusCode as any);
     }
   };
 }

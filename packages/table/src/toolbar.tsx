@@ -201,7 +201,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             />
           )}
 
-          {(startToolbarPlacement === 'after-date' || !startToolbarPlacement) && startToolbarContent}
+          {startToolbarPlacement === 'after-date' && startToolbarContent}
         </div>
 
         {isFiltered && (

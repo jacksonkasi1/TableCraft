@@ -55,9 +55,15 @@ function generateEnumConst(
   constName: string,
   options: Array<{ value: string | number | boolean }>
 ): string {
+  const seenKeys = new Set<string>();
   const entries = options
     .map(o => {
-      const key = String(o.value).replace(/[^a-zA-Z0-9_$]/g, '_');
+      let key = String(o.value).replace(/[^a-zA-Z0-9_$]/g, '_');
+      if (/^\d/.test(key)) key = `_${key}`; // valid JS identifier
+      while (seenKeys.has(key)) {
+        key += '_';
+      }
+      seenKeys.add(key);
       const val = JSON.stringify(o.value);
       return `  ${key}: ${val},`;
     })
@@ -163,7 +169,9 @@ function generateFiltersInterface(
     const operatorUnion = operators.map(op => `'${op}'`).join(' | ');
 
     if (f.type === 'date' || f.type === 'number') {
-      return `  ${f.field}?: { operator: ${operatorUnion}; value: ${valueType} | [${valueType}, ${valueType}] };`;
+      const hasArrayOp = ['in', 'notIn'].some(op => operators.includes(op));
+      const arrayType = hasArrayOp ? ` | ${valueType}[]` : '';
+      return `  ${f.field}?: { operator: ${operatorUnion}; value: ${valueType} | [${valueType}, ${valueType}]${arrayType} };`;
     }
 
     if (['in', 'notIn'].some(op => operators.includes(op))) {

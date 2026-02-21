@@ -173,7 +173,7 @@ describe('parseRequest', () => {
       });
     });
 
-    it('should deduplicate values in "in" array but preserve order', () => {
+    it('should NOT deduplicate values in "in" array and preserve order', () => {
       const result = parseRequest({ 'filter[status][in]': 'processing,processing' });
       // We intentionally do NOT deduplicate — that's the DB's job.
       // The parser's contract is: normalize shape, not semantics.

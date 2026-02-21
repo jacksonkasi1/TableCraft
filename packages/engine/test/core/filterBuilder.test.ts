@@ -34,7 +34,7 @@ const tenants = pgTable('tenants', {
   active: boolean('active'),
 });
 
-const usersOnly = pgTable('users', {
+const usersOnly = pgTable('users_only', {
   id: integer('id').primaryKey(),
   name: text('name'),
   email: text('email'),

@@ -181,14 +181,18 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
         if (value === null || value === undefined) continue;
         if (typeof value === "object" && !Array.isArray(value)) {
           const filter = value as { operator?: string; value?: unknown };
+          const isNullary = filter.operator === "isNull" || filter.operator === "isNotNull";
           const filterValue = filter.value;
-          // Skip if the filter value itself is null/undefined
-          if (filterValue === null || filterValue === undefined) continue;
+          // Skip if the filter value itself is null/undefined and it's not a nullary operator
+          if (!isNullary && (filterValue === null || filterValue === undefined)) continue;
+          
           if (filter.operator && filter.operator !== "eq") {
             // Serialize arrays as comma-separated (the backend parser splits on comma)
-            const serialized = Array.isArray(filterValue)
-              ? filterValue.join(",")
-              : String(filterValue);
+            const serialized = isNullary 
+              ? "true"
+              : Array.isArray(filterValue)
+                ? filterValue.join(",")
+                : String(filterValue);
             url.searchParams.set(`filter[${field}][${filter.operator}]`, serialized);
           } else {
             const serialized = Array.isArray(filterValue)
@@ -222,8 +226,8 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     const merged: Record<string, unknown> = { ...(params.filters ?? {}) };
 
     for (const [key, val] of Object.entries(customFilters)) {
-      // Falsy primitives (false, null, undefined, "", 0) → remove the filter
-      if (val === false || val === null || val === undefined || val === "" || val === 0) {
+      // False, null, undefined → remove the filter. (0 and "" are valid values)
+      if (val === false || val === null || val === undefined) {
         delete merged[key];
       } else if (typeof val === "object") {
         // { operator, value } form — pass through as-is

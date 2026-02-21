@@ -203,7 +203,7 @@ export function useUrlState<T>(
     (newValue: T | ((prevValue: T) => T)) => {
       const resolvedValue =
         typeof newValue === "function"
-          ? (newValue as (prev: T) => T)(value)
+          ? (newValue as (prev: T) => T)(currentValueRef.current)
           : newValue;
 
       if (!enabled) {

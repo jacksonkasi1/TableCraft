@@ -96,12 +96,18 @@ export function createClient(options: ClientOptions): TableCraftClient {
           if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
             // { operator: 'gte', value: 100 }
             const filter = value as { operator?: string; value?: unknown };
+            const isNullary = filter.operator === 'isNull' || filter.operator === 'isNotNull';
             const filterValue = filter.value;
+            // Skip if the filter value itself is null/undefined and it's not a nullary operator
+            if (!isNullary && (filterValue === null || filterValue === undefined)) continue;
+
             // Serialize arrays as comma-separated (the backend parser splits on comma
             // and auto-wraps scalars for array operators like `in`/`notIn`)
-            const serialized = Array.isArray(filterValue)
-              ? filterValue.join(',')
-              : String(filterValue ?? filter);
+            const serialized = isNullary
+              ? 'true'
+              : Array.isArray(filterValue)
+                ? filterValue.join(',')
+                : String(filterValue);
             if (filter.operator && filter.operator !== 'eq') {
               url.searchParams.set(`filter[${field}][${filter.operator}]`, serialized);
             } else {

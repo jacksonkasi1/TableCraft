@@ -79,11 +79,7 @@ export class FilterBuilder {
         continue;
       }
 
-      const { column: col, colConfig } = resolved;
-
-      // Allow the config to override the db field name via colConfig.field
-      // (already handled inside resolveColumn, but colConfig is available for future use)
-      void colConfig;
+      const { column: col } = resolved;
 
       // Check if value is a date preset
       if (isDatePreset(param.value)) {
@@ -115,20 +111,15 @@ export class FilterBuilder {
     for (const filter of config.filters) {
       if (filter.type !== 'static' || filter.value === undefined) continue;
 
-      // Try base column first; fall back to join column
-      let col: Column | undefined = baseColumns[filter.field];
+      const isJoinField = isJoinColumn(config, filter.field);
+      const resolved = this.resolveColumn(config, baseColumns, filter.field, isJoinField);
 
-      if (!col) {
-        // Look in join columns (recursive)
-        const resolved = this.resolveJoinColumn(config, filter.field);
-        col = resolved?.column;
-      }
-
-      if (!col) {
+      if (!resolved) {
         console.warn(`[FilterBuilder] Static filter: could not resolve column "${filter.field}" — skipped`);
         continue;
       }
 
+      const col = resolved.column;
       const op = filter.operator ?? 'eq';
       const condition = applyOperator(op, col, filter.value);
       if (condition) conditions.push(condition);
@@ -230,10 +221,9 @@ export class FilterBuilder {
 function collectFilterableJoinFields(joins: JoinConfig[], out: Set<string>): void {
   for (const join of joins) {
     if (join.columns) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      for (const col of join.columns as any[]) {
-        if ((col as ColumnConfig).filterable !== false) {
-          out.add((col as ColumnConfig).name);
+      for (const col of join.columns) {
+        if (col.filterable !== false) {
+          out.add(col.name);
         }
       }
     }
@@ -254,8 +244,7 @@ function isJoinColumn(config: TableConfig, fieldName: string): boolean {
 
 function isJoinColumnInJoins(joins: JoinConfig[], fieldName: string): boolean {
   for (const join of joins) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((join.columns as any[] | undefined)?.some((c: ColumnConfig) => c.name === fieldName)) {
+    if (join.columns?.some(c => c.name === fieldName)) {
       return true;
     }
     if (join.joins && isJoinColumnInJoins(join.joins, fieldName)) {
