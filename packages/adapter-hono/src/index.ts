@@ -9,6 +9,7 @@ import {
   TableConfig,
   ConfigInput,
   EngineContext,
+  TableCraftError,
 } from '@tablecraft/engine';
 
 export interface HonoAdapterOptions {
@@ -92,47 +93,53 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
       return c.json({ error: `Unknown resource '${tableName}'` }, 404);
     }
 
-    const config = engine.getConfig();
+    try {
+      const config = engine.getConfig();
 
-    // Context
-    const context = options.getContext
-      ? await options.getContext(c)
-      : {};
+      // Context
+      const context = options.getContext
+        ? await options.getContext(c)
+        : {};
 
-    // Access control
-    const hasAccess = options.checkAccess
-      ? await options.checkAccess(config, context, c)
-      : defaultCheckAccess(config, context);
+      // Access control
+      const hasAccess = options.checkAccess
+        ? await options.checkAccess(config, context, c)
+        : defaultCheckAccess(config, context);
 
-    if (!hasAccess) {
-      return c.json({ error: 'Forbidden' }, 403);
-    }
-
-    // Parse query
-    const params = parseRequest(
-      Object.fromEntries(new URL(c.req.url).searchParams)
-    );
-
-    // Export
-    if (params.export) {
-      const allowed = config.export?.formats ?? ['csv', 'json'];
-      const enabled = config.export?.enabled ?? true;
-
-      if (!enabled || !allowed.includes(params.export)) {
-        return c.json({ error: `Export format '${params.export}' not allowed` }, 400);
+      if (!hasAccess) {
+        return c.json({ error: 'Forbidden' }, 403);
       }
 
-      const body = await engine.exportData(params, context);
-      const { contentType, filename } = getExportMeta(tableName, params.export);
+      // Parse query
+      const params = parseRequest(
+        Object.fromEntries(new URL(c.req.url).searchParams)
+      );
 
-      c.header('Content-Disposition', `attachment; filename="${filename}"`);
-      return c.body(body, 200, { 'Content-Type': contentType });
+      // Export
+      if (params.export) {
+        const allowed = config.export?.formats ?? ['csv', 'json'];
+        const enabled = config.export?.enabled ?? true;
+
+        if (!enabled || !allowed.includes(params.export)) {
+          return c.json({ error: `Export format '${params.export}' not allowed` }, 400);
+        }
+
+        const body = await engine.exportData(params, context);
+        const { contentType, filename } = getExportMeta(tableName, params.export);
+
+        c.header('Content-Disposition', `attachment; filename="${filename}"`);
+        return c.body(body, 200, { 'Content-Type': contentType });
+      }
+
+      // Query
+      const result = await engine.query(params, context);
+      c.header('X-Total-Count', String(result.meta.total));
+      return c.json(result);
+    } catch (err: unknown) {
+      const statusCode = err instanceof TableCraftError ? err.statusCode : 500;
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      return c.json({ error: message }, statusCode as any);
     }
-
-    // Query
-    const result = await engine.query(params, context);
-    c.header('X-Total-Count', String(result.meta.total));
-    return c.json(result);
   });
 
   return app;
