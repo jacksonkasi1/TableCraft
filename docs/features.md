@@ -84,7 +84,21 @@ defineTable(schema.users)
 
 {% tabs %}
 {% tab title="Column Order" %}
-Set the default column order on first load. Use the `defaultColumnOrder<C>()` helper with your generated `*Column` type for full autocomplete — mirrors the `hiddenColumns` helper.
+Set the default column order on first load. Two ways to use it:
+
+**Quick — plain array (no extra import):**
+
+```tsx
+import { DataTable } from '@tablecraft/table';
+import type { OrdersRow } from './generated';
+
+<DataTable<OrdersRow>
+  adapter={adapter}
+  defaultColumnOrder={['status', 'email', 'total', 'createdAt']}
+/>
+```
+
+**Type-safe — with helper (recommended):**
 
 ```tsx
 import { DataTable, defaultColumnOrder } from '@tablecraft/table';
@@ -93,7 +107,11 @@ import type { OrdersRow, OrdersColumn } from './generated';
 <DataTable<OrdersRow>
   adapter={adapter}
   defaultColumnOrder={defaultColumnOrder<OrdersColumn>([
-    'status', 'email', 'total', 'createdAt',
+    'status',   // ✅ autocomplete + compile-time checked
+    'email',
+    'total',
+    'createdAt',
+    // 'typo'   // ❌ TypeScript error
   ])}
 />
 ```
@@ -115,7 +133,18 @@ Drag-to-resize columns with localStorage persistence.
 {% endtab %}
 
 {% tab title="Hidden Columns" %}
-Hide specific columns from the table UI. Data is still received from API.
+Hide specific columns from the table UI. Data is still received from the API.
+
+**Quick — plain array (no extra import):**
+
+```tsx
+<DataTable
+  adapter={adapter}
+  hiddenColumns={['id', 'tenantId', 'metadata']}
+/>
+```
+
+**Type-safe — with helper (recommended):**
 
 ```tsx
 import { hiddenColumns } from '@tablecraft/table';
@@ -124,6 +153,7 @@ import type { ProductsColumn } from './generated';
 <DataTable
   adapter={adapter}
   hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
+  // ✅ autocomplete + compile-time safety — typos are a TypeScript error
 />
 ```
 {% endtab %}
