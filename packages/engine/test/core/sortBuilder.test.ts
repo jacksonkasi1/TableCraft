@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { pgTable, text, integer } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { SortBuilder } from '../../src/core/sortBuilder';
@@ -252,6 +252,141 @@ describe('SortBuilder', () => {
       ];
       const sort = joinBuilder.buildSort(configAll, params, sqlExpr);
       expect(sort).toHaveLength(3);
+    });
+  });
+
+  describe('buildSort — subquery SQL expressions', () => {
+    const configWithSubquery: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+        { name: 'name', type: 'string', sortable: true, hidden: false, filterable: true },
+        { name: 'ordersCount', type: 'number', sortable: true, hidden: false, filterable: false, computed: true },
+      ],
+      subqueries: [
+        { alias: 'ordersCount', table: 'orders', type: 'count', filter: 'orders.user_id = users.id' },
+      ],
+    };
+
+    const subqueryExpr = sql`(SELECT count(*) FROM orders WHERE orders.user_id = users.id)`;
+    const subquerySqlExpressions = new Map([['ordersCount', subqueryExpr]]);
+
+    it('should sort by a subquery field (asc)', () => {
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'asc' }];
+      const sort = builder.buildSort(configWithSubquery, params, subquerySqlExpressions);
+      expect(sort).toHaveLength(1);
+    });
+
+    it('should sort by a subquery field (desc)', () => {
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'desc' }];
+      const sort = builder.buildSort(configWithSubquery, params, subquerySqlExpressions);
+      expect(sort).toHaveLength(1);
+    });
+
+    it('should handle mix of base column and subquery sort', () => {
+      const params: SortParam[] = [
+        { field: 'name', order: 'asc' },
+        { field: 'ordersCount', order: 'desc' },
+      ];
+      const sort = builder.buildSort(configWithSubquery, params, subquerySqlExpressions);
+      expect(sort).toHaveLength(2);
+    });
+
+    it('should drop subquery field when not in sqlExpressions map', () => {
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'asc' }];
+      const sort = builder.buildSort(configWithSubquery, params, new Map());
+      expect(sort).toHaveLength(0);
+    });
+
+    // 'first' mode subqueries are marked sortable: false — they must be silently
+    // excluded from ORDER BY even if their SQL expression were in the map.
+    it("should exclude 'first' mode subquery fields that are marked sortable: false", () => {
+      const configWithFirst: TableConfig = {
+        name: 'orders',
+        base: 'users',
+        columns: [
+          { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+          // 'first' subquery — sortable: false (as set by define.ts .subquery())
+          { name: 'firstItem', type: 'json', sortable: false, hidden: false, filterable: false, computed: true },
+        ],
+        subqueries: [
+          { alias: 'firstItem', table: 'orders', type: 'first', filter: 'orders.user_id = users.id' },
+        ],
+      };
+      // Even if the SQL expression is in the map, the sortable: false check prevents its use
+      const firstExpr = sql`(SELECT row_to_json(t) FROM (SELECT * FROM orders LIMIT 1) t)`;
+      const params: SortParam[] = [{ field: 'firstItem', order: 'asc' }];
+      const sort = builder.buildSort(configWithFirst, params, new Map([['firstItem', firstExpr]]));
+      expect(sort).toHaveLength(0);
+    });
+
+    // Simulate the queryGrouped/exportRows/explain merge: subquery expressions are
+    // merged into the sqlExpressions map BEFORE calling buildSort.
+    it('should sort correctly when subquery expressions are merged from queryGrouped/exportRows/explain paths', () => {
+      // Simulate: const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects])
+      const sqlExpressions = new Map<string, ReturnType<typeof sql>>();
+      // Simulate: subqueryExpressionsGrouped is built and merged in
+      sqlExpressions.set('ordersCount', subqueryExpr);
+
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'desc' }];
+      const sort = builder.buildSort(configWithSubquery, params, sqlExpressions);
+      expect(sort).toHaveLength(1);
+    });
+  });
+
+  describe('buildSort — join column name collisions', () => {
+    // Schema with two tables that could collide on column name
+    const payments = pgTable('payments', {
+      id: integer('id').primaryKey(),
+      userId: integer('user_id'),
+      amount: integer('amount'),
+    });
+    const collisionSchema = { users, orders, payments };
+
+    const configWithJoinCollision: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+      ],
+      joins: [
+        {
+          table: 'orders',
+          on: 'orders.user_id = users.id',
+          columns: [
+            // Map orders.total to a column named 'total'
+            { name: 'total', type: 'number', sortable: true, hidden: false, filterable: false },
+          ],
+        },
+        {
+          table: 'payments',
+          on: 'payments.user_id = users.id',
+          columns: [
+            // Map payments.amount to a column ALSO named 'total' — collision!
+            { name: 'total', type: 'number', sortable: true, hidden: false, filterable: false, field: 'amount' },
+          ],
+        },
+      ],
+    };
+
+    it('warns and uses the first matching join column when join sort fields collide', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const collisionBuilder = new SortBuilder(collisionSchema);
+      const sort = collisionBuilder.buildSort(configWithJoinCollision, [
+        { field: 'total', order: 'asc' },
+      ]);
+
+      // Should emit a warning about the collision
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toContain('total');
+      expect(warnSpy.mock.calls[0][0]).toContain('multiple');
+
+      // Should still produce a valid sort (first-match-wins)
+      expect(sort).toHaveLength(1);
+
+      warnSpy.mockRestore();
     });
   });
 });

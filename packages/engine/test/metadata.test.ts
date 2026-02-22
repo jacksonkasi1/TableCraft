@@ -337,3 +337,150 @@ describe('buildMetadata — complex config (joins, computed, aggregations, inclu
     expect(meta.columns).toHaveLength(9);
   });
 });
+
+// ── metadataBuilder fallback path — raw TableConfig (bypasses builder) ──
+
+describe("buildMetadata — raw TableConfig fallback path (subquery columns)", () => {
+  // This config simulates a developer who writes a raw TableConfig JSON object
+  // without using the define.ts builder. In this path, metadataBuilder.ts
+  // must add the subquery virtual columns itself via the fallback in step 3.
+
+  const rawConfigWithSubqueries: TableConfig = {
+    name: 'orders',
+    base: 'orders',
+    columns: [
+      // NOTE: No subquery columns pre-populated — this is the fallback path.
+      { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
+    ],
+    subqueries: [
+      { alias: 'itemCount', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },
+      { alias: 'hasReturns', table: 'returns', type: 'exists', filter: 'returns.orderId = orders.id' },
+      { alias: 'firstItem', table: 'orderItems', type: 'first', filter: 'orderItems.orderId = orders.id' },
+    ],
+  };
+
+  // Pre-populated subquery column config — tests that fallback does NOT duplicate
+  const configWithPrepopulatedSubquery: TableConfig = {
+    name: 'orders',
+    base: 'orders',
+    columns: [
+      { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
+      // Pre-populated subquery column — fallback must NOT add a duplicate
+      { name: 'itemCount', type: 'number', hidden: false, sortable: true, filterable: false, computed: true },
+    ],
+    subqueries: [
+      { alias: 'itemCount', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },
+    ],
+  };
+
+  it("does not duplicate subquery columns already present in config.columns", () => {
+    const meta = buildMetadata(configWithPrepopulatedSubquery);
+
+    const itemCountColumns = meta.columns.filter((col) => col.name === 'itemCount');
+    expect(itemCountColumns).toHaveLength(1);
+  });
+
+  it("should auto-add subquery columns in fallback path (count, exists, first)", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+
+    const itemCount = meta.columns.find(c => c.name === 'itemCount');
+    expect(itemCount).toBeDefined();
+    expect(itemCount!.source).toBe('subquery');
+
+    const hasReturns = meta.columns.find(c => c.name === 'hasReturns');
+    expect(hasReturns).toBeDefined();
+    expect(hasReturns!.source).toBe('subquery');
+
+    const firstItem = meta.columns.find(c => c.name === 'firstItem');
+    expect(firstItem).toBeDefined();
+    expect(firstItem!.source).toBe('subquery');
+  });
+
+  it("'count' subquery column should be sortable: true and filterable: false in fallback path", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+
+    const itemCount = meta.columns.find(c => c.name === 'itemCount')!;
+    expect(itemCount.sortable).toBe(true);
+    expect(itemCount.filterable).toBe(false);
+  });
+
+  it("'exists' subquery column should be sortable: true and filterable: false in fallback path", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+
+    const hasReturns = meta.columns.find(c => c.name === 'hasReturns')!;
+    expect(hasReturns.sortable).toBe(true);
+    expect(hasReturns.filterable).toBe(false);
+  });
+
+  it("'first' subquery column should be sortable: false and filterable: false in fallback path", () => {
+    // 'first' uses row_to_json() — non-scalar, cannot be sorted or filtered.
+    const meta = buildMetadata(rawConfigWithSubqueries);
+
+    const firstItem = meta.columns.find(c => c.name === 'firstItem')!;
+    expect(firstItem.sortable).toBe(false);
+    expect(firstItem.filterable).toBe(false);
+  });
+
+  it("'first' subquery column should NOT appear in filters list (filterable: false)", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+
+    const firstItemFilter = meta.filters.find(f => f.field === 'firstItem');
+    expect(firstItemFilter).toBeUndefined();
+  });
+
+  it("'count' subquery column should NOT appear in filters list (filterable: false)", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+
+    const itemCountFilter = meta.filters.find(f => f.field === 'itemCount');
+    expect(itemCountFilter).toBeUndefined();
+  });
+
+  it("'count' type subquery column should have type 'number'", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+    const itemCount = meta.columns.find(c => c.name === 'itemCount')!;
+    expect(itemCount.type).toBe('number');
+  });
+
+  it("'exists' type subquery column should have type 'boolean'", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+    const hasReturns = meta.columns.find(c => c.name === 'hasReturns')!;
+    expect(hasReturns.type).toBe('boolean');
+  });
+
+  it("'first' type subquery column should have type 'json'", () => {
+    const meta = buildMetadata(rawConfigWithSubqueries);
+    const firstItem = meta.columns.find(c => c.name === 'firstItem')!;
+    expect(firstItem.type).toBe('json');
+  });
+
+  it("define.ts builder path and fallback path should produce matching sortable/filterable for subquery columns", () => {
+    // Simulate define.ts builder path: columns pre-populated in config.columns
+    const builderPathConfig: TableConfig = {
+      name: 'orders',
+      base: 'orders',
+      columns: [
+        { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
+        // As set by define.ts .subquery()
+        { name: 'itemCount', type: 'number', label: 'itemCount', hidden: false, sortable: true, filterable: false, computed: true },
+        { name: 'firstItem', type: 'json', label: 'firstItem', hidden: false, sortable: false, filterable: false, computed: true },
+      ],
+      subqueries: [
+        { alias: 'itemCount', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },
+        { alias: 'firstItem', table: 'orderItems', type: 'first', filter: 'orderItems.orderId = orders.id' },
+      ],
+    };
+
+    const builderMeta = buildMetadata(builderPathConfig);
+    const fallbackMeta = buildMetadata(rawConfigWithSubqueries);
+
+    const builderItemCount = builderMeta.columns.find(c => c.name === 'itemCount')!;
+    const fallbackItemCount = fallbackMeta.columns.find(c => c.name === 'itemCount')!;
+    expect(builderItemCount.sortable).toBe(fallbackItemCount.sortable);
+    expect(builderItemCount.filterable).toBe(fallbackItemCount.filterable);
+
+    const builderFirstItem = builderMeta.columns.find(c => c.name === 'firstItem')!;
+    const fallbackFirstItem = fallbackMeta.columns.find(c => c.name === 'firstItem')!;
+    expect(builderFirstItem.sortable).toBe(fallbackFirstItem.sortable);
+    expect(builderFirstItem.filterable).toBe(fallbackFirstItem.filterable);
+  });
+});

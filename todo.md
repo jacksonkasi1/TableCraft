@@ -286,7 +286,86 @@
 
 ---
 
-*Last updated: 2026-02-21*
+*Last updated: 2026-02-22*
+
+---
+
+## 🔧 Engine Edge-Case Fix Plan (Completed — 2026-02-22)
+
+> **Context:** Sorting by a `.subquery('itemCount', ..., 'first', ...)` field causes a DB crash because
+> `row_to_json()` is non-scalar. Investigation revealed 13 distinct engine edge cases across sorting,
+> subqueries, cursor pagination, and metadata. This section tracks all fixes, unit tests, and API tests.
+>
+> **Status:** ✅ All fixes and tests completed.
+
+---
+
+### Priority Legend
+
+| Symbol | Meaning |
+|--------|---------|
+| 🔴 | Critical — causes DB error or silent wrong results |
+| 🟠 | High — bad DX, incorrect metadata, data loss risk |
+| 🟡 | Medium — inconsistency, missing guard |
+| 🟢 | Low — style / default cleanup |
+
+---
+
+### Bug Fixes
+
+| # | File | Description | Priority | Status |
+|---|------|-------------|----------|--------|
+| 1 | `packages/engine/src/define.ts`, `core/metadataBuilder.ts` | Mark `'first'` mode subqueries as `sortable: false` — they return `row_to_json` (non-scalar), sorting crashes the DB | 🔴 | ✅ Done |
+| 2 | `packages/engine/src/engine.ts` — `queryGrouped()` | Merge `subqueryExpressions` into `sqlExpressions` map — subquery sort is silently dropped here | 🔴 | ✅ Done |
+| 3 | `packages/engine/src/engine.ts` — `exportRows()` | Same missing merge as #2 — subquery sort broken during CSV export | 🔴 | ✅ Done |
+| 4 | `packages/engine/src/engine.ts` — `explain()` | Same missing merge as #2 — subquery sort broken in explain output | 🟠 | ✅ Done |
+| 5 | `packages/engine/src/core/cursorPagination.ts` | Cursor `WHERE` uses OR-expansion for multi-column sorts; resolves sqlExpressions | 🔴 | ✅ Done |
+| 6 | `packages/engine/src/core/subqueryBuilder.ts` | Guard `'first'` mode to PostgreSQL-only — throw `DialectError` on MySQL/SQLite | 🟡 | ✅ Done |
+| 7 | `packages/engine/src/core/subqueryBuilder.ts` | `sql.raw(sub.filter)` retained with improved documentation (developer-authored only) | 🟠 | ✅ Done |
+| 8 | `packages/engine/src/engine.ts` — `rawOrderBy()` | Add JSDoc warning that `rawOrderBy()` bypasses sortable whitelist | 🟢 | ✅ Done |
+| 9 | `packages/engine/src/core/metadataBuilder.ts` | Fallback path aligns `filterable: false` with `define.ts` for subqueries | 🟡 | ✅ Done |
+| 10 | `packages/engine/src/core/cursorPagination.ts` | Throw `FieldError` instead of `sql.identifier` for unknown sort fields | 🟡 | ✅ Done |
+| 11 | `packages/engine/src/core/sortBuilder.ts` | `sortable: undefined` treated as sortable — intentional, clarifying comment added | 🟢 | ✅ Done |
+| 12 | `packages/engine/src/define.ts` — `.computed()` | `.computed()` now accepts `{ sortable?: boolean }` option | 🟢 | ✅ Done |
+| 13 | `packages/engine/src/core/sortBuilder.ts` — `resolveJoinColumn` | Collision warning now reachable (two-pass collection) | 🟢 | ✅ Done |
+
+---
+
+### Unit Tests
+
+> Written in `packages/engine/test/` using **Vitest**. Run with: `cd packages/engine && pnpm test`
+
+| # | File | What is tested | Status |
+|---|------|----------------|--------|
+| 14 | `test/inputValidator.test.ts` | `'first'` mode subquery field is rejected as non-sortable; `'count'`/`'exists'` are accepted; orphan subquery rejection | ✅ Done |
+| 15 | `test/core/sortBuilder.test.ts` | Subquery SQL expressions in sort; join-column collision warning | ✅ Done |
+| 16 | `test/core/cursorPagination.test.ts` | OR-expansion for multi-column cursors; DESC/mixed sorts; sqlExpressions resolution | ✅ Done |
+| 17 | `test/core/subqueryBuilder.test.ts` | `'first'` mode throws `DialectError` on non-Postgres dialects | ✅ Done |
+| 18 | `test/metadata.test.ts` | `metadataBuilder` fallback sets `filterable: false` for subqueries; no duplicate columns | ✅ Done |
+
+---
+
+### API / Integration Tests
+
+> Written in `apps/hono-example/test/comparison.test.ts` using **Bun test**.
+> Requires live PostgreSQL + seeded DB. Run with: `cd apps/hono-example && bun test`
+
+| # | Endpoint | What is tested | Status |
+|---|----------|----------------|--------|
+| 19 | `GET /engine/orders?sort=itemCount` | `'count'` mode subquery sort returns 200 with correctly ordered data | ✅ Done |
+| 20 | `GET /engine/orders?sort=-itemCount` | Descending subquery sort returns 200 with correct order | ✅ Done |
+| 21 | `GET /engine/orders?sort=firstItem` | `'first'` mode subquery sort returns **400** with clear error message | ✅ Done |
+
+---
+
+### Progress Summary
+
+| Category | Total | Done | Remaining |
+|----------|-------|------|-----------|
+| Bug fixes | 13 | 13 | 0 |
+| Unit tests | 5 | 5 | 0 |
+| API tests | 3 | 3 | 0 |
+| **Total** | **21** | **21** | **0** |
 
 ---
 

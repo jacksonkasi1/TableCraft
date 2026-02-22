@@ -31,7 +31,7 @@ import {
 import { ChevronDown } from 'lucide-react';
 
 // ** import shared
-import { STATUS_OPTIONS, ROLE_OPTIONS, columnOverrides } from './shared/orders-shared';
+import { ALL, STATUS_OPTIONS, ROLE_OPTIONS, columnOverrides } from './shared/orders-shared';
 import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -49,7 +49,8 @@ type TotalOperator = typeof TOTAL_OPERATOR_OPTIONS[number]['value'];
 
 function parseStatusArray(urlValue: string): string[] {
   if (!urlValue) return [];
-  return urlValue.split(',').filter(Boolean);
+  // Filter out '__all__' sentinel value (should not be sent to API)
+  return urlValue.split(',').filter(s => s && s !== ALL);
 }
 
 function stringifyStatusArray(values: string[]): string {
@@ -61,10 +62,14 @@ function stringifyStatusArray(values: string[]): string {
 export function Orders3Page() {
   // ── URL-synced filter state ──────────────────────────────────────────────
   const [statusStr, setStatusStr]       = useUrlState<string>('status', '');
-  const [role, setRole]                 = useUrlState<string>('role', '');
+  const [rawRole, setRawRole]           = useUrlState<string>('role', '');
   const [totalOp, setTotalOp]           = useUrlState<TotalOperator>('total_op', 'gte');
   const [totalValue, localTotal, setLocalTotal] = useDebouncedUrlNumber('total');
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
+
+  // Normalize '__all__' (from URL or manual entry) to empty string
+  const role = rawRole === ALL ? '' : rawRole;
+  const setRole = (v: string) => setRawRole(v === ALL ? '' : v);
 
   // Parse status as array (used by both the adapter memo and the UI below)
   const selectedStatuses = parseStatusArray(statusStr);
@@ -148,7 +153,7 @@ export function Orders3Page() {
       </DropdownMenu>
 
       {/* Role single-select */}
-      <Select value={role || 'all'} onValueChange={(v) => setRole(v === 'all' ? '' : v)}>
+      <Select value={role || ALL} onValueChange={setRole}>
         <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="All roles" />
         </SelectTrigger>

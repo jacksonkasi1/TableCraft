@@ -14,14 +14,15 @@ The engine automatically validates all incoming parameters against your schema.
 
 The engine exports several error classes that extend `TableCraftError`.
 
-| Error Class         | Code               | Description                                         | HTTP Status Recommendation |
-| ------------------- | ------------------ | --------------------------------------------------- | -------------------------- |
-| `ValidationError`   | `VALIDATION_ERROR` | Invalid input format (e.g., "abc" for a number).    | 400 Bad Request            |
-| `FieldError`        | `FIELD_ERROR`      | Invalid field name (unknown or hidden).             | 400 Bad Request            |
-| `ConfigError`       | `CONFIG_ERROR`     | Invalid table configuration (developer error).      | 500 Internal Server Error  |
-| `QueryError`        | `QUERY_ERROR`      | Database query failed (e.g., constraint violation). | 500 Internal Server Error  |
-| `AccessDeniedError` | `ACCESS_DENIED`    | User lacks permission (RBAC).                       | 403 Forbidden              |
-| `NotFoundError`     | `NOT_FOUND`        | Resource not found.                                 | 404 Not Found              |
+| Error Class         | Code               | Description                                                          | HTTP Status |
+| ------------------- | ------------------ | -------------------------------------------------------------------- | ----------- |
+| `ValidationError`   | `VALIDATION_ERROR` | Invalid input format (e.g., "abc" for a number).                     | 400         |
+| `FieldError`        | `FIELD_ERROR`      | Invalid field name (unknown, hidden, or not sortable/filterable).    | 400         |
+| `ConfigError`       | `CONFIG_ERROR`     | Invalid table configuration (developer error).                       | 400         |
+| `DialectError`      | `DIALECT_ERROR`    | Feature not supported by the current database dialect.               | 400         |
+| `QueryError`        | `QUERY_ERROR`      | Database query failed (e.g., constraint violation).                  | 500         |
+| `AccessDeniedError` | `ACCESS_DENIED`    | User lacks permission (RBAC).                                        | 403         |
+| `NotFoundError`     | `NOT_FOUND`        | Resource not found.                                                  | 404         |
 
 ## 3. Handling Errors in Your Framework
 
@@ -82,6 +83,14 @@ The engine automatically detects your database dialect (PostgreSQL, MySQL, SQLit
 {% column %}
 #### Feature Support
 
-If a feature (like Recursive CTEs) isn't supported by your database, the engine will either emulate it or throw a helpful error.
+If a feature is only available on certain databases, the engine throws a `DialectError` instead of sending a query that will fail with a cryptic database error.
+
+**Example — `first` subquery on MySQL:**
+```
+DialectError: 'first' is not supported on mysql.
+Use PostgreSQL or write a raw query.
+```
+
+`'first'` mode uses `row_to_json()`, which is PostgreSQL-only. `'count'` and `'exists'` work on all dialects.
 {% endcolumn %}
 {% endcolumns %}

@@ -72,3 +72,73 @@ try {
 
 * **Inspect Network Payload:** Use your browser's Developer Tools (Network tab) to inspect the outgoing request to the engine. Verify that the query parameters (like `filters`, `sort`, `cursor`) match what you expect.
 * **Check React Query Keys:** If you are using `useTableQuery` and data isn't updating when state changes, ensure the query key includes all dependencies (which TableCraft handles automatically under the hood, but it's good to verify using the React Query DevTools).
+
+---
+
+## Subqueries
+
+### Why do I get a 400 when I sort by a `first` subquery field?
+
+The `'first'` subquery type uses PostgreSQL's `row_to_json()` function, which returns a **JSON object**, not a scalar value. SQL databases cannot use a JSON object in an `ORDER BY` clause — attempting to do so produces a cryptic database error.
+
+TableCraft prevents this by marking `'first'` subquery columns as `sortable: false` and rejecting the request with a `FieldError` (HTTP 400) before the query is sent:
+
+```text
+GET /orders?sort=firstItem  →  400 Bad Request
+{ "error": "Field 'firstItem' is not sortable. ..." }
+```
+
+Use `'count'` (integer) or `'exists'` (boolean) if you need a sortable subquery field.
+
+### Why does my `first` subquery throw a `DialectError` on MySQL/SQLite?
+
+`'first'` mode relies on `row_to_json()`, which is **PostgreSQL-only**. If the engine detects a non-PostgreSQL dialect (MySQL, SQLite), it throws a `DialectError` (HTTP 400) instead of sending a query that will fail at the database level:
+
+```text
+DialectError: 'first' is not supported on mysql. Use PostgreSQL or write a raw query.
+```
+
+Switch to PostgreSQL, or use `'count'` / `'exists'` which work on all dialects.
+
+### Can I filter by a subquery field?
+
+No. All subquery types (`count`, `exists`, `first`) have `filterable: false`. Subquery expressions are computed per-row in the SELECT clause — they cannot be used in a `WHERE` clause without wrapping the entire query in a subquery, which TableCraft does not do automatically. Use a join or a backend condition instead.
+
+---
+
+## Cursor Pagination
+
+### Why do I get duplicate or skipped rows when using cursor pagination with a multi-column sort?
+
+This happens when the cursor only encodes the **primary** sort field. If multiple rows share the same primary sort value, the engine cannot tell which ones were already seen.
+
+TableCraft's cursor encodes **all** sort field values from the last row, and the continuation `WHERE` uses a lexicographic OR-expansion:
+
+```sql
+-- ORDER BY status ASC, createdAt ASC, cursor after ("paid", "2026-01-15")
+WHERE (status > 'paid')
+   OR (status = 'paid' AND createdAt > '2026-01-15T10:00:00Z')
+```
+
+If you are still seeing duplicates, ensure your sort includes a **unique tiebreaker** (e.g., `?sort=status,id`), which guarantees a strict total order across all rows.
+
+### What happens if I sort by a computed column and use cursor pagination?
+
+Cursor pagination resolves `WHERE` conditions against **base table columns only**. If a sort field resolves exclusively to a SQL expression (e.g., a subquery or computed column), the engine currently includes it in `ORDER BY` but skips it in the cursor `WHERE`. This means cursor pagination with computed-only sort fields behaves correctly for ordering but may not produce a perfectly stable continuation on ties.
+
+For stable cursor pagination, always include at least one base column (e.g., `id`) as a tiebreaker in your sort.
+
+---
+
+## Computed Columns
+
+### Can I mark a computed column as non-sortable?
+
+Yes. Pass `{ sortable: false }` as the third argument to `.computed()`:
+
+```typescript
+.computed('jsonMeta', sql`row_to_json(meta)`, { type: 'string', sortable: false })
+```
+
+This prevents users from requesting `?sort=jsonMeta` and getting a database error from a non-scalar expression.
+

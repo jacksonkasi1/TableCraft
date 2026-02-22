@@ -109,15 +109,20 @@ export function buildMetadata(
   if (config.subqueries) {
     for (const sub of config.subqueries) {
       // Subqueries produce a virtual column with the alias name
-      // Only add if not already in allColumns (engine may have pushed it)
+      // Only add if not already in allColumns (define.ts builder always pre-populates
+      // via .subquery(), but raw TableConfig JSON objects bypass the builder).
       if (!allColumns.some(c => c.name === sub.alias)) {
+        // 'first' mode returns row_to_json() — non-scalar JSON object.
+        // 'count' returns integer, 'exists' returns boolean.
+        // filterable: false matches define.ts to keep both paths consistent.
+        const subqueryType = sub.type === 'exists' ? 'boolean' : sub.type === 'count' ? 'number' : 'json';
         allColumns.push({
           name: sub.alias,
-          type: sub.type === 'exists' ? 'boolean' : sub.type === 'count' ? 'number' : 'string',
+          type: subqueryType,
           label: sub.alias,
           hidden: false,
-          sortable: true,
-          filterable: true,
+          sortable: sub.type !== 'first',
+          filterable: false,
           computed: true,
           _source: 'subquery',
         } as any);

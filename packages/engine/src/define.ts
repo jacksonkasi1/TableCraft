@@ -413,13 +413,13 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   // ──── Computed Columns ────
 
-  computed(name: string, expression: SQL, options?: { type?: ColumnConfig['type']; label?: string }): this {
+  computed(name: string, expression: SQL, options?: { type?: ColumnConfig['type']; label?: string; sortable?: boolean }): this {
     this._config.columns.push({
       name,
       type: options?.type ?? 'string',
       label: options?.label ?? name,
       hidden: false,
-      sortable: true,
+      sortable: options?.sortable ?? true,
       filterable: false,
       computed: true,
     });
@@ -720,7 +720,21 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     return this;
   }
 
+  /**
+   * Add a raw SQL ORDER BY expression.
+   *
+   * **Warning**: This bypasses the sortable whitelist entirely. The expression
+   * is appended unconditionally to ORDER BY without any field validation.
+   * Ensure the SQL is safe and not derived from user-supplied input.
+   * Prefer `.sort()` or `.sortable()` for user-facing sort controls.
+   */
   rawOrderBy(sqlExpr: SQL): this {
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+      console.warn(
+        `[TableCraft] rawOrderBy() bypasses the sortable whitelist and should not be used with user input. ` +
+        `Expression: ${sqlExpr}`
+      );
+    }
     this._ext.rawOrderBys.push(sqlExpr);
     return this;
   }
@@ -739,12 +753,41 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     filter?: string
   ): this {
     if (!this._config.subqueries) this._config.subqueries = [];
-    this._config.subqueries.push({
-      alias,
-      table: getTableName(table),
-      type,
-      filter,
-    });
+
+    // Dedupe subquery entries by alias — replace if exists
+    const entry = { alias, table: getTableName(table), type, filter };
+    const existingIdx = this._config.subqueries.findIndex(e => e.alias === alias);
+    if (existingIdx >= 0) {
+      this._config.subqueries[existingIdx] = entry;
+    } else {
+      this._config.subqueries.push(entry);
+    }
+
+    // Register as a computed column so sorting/filtering validation passes.
+    // The actual SQL expression is built at query-time by SubqueryBuilder and
+    // merged into the sqlExpressions map by the engine.
+    //
+    // 'first' mode returns row_to_json() — a non-scalar JSON object — which
+    // cannot be used in ORDER BY. Mark it sortable: false to prevent DB errors.
+    // 'count' (integer) and 'exists' (boolean) are scalar and safe to sort.
+    const existingCol = this._config.columns.find(c => c.name === alias);
+    if (existingCol) {
+      existingCol.type = type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'json';
+      existingCol.sortable = type !== 'first';
+      existingCol.filterable = false;
+      existingCol.computed = true;
+    } else {
+      this._config.columns.push({
+        name: alias,
+        type: type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'json',
+        label: alias,
+        hidden: false,
+        sortable: type !== 'first',
+        filterable: false,
+        computed: true,
+      });
+    }
+
     return this;
   }
 
@@ -795,9 +838,6 @@ export class TableDefinitionBuilder<T extends Table = Table> {
    * 'none' = skip counting entirely — fastest
    */
   countMode(mode: 'exact' | 'estimated' | 'none'): this {
-    if (!(this._config as any)._countMode) {
-      (this._config as any)._countMode = mode;
-    }
     (this._config as any)._countMode = mode;
     return this;
   }
