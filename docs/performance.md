@@ -27,6 +27,28 @@ Cursor pagination encodes the sort value (e.g., `{ id: 100 }`) of the last fetch
 **How to Use:**
 Simply enable cursor pagination in your config or pass it via the client. If `!!resolvedParams.cursor` evaluates to true on the backend, TableCraft's `CursorPaginationBuilder` takes over entirely.
 
+#### Multi-column sort with cursor pagination
+
+When you sort by more than one field (e.g., `?sort=status,createdAt`), the cursor encodes **all** sort field values from the last row:
+
+```
+nextCursor → base64url({ "status": "paid", "createdAt": "2026-01-15T10:00:00Z" })
+```
+
+The continuation `WHERE` clause uses a **lexicographic OR-expansion** so rows that share the primary sort value but differ on a secondary value are never skipped:
+
+```sql
+-- Correct expansion for ORDER BY status ASC, createdAt ASC
+WHERE (status > 'paid')
+   OR (status = 'paid' AND createdAt > '2026-01-15T10:00:00Z')
+```
+
+A flat `AND` would incorrectly skip rows with the same `status` value but a later `createdAt`. The engine handles this automatically.
+
+{% hint style="info" %}
+Add a database index on every column you use in a multi-column sort to keep cursor lookups fast.
+{% endhint %}
+
 ## Large Dataset Handling
 
 Even with cursor pagination, querying metadata on a massive table can be expensive.

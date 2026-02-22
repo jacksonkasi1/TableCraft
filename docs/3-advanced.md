@@ -107,8 +107,6 @@ export const postConfig = defineTable(posts)
 
 ## 5. Type-Safe Date Filters
 
-Working with dates in SQL can be tricky. We provide type-safe helpers to make common date operations easy and readable.
-
 {% columns %}
 {% column %}
 #### Relative Time (`ago`)
@@ -145,6 +143,62 @@ export const monthlySales = defineTable(orders)
 ```
 {% endcolumn %}
 {% endcolumns %}
+
+## 6. Subquery Columns
+
+Subquery columns let you attach a correlated subquery to every row — useful for counts, existence checks, or fetching a single related record without a full join.
+
+```typescript
+import { defineTable } from '@tablecraft/engine';
+import { orders, orderItems } from '../db/schema';
+
+export const orderConfig = defineTable(orders)
+  // Count how many items are in each order
+  .subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
+
+  // Check whether any items exist (boolean flag)
+  .subquery('hasItems', orderItems, 'exists', 'order_items.order_id = orders.id')
+
+  // Fetch the first item row as a JSON object (PostgreSQL only)
+  .subquery('firstItem', orderItems, 'first', 'order_items.order_id = orders.id');
+```
+
+### Subquery types
+
+| Type      | Return value         | Sortable | Dialect        |
+| --------- | -------------------- | -------- | -------------- |
+| `count`   | `integer`            | ✅ Yes   | All            |
+| `exists`  | `boolean`            | ✅ Yes   | All            |
+| `first`   | JSON object (`{}`)   | ❌ No    | PostgreSQL only |
+
+### Sorting rules
+
+`count` and `exists` return scalar values and can be used in `?sort=itemCount`.
+
+`first` uses `row_to_json()` which returns a JSON object — not a scalar. Attempting to sort by it will return a **400 FieldError** before the query reaches the database:
+
+```
+GET /orders?sort=itemCount   → 200 OK  (scalar integer, sortable)
+GET /orders?sort=firstItem   → 400 Bad Request  (non-scalar JSON, not sortable)
+```
+
+### Dialect requirement for `first`
+
+Because `first` relies on `row_to_json()`, it is **PostgreSQL-only**. Using it with MySQL or SQLite throws a `DialectError` (HTTP 400):
+
+```
+DialectError: 'first' is not supported on mysql. Use PostgreSQL or write a raw query.
+```
+
+`count` and `exists` work on all dialects.
+
+### Sortable flag on `.computed()`
+
+The `.computed()` builder also accepts a `sortable` option for cases where a SQL expression is non-scalar:
+
+```typescript
+.computed('jsonMeta', sql`row_to_json(meta)`, { type: 'string', sortable: false })
+```
 
 ## Next Steps
 

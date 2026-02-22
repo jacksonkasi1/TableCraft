@@ -28,8 +28,17 @@ import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
 
 export function Orders2Page() {
   // ── URL-synced filter state ──────────────────────────────────────────────
-  const [status, setStatus]               = useUrlState<string>('status', '');
-  const [role, setRole]                   = useUrlState<string>('role', '');
+  const [rawStatus, setRawStatus] = useUrlState<string>('status', '');
+  const [rawRole, setRawRole]     = useUrlState<string>('role', '');
+
+  // Normalize '__all__' (from URL or manual entry) to empty string
+  const status = rawStatus === ALL ? '' : rawStatus;
+  const role   = rawRole   === ALL ? '' : rawRole;
+
+  // Wrap setters to also normalize '__all__' on change
+  const setStatus = (v: string) => setRawStatus(v === ALL ? '' : v);
+  const setRole   = (v: string) => setRawRole(v === ALL ? '' : v);
+
   const [minTotal, localTotal, setLocalTotal] = useDebouncedUrlNumber('min_total');
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
 
