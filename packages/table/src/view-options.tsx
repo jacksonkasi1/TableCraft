@@ -226,7 +226,11 @@ export function DataTableViewOptions<TData>({
       onResetColumnOrder();
       return;
     }
-    table.setColumnOrder([]);
+    if (table.resetColumnOrder) {
+      table.resetColumnOrder();
+    } else {
+      table.setColumnOrder([]);
+    }
     try {
       localStorage.removeItem(storageKey);
     } catch {

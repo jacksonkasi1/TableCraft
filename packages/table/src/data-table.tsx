@@ -205,6 +205,8 @@ export function DataTable<T extends Record<string, unknown>>({
 
   // ─── Column order ───
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  const columnOrderRef = useRef<string[]>(columnOrder);
+  columnOrderRef.current = columnOrder;
 
   /**
    * Pins system columns to fixed positions regardless of what order is stored or passed:
@@ -241,6 +243,9 @@ export function DataTable<T extends Record<string, unknown>>({
     }
   }, [tableId]); // eslint-disable-line react-hooks/exhaustive-deps
   // Note: defaultColumnOrder and normalizeColumnOrder are intentionally excluded — read once on mount.
+  // Assumes enableRowSelection and actions are stable for the component's lifetime.
+  // If they change after mount, you must include them (and normalizeColumnOrder) in the 
+  // dependencies and re-run setColumnOrder accordingly.
 
   // ─── Sorting state for TanStack ───
   const sorting: SortingState = useMemo(
@@ -361,10 +366,11 @@ export function DataTable<T extends Record<string, unknown>>({
     (updaterOrValue: string[] | ((prev: string[]) => string[])) => {
       const raw =
         typeof updaterOrValue === "function"
-          ? updaterOrValue(columnOrder)
+          ? updaterOrValue(columnOrderRef.current)
           : updaterOrValue;
       const newOrder = normalizeColumnOrder(raw);
       setColumnOrder(newOrder);
+      columnOrderRef.current = newOrder;
       try {
         localStorage.setItem(
           `tablecraft-column-order-${tableId}`,
@@ -374,9 +380,12 @@ export function DataTable<T extends Record<string, unknown>>({
         // ignore
       }
     },
-    [columnOrder, tableId, normalizeColumnOrder]
+    [tableId, normalizeColumnOrder]
   );
 
+  // Note: Consumers must pass a stable reference for defaultColumnOrder 
+  // (hoist to module scope, use useMemo, or use the provided defaultColumnOrder<C>() helper)
+  // so resetColumnOrder and downstream children are not recreated every render.
   const resetColumnOrder = useCallback(() => {
     const base = defaultColumnOrder && defaultColumnOrder.length > 0 ? defaultColumnOrder : [];
     const resetTo = normalizeColumnOrder(base);

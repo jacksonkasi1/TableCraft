@@ -328,7 +328,7 @@ import type { OrdersRow, OrdersColumn } from './generated';
 ```
 
 > **Note:** System columns (`'select'` and `'__actions'`) are always pinned automatically — `'select'` is always first, `'__actions'` is always last. You never need to include them in `defaultColumnOrder`.
-
+>
 > **Behaviour:**
 > - On first mount, if no saved order exists in `localStorage`, the `defaultColumnOrder` is applied.
 > - If a user has previously reordered columns, their saved order takes precedence.
