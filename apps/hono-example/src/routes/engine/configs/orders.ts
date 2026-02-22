@@ -24,8 +24,10 @@ export const orders = defineTable(s.orders)
   .computed('vatAmount', sql`${s.orders.total} * 0.2`, { type: 'number', label: 'VAT' })
   // Subquery: Item Count (count — sortable)
   .subquery('itemCount', s.orderItems, 'count', 'order_items.order_id = orders.id')
+
   // Subquery: First Item (first — NOT sortable; uses row_to_json, PostgreSQL only)
-  .subquery('firstItem', s.orderItems, 'first', 'order_items.order_id = orders.id')
+  // .subquery('firstItem', s.orderItems, 'first', 'order_items.order_id = orders.id')
+
   // Tenant isolation (using context.tenantId)
   .tenant('tenantId')
   // Soft Delete (filters out deletedAt IS NOT NULL)
