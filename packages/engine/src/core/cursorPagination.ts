@@ -97,7 +97,7 @@ export class CursorPaginationBuilder {
             const expr = sqlExpressions?.get(s.field);
             return { s, col, expr };
           })
-          .filter(({ s, col, expr }) => (col !== undefined || expr !== undefined) && decoded[s.field] !== undefined);
+          .filter(({ s, col, expr }) => (col !== undefined || expr !== undefined) && decoded[s.field] != null);
 
         if (resolvable.length === 1) {
           // Single field — simple gt/lt

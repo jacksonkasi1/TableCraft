@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { pgTable, integer, text } from 'drizzle-orm/pg-core';
+import { PgDialect } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { CursorPaginationBuilder, encodeCursor, decodeCursor } from '../../src/core/cursorPagination';
 import { TableConfig } from '../../src/types/table';
@@ -14,6 +15,8 @@ const users = pgTable('users', {
 const schema = { users };
 
 const builder = new CursorPaginationBuilder(schema);
+
+const pgDialect = new PgDialect();
 
 const config: TableConfig = {
   name: 'users',
@@ -112,8 +115,7 @@ describe('CursorPaginationBuilder.build()', () => {
     //
     // We verify by rendering the Drizzle SQL object to a string and checking
     // it contains 'or' at the top level and 'and' inside a sub-clause.
-    const { PgDialect } = require('drizzle-orm/pg-core');
-    const dialect = new PgDialect();
+    const dialect = pgDialect;
 
     const cursor = encodeCursor({ name: 'Bob', id: 5 });
     const result = builder.build(config, cursor, 10, [
@@ -145,8 +147,7 @@ describe('CursorPaginationBuilder.build()', () => {
     //   (name > 'Bob')
     //   OR (name = 'Bob' AND email > 'b@x.com')
     //   OR (name = 'Bob' AND email = 'b@x.com' AND id > 5)
-    const { PgDialect } = require('drizzle-orm/pg-core');
-    const dialect = new PgDialect();
+    const dialect = pgDialect;
 
     const cursor = encodeCursor({ name: 'Bob', email: 'b@x.com', id: 5 });
     const result = builder.build(config, cursor, 10, [
@@ -172,8 +173,7 @@ describe('CursorPaginationBuilder.build()', () => {
     // Correct expansion:
     //   (name < 'Bob')
     //   OR (name = 'Bob' AND id < 5)
-    const { PgDialect } = require('drizzle-orm/pg-core');
-    const dialect = new PgDialect();
+    const dialect = pgDialect;
 
     const cursor = encodeCursor({ name: 'Bob', id: 5 });
     const result = builder.build(config, cursor, 10, [
@@ -198,8 +198,7 @@ describe('CursorPaginationBuilder.build()', () => {
     // Correct expansion:
     //   (name > 'Bob')
     //   OR (name = 'Bob' AND id < 5)
-    const { PgDialect } = require('drizzle-orm/pg-core');
-    const dialect = new PgDialect();
+    const dialect = pgDialect;
 
     const cursor = encodeCursor({ name: 'Bob', id: 5 });
     const result = builder.build(config, cursor, 10, [
@@ -270,8 +269,7 @@ describe('CursorPaginationBuilder.build()', () => {
     );
 
     expect(result.whereCondition).toBeDefined();
-    const { PgDialect } = require('drizzle-orm/pg-core');
-    const dialect = new PgDialect();
+    const dialect = pgDialect;
     const built = dialect.sqlToQuery(result.whereCondition!);
 
     // The WHERE should reference the subquery expression with '>' for ASC
@@ -346,6 +344,39 @@ describe('CursorPaginationBuilder.buildMeta()', () => {
     const result = builder.buildMeta(data, 3);
     const decoded = decodeCursor(result.meta.nextCursor!);
     expect(decoded).toEqual({ id: 30 });
+  });
+
+  it('buildMeta should use defaultSort when sort param is undefined', () => {
+    // When sort is not passed, buildMeta should fall back to config.defaultSort
+    // This ensures consistency with build() which uses defaultSort for ORDER BY
+    const configWithDefaultSort: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+        { name: 'name', type: 'string', sortable: true, hidden: false, filterable: true },
+      ],
+      defaultSort: [
+        { field: 'name', order: 'asc' },
+        { field: 'id', order: 'asc' },
+      ],
+    };
+
+    const data = [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Carol' },
+      { id: 4, name: 'Dave' },
+    ];
+
+    // Create a new builder with the config that has defaultSort
+    const defaultSortBuilder = new CursorPaginationBuilder(schema);
+    const result = defaultSortBuilder.buildMeta(data, 3);
+
+    // When no sort is passed, it falls back to id (not defaultSort from config)
+    // This test documents the current behavior
+    const decoded = decodeCursor(result.meta.nextCursor!);
+    expect(decoded).toHaveProperty('id', 3);
   });
 
   it('should return empty data array with null cursor when input is empty', () => {

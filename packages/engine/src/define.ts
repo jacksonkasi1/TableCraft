@@ -729,6 +729,12 @@ export class TableDefinitionBuilder<T extends Table = Table> {
    * Prefer `.sort()` or `.sortable()` for user-facing sort controls.
    */
   rawOrderBy(sqlExpr: SQL): this {
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+      console.warn(
+        `[TableCraft] rawOrderBy() bypasses the sortable whitelist and should not be used with user input. ` +
+        `Expression: ${sqlExpr}`
+      );
+    }
     this._ext.rawOrderBys.push(sqlExpr);
     return this;
   }
@@ -832,9 +838,6 @@ export class TableDefinitionBuilder<T extends Table = Table> {
    * 'none' = skip counting entirely — fastest
    */
   countMode(mode: 'exact' | 'estimated' | 'none'): this {
-    if (!(this._config as any)._countMode) {
-      (this._config as any)._countMode = mode;
-    }
     (this._config as any)._countMode = mode;
     return this;
   }
