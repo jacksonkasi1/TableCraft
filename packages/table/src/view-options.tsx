@@ -198,17 +198,11 @@ export function DataTableViewOptions<TData>({
 
       const newOrder = arrayMove(ids, oldIndex, newIndex);
 
-      // Persist in table state
+      // Persist in table state — onColumnOrderChange in data-table.tsx normalizes
+      // (pins select first / __actions last) and writes to localStorage
       table.setColumnOrder(newOrder);
-
-      // Persist in localStorage
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(newOrder));
-      } catch {
-        // ignore
-      }
     },
-    [orderedColumns, table, storageKey]
+    [orderedColumns, table]
   );
 
   const handleDragCancel = useCallback(() => {

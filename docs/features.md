@@ -119,6 +119,7 @@ import type { OrdersRow, OrdersColumn } from './generated';
 - First mount with no saved order → uses `defaultColumnOrder`
 - User reorders → their order persists in `localStorage`
 - "Reset Column Order" → restores `defaultColumnOrder`
+- `select` and `__actions` are always pinned (first / last) — never include them in the array
 {% endtab %}
 
 {% tab title="Resizing" %}
