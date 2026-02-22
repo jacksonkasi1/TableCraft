@@ -44,6 +44,7 @@ export function DataTable<T extends Record<string, unknown>>({
   idField = "id" as keyof T,
   onRowClick,
   hiddenColumns,
+  defaultColumnOrder,
   startToolbarContent,
   startToolbarPlacement,
   toolbarContent,
@@ -203,7 +204,7 @@ export function DataTable<T extends Record<string, unknown>>({
   // ─── Column order ───
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
 
-  // Load column order from localStorage
+  // Load column order from localStorage; fall back to defaultColumnOrder if no saved order
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`tablecraft-column-order-${tableId}`);
@@ -211,12 +212,19 @@ export function DataTable<T extends Record<string, unknown>>({
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.every((item: unknown) => typeof item === "string")) {
           setColumnOrder(parsed);
+          return;
         }
       }
     } catch {
       // ignore
     }
-  }, [tableId]);
+    // No saved order — use defaultColumnOrder if provided
+    if (defaultColumnOrder && defaultColumnOrder.length > 0) {
+      setColumnOrder(defaultColumnOrder);
+    }
+  }, [tableId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Note: defaultColumnOrder is intentionally excluded — it is only read once on mount.
+  // Changing it after mount would conflict with any user-applied order.
 
   // ─── Sorting state for TanStack ───
   const sorting: SortingState = useMemo(
@@ -353,13 +361,19 @@ export function DataTable<T extends Record<string, unknown>>({
   );
 
   const resetColumnOrder = useCallback(() => {
-    setColumnOrder([]);
+    const resetTo = defaultColumnOrder && defaultColumnOrder.length > 0 ? defaultColumnOrder : [];
+    setColumnOrder(resetTo);
     try {
-      localStorage.removeItem(`tablecraft-column-order-${tableId}`);
+      if (resetTo.length > 0) {
+        // Persist the defaultColumnOrder as the saved state so it survives reload
+        localStorage.setItem(`tablecraft-column-order-${tableId}`, JSON.stringify(resetTo));
+      } else {
+        localStorage.removeItem(`tablecraft-column-order-${tableId}`);
+      }
     } catch {
       // ignore
     }
-  }, [tableId]);
+  }, [tableId, defaultColumnOrder]);
 
   // ─── Row click handler ───
   const handleRowClick = useCallback(

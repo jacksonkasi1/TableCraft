@@ -126,6 +126,8 @@ interface DataTableViewOptionsProps<TData> {
   size?: "sm" | "default" | "lg";
   tableId?: string;
   hiddenColumns?: string[];
+  /** Override the reset-column-order handler (e.g. to reset to a defaultColumnOrder). */
+  onResetColumnOrder?: () => void;
 }
 
 export function DataTableViewOptions<TData>({
@@ -134,6 +136,7 @@ export function DataTableViewOptions<TData>({
   size = "default",
   tableId,
   hiddenColumns,
+  onResetColumnOrder,
 }: DataTableViewOptionsProps<TData>) {
   const isLoading = table.options.meta?.isLoadingColumns ?? false;
 
@@ -224,13 +227,18 @@ export function DataTableViewOptions<TData>({
   );
 
   const resetColumnOrder = useCallback(() => {
+    if (onResetColumnOrder) {
+      // Delegate to parent — it handles defaultColumnOrder and localStorage correctly
+      onResetColumnOrder();
+      return;
+    }
     table.setColumnOrder([]);
     try {
       localStorage.removeItem(storageKey);
     } catch {
       // ignore
     }
-  }, [table, storageKey]);
+  }, [table, storageKey, onResetColumnOrder]);
 
   const getColumnLabel = useCallback(
     (column: Column<TData, unknown>): string => {
