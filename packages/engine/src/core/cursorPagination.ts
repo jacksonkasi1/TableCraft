@@ -89,27 +89,34 @@ export class CursorPaginationBuilder {
     if (cursor) {
       const decoded = decodeCursor(cursor);
       if (decoded && sortFields.length > 0) {
-        // Collect resolvable sort fields (skip any with missing column/value)
+        // Collect resolvable sort fields from base columns OR sqlExpressions
+        // (computed/subquery sort fields can participate in cursor continuation)
         const resolvable = sortFields
-          .map((s) => ({ s, col: columns[s.field] }))
-          .filter(({ s, col }) => col !== undefined && decoded[s.field] !== undefined);
+          .map((s) => {
+            const col = columns[s.field];
+            const expr = sqlExpressions?.get(s.field);
+            return { s, col, expr };
+          })
+          .filter(({ s, col, expr }) => (col !== undefined || expr !== undefined) && decoded[s.field] !== undefined);
 
         if (resolvable.length === 1) {
           // Single field — simple gt/lt
-          const { s, col } = resolvable[0];
+          const { s, col, expr } = resolvable[0];
+          const target = col ?? expr!;
           whereCondition = s.order === 'desc'
-            ? lt(col!, decoded[s.field])
-            : gt(col!, decoded[s.field]);
+            ? lt(target, decoded[s.field])
+            : gt(target, decoded[s.field]);
         } else if (resolvable.length > 1) {
           // Multi-field: build the lexicographic OR-expansion
           // Each "arm" of the OR is: (prefix equality conditions) AND (advance condition)
           const orArms: SQL[] = [];
 
           for (let i = 0; i < resolvable.length; i++) {
-            const { s, col } = resolvable[i];
+            const { s, col, expr } = resolvable[i];
+            const target = col ?? expr!;
             const advance: SQL = s.order === 'desc'
-              ? lt(col!, decoded[s.field])
-              : gt(col!, decoded[s.field]);
+              ? lt(target, decoded[s.field])
+              : gt(target, decoded[s.field]);
 
             if (i === 0) {
               // First arm: just the advance condition on col1
@@ -118,7 +125,7 @@ export class CursorPaginationBuilder {
               // Remaining arms: prefix equality on cols 0..i-1, advance on col i
               const prefixEqs: SQL[] = resolvable
                 .slice(0, i)
-                .map(({ s: ps, col: pc }) => eq(pc!, decoded[ps.field]));
+                .map(({ s: ps, col: pc, expr: pe }) => eq(pc ?? pe!, decoded[ps.field]));
               orArms.push(and(...prefixEqs, advance) as SQL);
             }
           }

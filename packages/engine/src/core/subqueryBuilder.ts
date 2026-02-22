@@ -63,10 +63,7 @@ export class SubqueryBuilder {
         // Throw a clear DialectError rather than silently generating invalid SQL
         // that will crash at query-execution time with a cryptic DB error.
         if (dialect && dialect !== 'unknown' && dialect !== 'postgresql') {
-          throw new DialectError(
-            `subquery type 'first' (alias: '${sub.alias}')`,
-            dialect
-          );
+          throw new DialectError('first', dialect);
         }
         return sql`(SELECT row_to_json(t) FROM (SELECT * FROM ${subTable} WHERE ${filterSql} LIMIT 1) t)`;
       }

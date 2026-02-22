@@ -87,13 +87,13 @@ describe('SubqueryBuilder', () => {
       expect(() => builder.buildSubqueries(firstOnlyConfig, 'sqlite')).toThrow(DialectError);
     });
 
-    it("should include the alias name in the DialectError message", () => {
+    it("should throw DialectError with 'first' feature name and dialect", () => {
       try {
         builder.buildSubqueries(firstOnlyConfig, 'mysql');
         expect.fail('should have thrown');
       } catch (err) {
         expect(err).toBeInstanceOf(DialectError);
-        expect((err as DialectError).message).toContain('lastOrder');
+        expect((err as DialectError).message).toContain('first');
         expect((err as DialectError).message).toContain('mysql');
       }
     });

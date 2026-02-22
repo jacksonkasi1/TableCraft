@@ -210,5 +210,25 @@ describe('validateInput', () => {
         ],
       }, configWithFirstSubquery)).toThrow(FieldError);
     });
+
+    it("should reject sort by subquery alias that exists in subqueries but not in columns", () => {
+      // Edge case: developer defines subquery but forgets to add column entry
+      const configWithMissingColumn: TableConfig = {
+        name: 'orders',
+        base: 'orders',
+        columns: [
+          { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+          // NOTE: 'orphanSubquery' is NOT in columns — only in subqueries
+        ],
+        subqueries: [
+          { alias: 'orphanSubquery', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },
+        ],
+      };
+
+      // validateInput only checks config.columns, so orphanSubquery is unknown
+      expect(() => validateInput({
+        sort: [{ field: 'orphanSubquery', order: 'asc' }],
+      }, configWithMissingColumn)).toThrow(FieldError);
+    });
   });
 });

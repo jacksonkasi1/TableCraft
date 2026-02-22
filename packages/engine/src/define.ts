@@ -747,12 +747,15 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     filter?: string
   ): this {
     if (!this._config.subqueries) this._config.subqueries = [];
-    this._config.subqueries.push({
-      alias,
-      table: getTableName(table),
-      type,
-      filter,
-    });
+
+    // Dedupe subquery entries by alias — replace if exists
+    const entry = { alias, table: getTableName(table), type, filter };
+    const existingIdx = this._config.subqueries.findIndex(e => e.alias === alias);
+    if (existingIdx >= 0) {
+      this._config.subqueries[existingIdx] = entry;
+    } else {
+      this._config.subqueries.push(entry);
+    }
 
     // Register as a computed column so sorting/filtering validation passes.
     // The actual SQL expression is built at query-time by SubqueryBuilder and

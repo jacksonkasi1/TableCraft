@@ -99,7 +99,7 @@ describe('CursorPaginationBuilder.build()', () => {
       { field: 'name', order: 'asc' },
       { field: 'id', order: 'asc' },
     ]);
-    // Both fields present in decoded cursor → compound AND condition
+    // Both fields present in decoded cursor → compound OR-expansion condition
     expect(result.whereCondition).toBeDefined();
   });
 
@@ -244,6 +244,39 @@ describe('CursorPaginationBuilder.build()', () => {
       sqlExpressions
     );
     expect(result.orderBy).toHaveLength(1);
+  });
+
+  it('cursor WHERE uses sqlExpressions-backed sort field for continuation', () => {
+    // Verify that computed/subquery sort fields participate in cursor WHERE,
+    // not just base columns
+    const configWithComputed: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+        { name: 'ordersCount', type: 'number', sortable: true, hidden: false, filterable: false, computed: true },
+      ],
+    };
+    const ordersCountExpr = sql`(SELECT count(*) FROM orders WHERE orders.user_id = users.id)`;
+    const sqlExpressions = new Map([['ordersCount', ordersCountExpr]]);
+
+    const cursor = encodeCursor({ ordersCount: 5 });
+    const result = builder.build(
+      configWithComputed,
+      cursor,
+      10,
+      [{ field: 'ordersCount', order: 'asc' }],
+      sqlExpressions
+    );
+
+    expect(result.whereCondition).toBeDefined();
+    const { PgDialect } = require('drizzle-orm/pg-core');
+    const dialect = new PgDialect();
+    const built = dialect.sqlToQuery(result.whereCondition!);
+
+    // The WHERE should reference the subquery expression with '>' for ASC
+    expect(built.sql).toContain('>');
+    expect(built.params).toContain(5);
   });
 
   it('should throw FieldError for unknown sort field not in columns or sqlExpressions', () => {

@@ -83,7 +83,7 @@ The `'first'` subquery type uses PostgreSQL's `row_to_json()` function, which re
 
 TableCraft prevents this by marking `'first'` subquery columns as `sortable: false` and rejecting the request with a `FieldError` (HTTP 400) before the query is sent:
 
-```
+```text
 GET /orders?sort=firstItem  →  400 Bad Request
 { "error": "Field 'firstItem' is not sortable. ..." }
 ```
@@ -94,7 +94,7 @@ Use `'count'` (integer) or `'exists'` (boolean) if you need a sortable subquery 
 
 `'first'` mode relies on `row_to_json()`, which is **PostgreSQL-only**. If the engine detects a non-PostgreSQL dialect (MySQL, SQLite), it throws a `DialectError` (HTTP 400) instead of sending a query that will fail at the database level:
 
-```
+```text
 DialectError: 'first' is not supported on mysql. Use PostgreSQL or write a raw query.
 ```
 
