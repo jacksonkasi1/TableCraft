@@ -1,7 +1,7 @@
 import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
 import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search } from "lucide-react";
-import type { TableConfig, ExportConfig, ExportableData } from "./types";
+import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement } from "./types";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./export";
 import {
@@ -57,7 +57,15 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   columnMapping?: Record<string, string>;
   customToolbarContent?: React.ReactNode;
   startToolbarContent?: React.ReactNode;
-  startToolbarPlacement?: 'before-search' | 'after-search' | 'after-date';
+  /**
+   * Controls where `startToolbarContent` is rendered in the left toolbar area.
+   * - `'before-search'` — before the search input
+   * - `'after-search'`  — after search, before the date filter. 
+   *                       NOTE: If `enableSearch` is false, this renders in the same visual position as `'before-search'`.
+   * - `'after-date'`    — after the date filter (default)
+   * @default 'after-date'
+   */
+  startToolbarPlacement?: StartToolbarPlacement;
   hiddenColumns?: string[];
 }
 

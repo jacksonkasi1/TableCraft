@@ -34,9 +34,6 @@ function toDbValue(value: unknown, operator?: Operator): unknown {
   }
   if (Array.isArray(value)) {
     return value.map(v => {
-      if (operator && STRING_OPERATORS.includes(operator)) {
-        return v;
-      }
       return isDateString(v) ? new Date(v) : v;
     });
   }
