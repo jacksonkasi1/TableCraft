@@ -163,7 +163,7 @@ export class CursorPaginationBuilder {
       const sortFields = sort?.length ? sort : [{ field: 'id', order: 'asc' as const }];
       const cursorValues: Record<string, unknown> = {};
       for (const s of sortFields) {
-        if (lastRow[s.field] !== undefined) {
+        if (lastRow[s.field] != null) {
           cursorValues[s.field] = lastRow[s.field];
         }
       }
