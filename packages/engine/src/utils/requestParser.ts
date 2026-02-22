@@ -184,7 +184,7 @@ function normalizeFilterValue(value: unknown, operator: Operator): unknown {
       return value.slice(0, MAX_ARRAY_LENGTH);
     }
     // Single value (e.g. ?filter[status][in]=processing) — wrap to array
-    if (value !== null && value !== undefined) {
+    if (value !== undefined) {
       return [value];
     }
     return [];

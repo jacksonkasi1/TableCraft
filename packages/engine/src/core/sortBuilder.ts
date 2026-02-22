@@ -64,8 +64,11 @@ export class SortBuilder {
              col = getTableColumns(joinedTable)[colName];
          }
       } else {
-         // 2. Try the base table first
-         col = baseColumns[dbFieldName];
+         // 2. Try the base table first, unless it's a join field to prevent shadowing
+         const isJoinField = isJoinColumnInJoins(config.joins ?? [], sp.field);
+         if (!isJoinField) {
+           col = baseColumns[dbFieldName];
+         }
       }
 
       if (col) {
@@ -153,4 +156,16 @@ function collectSortableJoinFields(joins: JoinConfig[], out: Set<string>): void 
       collectSortableJoinFields(join.joins, out);
     }
   }
+}
+
+function isJoinColumnInJoins(joins: JoinConfig[], fieldName: string): boolean {
+  for (const join of joins) {
+    if (join.columns?.some(c => c.name === fieldName)) {
+      return true;
+    }
+    if (join.joins && isJoinColumnInJoins(join.joins, fieldName)) {
+      return true;
+    }
+  }
+  return false;
 }

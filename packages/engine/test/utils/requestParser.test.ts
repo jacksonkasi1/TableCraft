@@ -158,10 +158,10 @@ describe('parseRequest', () => {
 
     it('should handle "null" string in "in" operator', () => {
       const result = parseRequest({ 'filter[status][in]': 'null' });
-      // coerceValue('null') → null, normalizeFilterValue: null is null → []
-      expect(result.filters!.status).toEqual({
+      // coerceValue('null') → null, normalizeFilterValue: null → [null]
+      expect(result.filters?.['status']).toEqual({
         operator: 'in',
-        value: [],
+        value: [null],
       });
     });
 
@@ -307,7 +307,7 @@ describe('parseRequest', () => {
       expect(({} as any).attack).toBeUndefined();
       // The filter itself should exist as a normal property
       if (result.filters) {
-        expect(result.filters['__proto__']).toBeDefined();
+        expect(Object.prototype.hasOwnProperty.call(result.filters, '__proto__')).toBe(true);
       }
     });
 
