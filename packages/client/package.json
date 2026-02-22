@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/client",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Type-safe frontend client for TableCraft APIs",
   "type": "module",
   "main": "dist/index.js",

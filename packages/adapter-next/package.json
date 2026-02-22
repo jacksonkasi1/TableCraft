@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/adapter-next",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Next.js App Router adapter for TableCraft",
   "type": "module",
   "main": "dist/index.js",
