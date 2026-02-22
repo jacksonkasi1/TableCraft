@@ -2,7 +2,21 @@ import {
   Table,
   SQL,
   getTableName,
+  eq, ne, gt, gte, lt, lte,
+  like, ilike, inArray, notInArray,
+  between, notBetween, isNull, isNotNull,
+  exists, notExists, and, or, not, sql
 } from 'drizzle-orm';
+
+export const drizzleOperators = {
+  eq, ne, gt, gte, lt, lte,
+  like, ilike, inArray, notInArray,
+  between, notBetween, isNull, isNotNull,
+  exists, notExists, and, or, not, sql
+};
+
+// ** import types
+import { EngineParams, EngineContext } from './types/engine';
 import {
   TableConfig,
   ColumnConfig,
@@ -39,11 +53,16 @@ export interface QuickOptions<T extends Table = Table> {
 // ── Runtime Extensions ──
 // These hold SQL objects and functions that can't be serialized into TableConfig.
 
-export interface RuntimeExtensions {
+export interface RuntimeExtensions<T extends Table = Table> {
   computedExpressions: Map<string, SQL>;
   transforms: Map<string, (value: unknown) => unknown>;
   rawSelects: Map<string, SQL>;
   rawWheres: SQL[];
+  dynamicWheres: ((
+    ctx: { query: EngineParams; context: EngineContext },
+    ops: typeof drizzleOperators,
+    table: T
+  ) => SQL | undefined | Promise<SQL | undefined>)[];
   rawJoins: SQL[];
   rawOrderBys: SQL[];
   ctes: Map<string, SQL>;
@@ -55,12 +74,13 @@ export interface RuntimeExtensions {
   };
 }
 
-function emptyExtensions(): RuntimeExtensions {
+function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
   return {
     computedExpressions: new Map(),
     transforms: new Map(),
     rawSelects: new Map(),
     rawWheres: [],
+    dynamicWheres: [],
     rawJoins: [],
     rawOrderBys: [],
     ctes: new Map(),
@@ -73,7 +93,7 @@ function emptyExtensions(): RuntimeExtensions {
 export class TableDefinitionBuilder<T extends Table = Table> {
   _config: TableConfig;
   _table: T;
-  _ext: RuntimeExtensions;
+  _ext: RuntimeExtensions<T>;
 
   constructor(table: T, config: TableConfig) {
     this._table = table;
@@ -409,7 +429,20 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   // ──── Backend Conditions ────
 
-  where(condition: { field: string; op: Operator; value: unknown }): this {
+  where(
+    condition:
+      | { field: string; op: Operator; value: unknown }
+      | ((
+          ctx: { query: EngineParams; context: EngineContext },
+          ops: typeof drizzleOperators,
+          table: T
+        ) => SQL | undefined | Promise<SQL | undefined>)
+  ): this {
+    if (typeof condition === 'function') {
+      this._ext.dynamicWheres.push(condition);
+      return this;
+    }
+
     if (!this._config.backendConditions) this._config.backendConditions = [];
     this._config.backendConditions.push({
       field: condition.field,

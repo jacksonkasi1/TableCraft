@@ -88,7 +88,7 @@ describe('createTableCraftAdapter with axios', () => {
     expect(mockAxios.request).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: 'Bearer token123',
+          authorization: 'Bearer token123',
         }),
       })
     );
@@ -240,7 +240,7 @@ describe('createTableCraftAdapter with axios', () => {
     expect(mockAxios.request).toHaveBeenLastCalledWith(
       expect.objectContaining({
         url: expect.stringContaining('export=csv'),
-        headers: expect.objectContaining({ Authorization: 'Bearer test' }),
+        headers: expect.objectContaining({ authorization: 'Bearer test' }),
       })
     );
   });

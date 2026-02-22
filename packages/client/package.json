@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/client",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Type-safe frontend client for TableCraft APIs",
   "type": "module",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "axios": "^1.7.0"
+    "axios": "^1.13.0"
   },
   "peerDependenciesMeta": {
     "axios": {
@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.13",
-    "axios": "^1.7.0",
+    "axios": "^1.13.0",
     "typescript": "^5.9.3",
     "vitest": "^2.1.8"
   },

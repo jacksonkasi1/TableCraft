@@ -66,4 +66,68 @@ describe('validateInput', () => {
       sort: [{ field: 'active', order: 'asc' }],
     }, config)).toThrow(FieldError);
   });
+
+  describe('sort validation with join columns', () => {
+    const configWithJoin: TableConfig = {
+      name: 'orders',
+      base: 'orders',
+      columns: [
+        { name: 'id', type: 'number', hidden: false, sortable: true, filterable: true },
+        { name: 'status', type: 'string', hidden: false, sortable: true, filterable: true },
+      ],
+      joins: [{
+        table: 'users',
+        type: 'left',
+        on: 'orders.user_id = users.id',
+        columns: [
+          { name: 'email', type: 'string', hidden: false, sortable: true, filterable: true },
+          { name: 'role', type: 'string', hidden: false, sortable: false, filterable: true },
+        ],
+      }],
+    };
+
+    it('should allow sorting by a join column marked sortable', () => {
+      expect(() => validateInput({
+        sort: [{ field: 'email', order: 'asc' }],
+      }, configWithJoin)).not.toThrow();
+    });
+
+    it('should reject sorting by a join column not marked sortable', () => {
+      expect(() => validateInput({
+        sort: [{ field: 'role', order: 'asc' }],
+      }, configWithJoin)).toThrow(FieldError);
+    });
+
+    it('should allow sorting by a mix of base and join columns', () => {
+      expect(() => validateInput({
+        sort: [
+          { field: 'status', order: 'asc' },
+          { field: 'email', order: 'desc' },
+        ],
+      }, configWithJoin)).not.toThrow();
+    });
+
+    it('should allow sorting by nested join columns', () => {
+      const configNested: TableConfig = {
+        ...configWithJoin,
+        joins: [{
+          table: 'users',
+          type: 'left',
+          on: 'orders.user_id = users.id',
+          columns: [],
+          joins: [{
+            table: 'profiles',
+            type: 'left',
+            on: 'users.id = profiles.user_id',
+            columns: [
+              { name: 'avatar', type: 'string', hidden: false, sortable: true, filterable: false },
+            ],
+          }],
+        }],
+      };
+      expect(() => validateInput({
+        sort: [{ field: 'avatar', order: 'asc' }],
+      }, configNested)).not.toThrow();
+    });
+  });
 });

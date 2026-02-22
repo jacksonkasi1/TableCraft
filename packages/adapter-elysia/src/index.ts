@@ -8,6 +8,7 @@ import {
   TableConfig,
   ConfigInput,
   EngineContext,
+  TableCraftError,
 } from '@tablecraft/engine';
 
 export interface ElysiaAdapterOptions {
@@ -42,70 +43,88 @@ export function createElysiaPlugin(options: ElysiaAdapterOptions) {
   return new Elysia({ prefix: '/api/data' }).get(
     '/:table/_meta',
     async ({ params, request, store, set }) => {
-      const tableName = params.table;
+      try {
+        const tableName = params.table;
 
-      const engine = engines[tableName];
-      if (!engine) {
-        set.status = 404;
-        return { error: `Unknown resource '${tableName}'` };
+        const engine = engines[tableName];
+        if (!engine) {
+          set.status = 404;
+          return { error: `Unknown resource '${tableName}'` };
+        }
+
+        const context = options.getContext
+          ? await options.getContext({ request, store: store as Record<string, unknown> })
+          : {};
+        return engine.getMetadata(context);
+      } catch (err: unknown) {
+        if (err instanceof TableCraftError) {
+          set.status = err.statusCode;
+          return { error: err.message };
+        }
+        set.status = 500;
+        return { error: err instanceof Error ? err.message : 'Internal server error' };
       }
-
-      const context = options.getContext
-        ? await options.getContext({ request, store: store as Record<string, unknown> })
-        : {};
-      return engine.getMetadata(context);
     }
   ).get(
     '/:table',
     async ({ params, request, store, set }) => {
-      const tableName = params.table;
+      try {
+        const tableName = params.table;
 
-      const engine = engines[tableName];
-      if (!engine) {
-        set.status = 404;
-        return { error: `Unknown resource '${tableName}'` };
-      }
-
-      const config = engine.getConfig();
-
-      const context = options.getContext
-        ? await options.getContext({ request, store: store as Record<string, unknown> })
-        : {};
-
-      const hasAccess = options.checkAccess
-        ? await options.checkAccess(config, context, request)
-        : defaultCheckAccess(config, context);
-
-      if (!hasAccess) {
-        set.status = 403;
-        return { error: 'Forbidden' };
-      }
-
-      const url = new URL(request.url);
-      const reqParams = parseRequest(url.searchParams);
-
-      // Export
-      if (reqParams.export) {
-        const allowed = config.export?.formats ?? ['csv', 'json'];
-        const enabled = config.export?.enabled ?? true;
-
-        if (!enabled || !allowed.includes(reqParams.export)) {
-          set.status = 400;
-          return { error: `Export format '${reqParams.export}' not allowed` };
+        const engine = engines[tableName];
+        if (!engine) {
+          set.status = 404;
+          return { error: `Unknown resource '${tableName}'` };
         }
 
-        const body = await engine.exportData(reqParams, context);
-        const { contentType, filename } = getExportMeta(tableName, reqParams.export);
+        const config = engine.getConfig();
 
-        set.headers['Content-Type'] = contentType;
-        set.headers['Content-Disposition'] = `attachment; filename="${filename}"`;
-        return body;
+        const context = options.getContext
+          ? await options.getContext({ request, store: store as Record<string, unknown> })
+          : {};
+
+        const hasAccess = options.checkAccess
+          ? await options.checkAccess(config, context, request)
+          : defaultCheckAccess(config, context);
+
+        if (!hasAccess) {
+          set.status = 403;
+          return { error: 'Forbidden' };
+        }
+
+        const url = new URL(request.url);
+        const reqParams = parseRequest(url.searchParams);
+
+        // Export
+        if (reqParams.export) {
+          const allowed = config.export?.formats ?? ['csv', 'json'];
+          const enabled = config.export?.enabled ?? true;
+
+          if (!enabled || !allowed.includes(reqParams.export)) {
+            set.status = 400;
+            return { error: `Export format '${reqParams.export}' not allowed` };
+          }
+
+          const body = await engine.exportData(reqParams, context);
+          const { contentType, filename } = getExportMeta(tableName, reqParams.export);
+
+          set.headers['Content-Type'] = contentType;
+          set.headers['Content-Disposition'] = `attachment; filename="${filename}"`;
+          return body;
+        }
+
+        // Query
+        const result = await engine.query(reqParams, context);
+        set.headers['X-Total-Count'] = String(result.meta.total);
+        return result;
+      } catch (err: unknown) {
+        if (err instanceof TableCraftError) {
+          set.status = err.statusCode;
+          return { error: err.message };
+        }
+        set.status = 500;
+        return { error: err instanceof Error ? err.message : 'Internal server error' };
       }
-
-      // Query
-      const result = await engine.query(reqParams, context);
-      set.headers['X-Total-Count'] = String(result.meta.total);
-      return result;
     }
   );
 }
@@ -128,40 +147,49 @@ export function createElysiaHandler(options: {
   const engine = createTableEngine({ db, schema, config });
 
   return async ({ request, store, set }: { request: Request; store: Record<string, unknown>; set: any }) => {
-    const context = getContext
-      ? await getContext({ request, store })
-      : {};
+    try {
+      const context = getContext
+        ? await getContext({ request, store })
+        : {};
 
-    const actualConfig = engine.getConfig();
+      const actualConfig = engine.getConfig();
 
-    const hasAccess = checkAccess
-      ? await checkAccess(actualConfig, context, request)
-      : defaultCheckAccess(actualConfig, context);
+      const hasAccess = checkAccess
+        ? await checkAccess(actualConfig, context, request)
+        : defaultCheckAccess(actualConfig, context);
 
-    if (!hasAccess) {
-      set.status = 403;
-      return { error: 'Forbidden' };
-    }
-
-    const url = new URL(request.url);
-    const params = parseRequest(url.searchParams);
-
-    if (params.export) {
-      const allowed = actualConfig.export?.formats ?? ['csv', 'json'];
-      if (!(actualConfig.export?.enabled ?? true) || !allowed.includes(params.export)) {
-        set.status = 400;
-        return { error: `Export format '${params.export}' not allowed` };
+      if (!hasAccess) {
+        set.status = 403;
+        return { error: 'Forbidden' };
       }
 
-      const body = await engine.exportData(params, context);
-      const { contentType, filename } = getExportMeta(actualConfig.name, params.export);
-      set.headers['Content-Type'] = contentType;
-      set.headers['Content-Disposition'] = `attachment; filename="${filename}"`;
-      return body;
-    }
+      const url = new URL(request.url);
+      const params = parseRequest(url.searchParams);
 
-    const result = await engine.query(params, context);
-    set.headers['X-Total-Count'] = String(result.meta.total);
-    return result;
+      if (params.export) {
+        const allowed = actualConfig.export?.formats ?? ['csv', 'json'];
+        if (!(actualConfig.export?.enabled ?? true) || !allowed.includes(params.export)) {
+          set.status = 400;
+          return { error: `Export format '${params.export}' not allowed` };
+        }
+
+        const body = await engine.exportData(params, context);
+        const { contentType, filename } = getExportMeta(actualConfig.name, params.export);
+        set.headers['Content-Type'] = contentType;
+        set.headers['Content-Disposition'] = `attachment; filename="${filename}"`;
+        return body;
+      }
+
+      const result = await engine.query(params, context);
+      set.headers['X-Total-Count'] = String(result.meta.total);
+      return result;
+    } catch (err: unknown) {
+      if (err instanceof TableCraftError) {
+        set.status = err.statusCode;
+        return { error: err.message };
+      }
+      set.status = 500;
+      return { error: err instanceof Error ? err.message : 'Internal server error' };
+    }
   };
 }

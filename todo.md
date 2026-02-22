@@ -286,11 +286,61 @@
 
 ---
 
-*Last updated: 2026-02-18*
+*Last updated: 2026-02-21*
 
 ---
 
 ## 📝 Changelog
+
+### 2026-02-21 — Engine Bug Fix Session
+
+**Bugs fixed:**
+
+- **FilterBuilder rewrite** (`packages/engine/src/core/filterBuilder.ts`)
+  - Fixed name-clash bug where base table columns shadowed join columns
+  - Added recursive join column resolution, `buildStaticFilters` join support, warning logs
+  - 27 comprehensive tests added
+
+- **SortBuilder: join + computed column support** (`packages/engine/src/core/sortBuilder.ts`)
+  - Join columns (e.g. `email`, `role` from `.join()`) were silently dropped from ORDER BY
+  - Computed columns (e.g. `vatAmount` from `.computed()`) were silently dropped from ORDER BY
+  - Added `collectSortableJoinFields`, `resolveJoinColumn`, SQL expression fallback
+  - 19 tests (6 base + 6 computed + 7 join)
+
+- **InputValidator: join column sort validation** (`packages/engine/src/core/inputValidator.ts`)
+  - `validateSortFields` rejected valid join columns like `email` → threw FieldError → caused 500
+  - Added `collectSortableJoinFields` (recursive, matches FilterBuilder pattern)
+  - 12 tests (8 original + 4 new)
+
+- **engine.ts: SQL expressions for sort** (`packages/engine/src/engine.ts`)
+  - All 4 `sortBuilder.buildSort()` callsites now pass `computedExpressions + rawSelects` map
+
+- **Adapter-Hono: missing error handling** (`packages/adapter-hono/src/index.ts`)
+  - `createHonoApp` `/:table` GET handler had no try/catch → engine errors surfaced as raw 500
+  - Now returns proper JSON with correct HTTP status from `TableCraftError.statusCode`
+
+- **Frontend: role filter value mismatch** (`apps/vite-web-example/src/pages/orders2-page.tsx`)
+  - ROLE_OPTIONS had `'user'` and `'moderator'` — DB only has `'admin'` and `'member'`
+  - Fixed to `'admin'`, `'member'`, `'viewer'`
+
+- **Frontend: orders2-page deletedAt** — fixed isNotNull filter
+- **Frontend: users-page isActive** — fixed field name
+- **Codegen: generator.ts** — customFilters, enum const objects, staticFilters typed const
+- **tablecraft-adapter.ts** — CustomFilterEntry extended with isNull/isNotNull
+
+**Remaining known issues (from this session):**
+
+- [ ] `viewer` role is in schema comments but never seeded — dropdown option may return empty
+- [ ] `validateSelectFields` likely needs same join column support for `?select=email`
+- [ ] `fieldSelector` has no join column awareness
+- [ ] SortBuilder/FilterBuilder/InputValidator each duplicate join-collection logic — extract shared util
+- [ ] Docs: add simple/medium/complex examples showing the same DX at each level
+- [ ] Docs: document how joins expose columns for sort/filter/select
+- [ ] Docs: document customFilters API, isNull/isNotNull operators
+- [ ] Docs: document request parser URL format and error code mapping
+- [ ] Consider auto-generating dropdown options from schema enums
+- [ ] Consider `getDistinctValues(column)` engine method for dynamic filter options
+- [ ] Add integration tests with actual SQL against test DB
 
 ### 2026-02-18
 - ✅ Created `docs/client-sdk.md` with complete API reference
