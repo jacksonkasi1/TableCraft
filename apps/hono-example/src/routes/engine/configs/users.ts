@@ -13,7 +13,10 @@ export const users = defineTable(s.users)
   // Add a dynamic custom filter
   .where(async (ctx, { eq, or, ilike }, table) => {
     // The query parser coerces 'true' string to boolean true
-    const isSpecial = ctx.query.filters?.is_special?.value === true;
+    // Note: filters[field] can be FilterParam | FilterParam[]
+    const filter = ctx.query.filters?.is_special;
+    const filterParam = Array.isArray(filter) ? filter[0] : filter;
+    const isSpecial = filterParam?.value === true;
     if (isSpecial) {
       // Find admins OR anyone whose email has "demo"
       return or(
