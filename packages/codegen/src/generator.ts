@@ -56,10 +56,15 @@ function generateEnumConst(
   options: Array<{ value: string | number | boolean }>
 ): string {
   const seenKeys = new Set<string>();
+  let fallbackIndex = 1;
   const entries = options
     .map(o => {
       let key = String(o.value).replace(/[^a-zA-Z0-9_$]/g, '_');
-      if (/^\d/.test(key)) key = `_${key}`; // valid JS identifier
+      if (!key) {
+        key = `opt_${fallbackIndex++}`;
+      } else if (/^\d/.test(key)) {
+        key = `_${key}`; // valid JS identifier
+      }
       while (seenKeys.has(key)) {
         key += '_';
       }
@@ -85,30 +90,33 @@ function collectEnumConsts(
   columns: ColumnMeta[],
   filters: TableMetadata['filters']
 ): Array<{ constName: string; options: Array<{ value: string | number | boolean }> }> {
-  const seen = new Set<string>();
-  const result: Array<{ constName: string; options: Array<{ value: string | number | boolean }> }> = [];
+  const enumMap = new Map<string, Array<{ value: string | number | boolean }>>();
+
+  // Process filters first, they take precedence for options
+  for (const f of filters) {
+    if (f.options && f.options.length > 0) {
+      const name = enumConstName(tableName, f.field);
+      enumMap.set(name, [...f.options]);
+    }
+  }
 
   for (const col of columns) {
     if (col.options && col.options.length > 0) {
       const name = enumConstName(tableName, col.name);
-      if (!seen.has(name)) {
-        seen.add(name);
-        result.push({ constName: name, options: col.options });
+      const existing = enumMap.get(name) || [];
+      // Merge, keeping existing (filter) options if they exist
+      const seenValues = new Set(existing.map(o => o.value));
+      for (const opt of col.options) {
+        if (!seenValues.has(opt.value)) {
+          existing.push(opt);
+          seenValues.add(opt.value);
+        }
       }
+      enumMap.set(name, existing);
     }
   }
 
-  for (const f of filters) {
-    if (f.options && f.options.length > 0) {
-      const name = enumConstName(tableName, f.field);
-      if (!seen.has(name)) {
-        seen.add(name);
-        result.push({ constName: name, options: f.options });
-      }
-    }
-  }
-
-  return result;
+  return Array.from(enumMap.entries()).map(([constName, options]) => ({ constName, options }));
 }
 
 function generateRowInterface(

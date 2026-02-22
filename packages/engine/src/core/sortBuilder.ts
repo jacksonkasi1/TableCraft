@@ -59,7 +59,16 @@ export class SortBuilder {
       // 1. Dot-syntax: "users.email" → explicit table reference
       if (dbFieldName.includes('.')) {
          const [tableName, colName] = dbFieldName.split('.');
-         const joinedTable = this.schema[tableName] as Table;
+         // Find actual table name if tableName is an alias
+         let actualTableName = tableName;
+         if (config.joins) {
+           const aliasedJoin = config.joins.find(j => j.alias === tableName);
+           if (aliasedJoin) {
+             actualTableName = aliasedJoin.table;
+           }
+         }
+         
+         const joinedTable = this.schema[actualTableName] as Table | undefined;
          if (joinedTable) {
              col = getTableColumns(joinedTable)[colName];
          }

@@ -13,7 +13,7 @@ export interface SortParam {
 }
 
 export interface EngineParams {
-  filters?: Record<string, FilterParam>;
+  filters?: Record<string, FilterParam | FilterParam[]>;
   search?: string;
   sort?: SortParam[];
   page?: number;

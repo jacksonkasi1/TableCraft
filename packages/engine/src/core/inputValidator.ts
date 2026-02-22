@@ -36,7 +36,7 @@ function validateFilterValues(params: EngineParams, config: TableConfig): void {
     columnMap.set(col.name, col);
   }
 
-  for (const [field, filter] of Object.entries(params.filters)) {
+  for (const [field, filterOrFilters] of Object.entries(params.filters)) {
     const col = columnMap.get(field);
 
     if (!col) {
@@ -50,9 +50,11 @@ function validateFilterValues(params: EngineParams, config: TableConfig): void {
       throw new FieldError(field, 'is not filterable');
     }
 
-    if (filter.operator === 'isNull' || filter.operator === 'isNotNull') continue;
-
-    validateValueType(field, col.type, filter);
+    const filters = Array.isArray(filterOrFilters) ? filterOrFilters : [filterOrFilters];
+    for (const filter of filters) {
+      if (filter.operator === 'isNull' || filter.operator === 'isNotNull') continue;
+      validateValueType(field, col.type, filter);
+    }
   }
 }
 

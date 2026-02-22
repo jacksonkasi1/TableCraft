@@ -91,37 +91,41 @@ export function useUrlState<T>(
 
   const lastSetValue = useRef<T>(defaultValue);
 
-  const serialize =
+  const serialize = useCallback(
     options.serialize ||
-    ((value: T) =>
-      typeof value === "object" ? JSON.stringify(value) : String(value));
+      ((value: T) =>
+        typeof value === "object" ? JSON.stringify(value) : String(value)),
+    [options.serialize]
+  );
 
-  const deserialize =
+  const deserialize = useCallback(
     options.deserialize ||
-    ((value: string) => {
-      try {
-        if (typeof defaultValue === "number") {
-          const num = Number(value);
-          if (Number.isNaN(num)) return defaultValue;
-          return num as unknown as T;
-        }
-        if (typeof defaultValue === "boolean") {
-          return (value === "true") as unknown as T;
-        }
-        if (typeof defaultValue === "object") {
-          try {
-            const parsed = JSON.parse(value) as T;
-            if (parsed && typeof parsed === "object") return parsed;
-            return defaultValue;
-          } catch {
-            return defaultValue;
+      ((value: string) => {
+        try {
+          if (typeof defaultValue === "number") {
+            const num = Number(value);
+            if (Number.isNaN(num)) return defaultValue;
+            return num as unknown as T;
           }
+          if (typeof defaultValue === "boolean") {
+            return (value === "true") as unknown as T;
+          }
+          if (typeof defaultValue === "object") {
+            try {
+              const parsed = JSON.parse(value) as T;
+              if (parsed && typeof parsed === "object") return parsed;
+              return defaultValue;
+            } catch {
+              return defaultValue;
+            }
+          }
+          return value as unknown as T;
+        } catch {
+          return defaultValue;
         }
-        return value as unknown as T;
-      } catch {
-        return defaultValue;
-      }
-    });
+      }),
+    [options.deserialize, defaultValue]
+  );
 
   const getValueFromUrl = useCallback(() => {
     if (!enabled) return defaultValue;

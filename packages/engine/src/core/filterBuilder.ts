@@ -27,7 +27,7 @@ export class FilterBuilder {
    */
   buildFilters(
     config: TableConfig,
-    params: Record<string, FilterParam>
+    params: Record<string, FilterParam | FilterParam[]>
   ): SQL | undefined {
     if (!params || Object.keys(params).length === 0) {
       return undefined;
@@ -62,14 +62,20 @@ export class FilterBuilder {
       collectFilterableJoinFields(config.joins, filterableFields);
     }
 
+    // Determine if fields are join columns by pre-computing a Set
+    const joinFields = new Set<string>();
+    if (config.joins) {
+      collectFilterableJoinFields(config.joins, joinFields);
+    }
+
     const conditions: SQL[] = [];
 
-    for (const [field, param] of Object.entries(params)) {
+    for (const [field, paramOrParams] of Object.entries(params)) {
       // Security: reject fields not in the whitelist
       if (!filterableFields.has(field)) continue;
 
-      // Determine whether this field is a join column
-      const isJoinField = isJoinColumn(config, field);
+      // Determine whether this field is a join column using the Set
+      const isJoinField = joinFields.has(field);
 
       // Resolve the column — could be on the base table or a joined table.
       // Pass isJoinField so that base-table columns can never shadow join columns.
@@ -80,16 +86,19 @@ export class FilterBuilder {
       }
 
       const { column: col } = resolved;
+      const paramsList = Array.isArray(paramOrParams) ? paramOrParams : [paramOrParams];
 
-      // Check if value is a date preset
-      if (isDatePreset(param.value)) {
-        const presetCondition = buildDatePresetCondition(col, param.value);
-        if (presetCondition) conditions.push(presetCondition);
-        continue;
+      for (const param of paramsList) {
+        // Check if value is a date preset
+        if (isDatePreset(param.value)) {
+          const presetCondition = buildDatePresetCondition(col, param.value);
+          if (presetCondition) conditions.push(presetCondition);
+          continue;
+        }
+
+        const condition = applyOperator(param.operator, col, param.value);
+        if (condition) conditions.push(condition);
       }
-
-      const condition = applyOperator(param.operator, col, param.value);
-      if (condition) conditions.push(condition);
     }
 
     return conditions.length > 0 ? and(...conditions) : undefined;
@@ -111,7 +120,7 @@ export class FilterBuilder {
     for (const filter of config.filters) {
       if (filter.type !== 'static' || filter.value === undefined) continue;
 
-      const isJoinField = isJoinColumn(config, filter.field);
+    const isJoinField = isJoinColumn(config, filter.field);
       const resolved = this.resolveColumn(config, baseColumns, filter.field, isJoinField);
 
       if (!resolved) {

@@ -83,6 +83,7 @@ export type {
   DataTableProps,
   ToolbarContext,
   TableContext,
+  StartToolbarPlacement,
   ColumnOverrides,
   ActionsRender,
 } from "./types";

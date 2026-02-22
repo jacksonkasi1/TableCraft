@@ -1,17 +1,16 @@
 // ** import core packages
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 
 // ** import table
-import { DataTable, hiddenColumns, useUrlState, defineColumnOverrides } from '@tablecraft/table';
+import { DataTable, hiddenColumns, useUrlState } from '@tablecraft/table';
 
 // ** import types
-import type { OrdersRow, OrdersColumn } from '../generated';
+import type { OrdersColumn, OrdersRow } from '../generated';
 
 // ** import generated adapter
 import { createOrdersAdapter } from '../generated';
 
 // ** import ui
-import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
 import {
   Select,
@@ -21,55 +20,9 @@ import {
   SelectValue,
 } from '../components/ui/select';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const ALL = '__all__';
-
-const STATUS_OPTIONS = [
-  { value: ALL, label: 'All statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'shipped', label: 'Shipped' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const ROLE_OPTIONS = [
-  { value: ALL, label: 'All roles' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'member', label: 'Member' },
-  { value: 'viewer', label: 'Viewer' },
-];
-
-const STATUS_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  pending:    'secondary',
-  processing: 'outline',
-  shipped:    'default',
-  delivered:  'default',
-  cancelled:  'destructive',
-};
-
-// ─── Column overrides ─────────────────────────────────────────────────────────
-
-const columnOverrides = defineColumnOverrides<OrdersRow>()({
-  status: ({ value }) => {
-    const v = String(value ?? '');
-    return (
-      <Badge variant={STATUS_BADGE_VARIANT[v] ?? 'secondary'}>
-        {v}
-      </Badge>
-    );
-  },
-  total: ({ value }) => (
-    <span className="font-mono">${Number(value ?? 0).toFixed(2)}</span>
-  ),
-  vatAmount: ({ value }) => (
-    <span className="font-mono text-muted-foreground">${Number(value ?? 0).toFixed(2)}</span>
-  ),
-  role: ({ value }) => (
-    <Badge variant="outline">{String(value ?? '')}</Badge>
-  ),
-});
+// ** import shared
+import { ALL, STATUS_OPTIONS, ROLE_OPTIONS, columnOverrides } from './shared/orders-shared';
+import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -77,25 +30,8 @@ export function Orders2Page() {
   // ── URL-synced filter state ──────────────────────────────────────────────
   const [status, setStatus]               = useUrlState<string>('status', '');
   const [role, setRole]                   = useUrlState<string>('role', '');
-  const [minTotal, setMinTotal]           = useUrlState<number>('min_total', 0);
+  const [minTotal, localTotal, setLocalTotal] = useDebouncedUrlNumber('min_total');
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
-
-  // ── Local state for debounce ─────────────────────────────────────────────
-  const [localTotal, setLocalTotal] = useState<string>(minTotal > 0 ? String(minTotal) : '');
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setMinTotal(Number(localTotal) || 0);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [localTotal, setMinTotal]);
-
-  useEffect(() => {
-    const currentNum = Number(localTotal) || 0;
-    if (currentNum !== minTotal) {
-      setLocalTotal(minTotal > 0 ? String(minTotal) : '');
-    }
-  }, [minTotal]); // localTotal is excluded intentionally to avoid sync loops
 
   // ── Adapter ──────────────────────────────────────────────────────────────
   const adapter = useMemo(() => createOrdersAdapter({
@@ -149,14 +85,14 @@ export function Orders2Page() {
       {/* Min total */}
       <div className="relative">
         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-          <input
-            type="number"
-            min={0}
-            placeholder="Min total"
-            value={localTotal}
-            onChange={(e) => setLocalTotal(e.target.value)}
-            className="h-8 w-[120px] rounded-md border border-input bg-background pl-6 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
+        <input
+          type="number"
+          min={0}
+          placeholder="Min total"
+          value={localTotal}
+          onChange={(e) => setLocalTotal(e.target.value)}
+          className="h-8 w-[120px] rounded-md border border-input bg-background pl-6 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
       </div>
 
       {/* Include deleted */}

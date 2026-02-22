@@ -1,17 +1,16 @@
 // ** import core packages
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 
 // ** import table
-import { DataTable, hiddenColumns, useUrlState, defineColumnOverrides } from '@tablecraft/table';
+import { DataTable, hiddenColumns, useUrlState } from '@tablecraft/table';
 
 // ** import types
-import type { OrdersRow, OrdersColumn } from '../generated';
+import type { OrdersColumn, OrdersRow } from '../generated';
 
 // ** import generated adapter
 import { createOrdersAdapter } from '../generated';
 
 // ** import ui
-import { Badge } from '../components/ui/badge';
 import { Checkbox } from '../components/ui/checkbox';
 import { Button } from '../components/ui/button';
 import {
@@ -31,22 +30,11 @@ import {
 } from '../components/ui/dropdown-menu';
 import { ChevronDown } from 'lucide-react';
 
+// ** import shared
+import { STATUS_OPTIONS, ROLE_OPTIONS, columnOverrides } from './shared/orders-shared';
+import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
+
 // ─── Constants ───────────────────────────────────────────────────────────────
-
-const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'shipped', label: 'Shipped' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const ROLE_OPTIONS = [
-  { value: 'all', label: 'All roles' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'member', label: 'Member' },
-  { value: 'viewer', label: 'Viewer' },
-];
 
 const TOTAL_OPERATOR_OPTIONS = [
   { value: 'gte', label: 'Min ≥', short: 'Min' },
@@ -56,14 +44,6 @@ const TOTAL_OPERATOR_OPTIONS = [
 ] as const;
 
 type TotalOperator = typeof TOTAL_OPERATOR_OPTIONS[number]['value'];
-
-const STATUS_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  pending:    'secondary',
-  processing: 'outline',
-  shipped:    'default',
-  delivered:  'default',
-  cancelled:  'destructive',
-};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -76,28 +56,6 @@ function stringifyStatusArray(values: string[]): string {
   return values.join(',');
 }
 
-// ─── Column overrides ─────────────────────────────────────────────────────────
-
-const columnOverrides = defineColumnOverrides<OrdersRow>()({
-  status: ({ value }) => {
-    const v = String(value ?? '');
-    return (
-      <Badge variant={STATUS_BADGE_VARIANT[v] ?? 'secondary'}>
-        {v}
-      </Badge>
-    );
-  },
-  total: ({ value }) => (
-    <span className="font-mono">${Number(value ?? 0).toFixed(2)}</span>
-  ),
-  vatAmount: ({ value }) => (
-    <span className="font-mono text-muted-foreground">${Number(value ?? 0).toFixed(2)}</span>
-  ),
-  role: ({ value }) => (
-    <Badge variant="outline">{String(value ?? '')}</Badge>
-  ),
-});
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function Orders3Page() {
@@ -105,25 +63,8 @@ export function Orders3Page() {
   const [statusStr, setStatusStr]       = useUrlState<string>('status', '');
   const [role, setRole]                 = useUrlState<string>('role', '');
   const [totalOp, setTotalOp]           = useUrlState<TotalOperator>('total_op', 'gte');
-  const [totalValue, setTotalValue]     = useUrlState<number>('total', 0);
+  const [totalValue, localTotal, setLocalTotal] = useDebouncedUrlNumber('total');
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
-
-  // ── Local state for debounce ─────────────────────────────────────────────
-  const [localTotal, setLocalTotal] = useState<string>(totalValue > 0 ? String(totalValue) : '');
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setTotalValue(Number(localTotal) || 0);
-    }, 400);
-    return () => clearTimeout(handler);
-  }, [localTotal, setTotalValue]);
-
-  useEffect(() => {
-    const currentNum = Number(localTotal) || 0;
-    if (currentNum !== totalValue) {
-      setLocalTotal(totalValue > 0 ? String(totalValue) : '');
-    }
-  }, [totalValue]); // localTotal is excluded intentionally to avoid sync loops
 
   // Parse status as array (used by both the adapter memo and the UI below)
   const selectedStatuses = parseStatusArray(statusStr);

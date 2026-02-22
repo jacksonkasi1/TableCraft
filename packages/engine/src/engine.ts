@@ -272,6 +272,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
       } else {
         // ── Offset-based pagination ──
+        // Note: rawSelects deliberately overwrite computedExpressions when keys collide.
         const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
         const orderBy = sortBuilder.buildSort(config, resolvedParams.sort, sqlExpressions);
         const pagination = paginationBuilder.buildPagination(config, resolvedParams.page, resolvedParams.pageSize);

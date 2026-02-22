@@ -6,7 +6,10 @@ By passing a `customFilters` object to the `createTableCraftAdapter`, TableCraft
 
 ## 1. The Basics
 
-When defining `customFilters`, the adapter automatically ignores falsy values (`null`, `undefined`, `false`). This means you don't need to write complex `if` statements to conditionally add filters—just pass the raw UI state directly. (Note: `0` and `""` are treated as valid values and will be sent to the API).
+When defining `customFilters`, the adapter automatically ignores falsy values (`null`, `undefined`, `false`). This means you don't need to write complex `if` statements to conditionally add filters—just pass the raw UI state directly. 
+
+> **Note:** `0` and `""` (empty string) are treated as **valid values** and will be sent to the API. 
+> If you have a numeric filter where `0` means "no filter", you should explicitly convert it to `null` before passing it to the adapter, or use an object operator like `total: val > 0 ? { operator: 'eq', value: val } : null`.
 
 ```tsx
 import { useMemo, useState } from 'react';

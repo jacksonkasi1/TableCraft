@@ -106,8 +106,8 @@ function parseSelect(val: string | undefined): string[] | undefined {
   return fields.length > 0 ? fields : undefined;
 }
 
-function parseFilters(raw: Record<string, string>): Record<string, FilterParam> | undefined {
-  const filters: Record<string, FilterParam> = {};
+function parseFilters(raw: Record<string, string>): Record<string, FilterParam | FilterParam[]> | undefined {
+  const filters: Record<string, FilterParam | FilterParam[]> = {};
   const filterRegexSimple = /^filter\[([\w.-]+)]$/;
   const filterRegexOperator = /^filter\[([\w.-]+)]\[(\w+)]$/;
 
@@ -118,10 +118,20 @@ function parseFilters(raw: Record<string, string>): Record<string, FilterParam> 
       const op = matchOp[2];
       if (isValidOperator(op)) {
         const operator = op as Operator;
-        filters[field] = {
+        const param = {
           operator,
           value: normalizeFilterValue(coerceValue(value), operator),
         };
+        const existing = filters[field];
+        if (existing) {
+          if (Array.isArray(existing)) {
+            existing.push(param);
+          } else {
+            filters[field] = [existing, param];
+          }
+        } else {
+          filters[field] = param;
+        }
       }
       continue;
     }
@@ -129,7 +139,17 @@ function parseFilters(raw: Record<string, string>): Record<string, FilterParam> 
     const matchSimple = filterRegexSimple.exec(key);
     if (matchSimple) {
       const field = matchSimple[1];
-      filters[field] = { operator: 'eq', value: coerceValue(value) };
+      const param = { operator: 'eq' as Operator, value: normalizeFilterValue(coerceValue(value), 'eq') };
+      const existing = filters[field];
+      if (existing) {
+        if (Array.isArray(existing)) {
+          existing.push(param);
+        } else {
+          filters[field] = [existing, param];
+        }
+      } else {
+        filters[field] = param;
+      }
     }
   }
 

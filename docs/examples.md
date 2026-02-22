@@ -20,7 +20,7 @@ export const productsConfig = defineTable(products)
 {% endtab %}
 {% endtabs %}
 
-## 14. Advanced Custom Filters with URL State
+## Advanced Custom Filters with URL State
 
 Build complex UI filters (multi-select, dynamic operators, checkboxes) synced directly to the URL. The engine supports operators like `in`, `isNotNull`, `gte`, and automatically drops falsy values.
 
