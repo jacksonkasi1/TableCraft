@@ -114,8 +114,12 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
     } catch (err: unknown) {
-      if (err instanceof TableCraftError && err.statusCode < 500) {
-        res.status(err.statusCode).json({ error: err.message });
+      if (err instanceof TableCraftError) {
+        if (err.statusCode >= 500) {
+          next(err);
+        } else {
+          res.status(err.statusCode).json({ error: err.message });
+        }
       } else {
         next(err);
       }
@@ -179,8 +183,12 @@ export function createExpressHandler(options: {
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
     } catch (err: unknown) {
-      if (err instanceof TableCraftError && err.statusCode < 500) {
-        res.status(err.statusCode).json({ error: err.message });
+      if (err instanceof TableCraftError) {
+        if (err.statusCode >= 500) {
+          next(err);
+        } else {
+          res.status(err.statusCode).json({ error: err.message });
+        }
       } else {
         next(err);
       }

@@ -96,6 +96,10 @@ export class SortBuilder {
   /**
    * Searches join configs recursively for a column with the given plain name.
    * Returns the Drizzle Column from the joined table's schema.
+   * 
+   * Note: This implements a "first-match-wins" strategy. If multiple joins
+   * expose a column with the same name, the first one encountered in a
+   * depth-first traversal of the join tree will be used.
    */
   private resolveJoinColumn(
     config: { joins?: JoinConfig[] },

@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
   createEngines,
   createTableEngine,
@@ -51,38 +52,50 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
 
   if (options.enableDiscovery) {
     app.get('/_tables', async (c) => {
-      const context = options.getContext
-        ? await options.getContext(c)
-        : {};
-      
-      if (options.checkAccess) {
-        const hasAccess = await options.checkAccess(
-          { name: '_tables' } as TableConfig,
-          context,
-          c
-        );
-        if (!hasAccess) {
-          return c.json({ error: 'Forbidden' }, 403);
+      try {
+        const context = options.getContext
+          ? await options.getContext(c)
+          : {};
+        
+        if (options.checkAccess) {
+          const hasAccess = await options.checkAccess(
+            { name: '_tables' } as TableConfig,
+            context,
+            c
+          );
+          if (!hasAccess) {
+            return c.json({ error: 'Forbidden' }, 403);
+          }
         }
+        
+        return c.json(Object.keys(engines));
+      } catch (err: unknown) {
+        const statusCode = err instanceof TableCraftError ? err.statusCode : 500;
+        const message = err instanceof Error ? err.message : 'Internal server error';
+        return c.json({ error: message }, statusCode as ContentfulStatusCode);
       }
-      
-      return c.json(Object.keys(engines));
     });
   }
 
   app.get('/:table/_meta', async (c) => {
-    const tableName = c.req.param('table');
+    try {
+      const tableName = c.req.param('table');
 
-    const engine = engines[tableName];
-    if (!engine) {
-      return c.json({ error: `Unknown resource '${tableName}'` }, 404);
+      const engine = engines[tableName];
+      if (!engine) {
+        return c.json({ error: `Unknown resource '${tableName}'` }, 404);
+      }
+
+      const context = options.getContext
+        ? await options.getContext(c)
+        : {};
+      const metadata = engine.getMetadata(context);
+      return c.json(metadata);
+    } catch (err: unknown) {
+      const statusCode = err instanceof TableCraftError ? err.statusCode : 500;
+      const message = err instanceof Error ? err.message : 'Internal server error';
+      return c.json({ error: message }, statusCode as ContentfulStatusCode);
     }
-
-    const context = options.getContext
-      ? await options.getContext(c)
-      : {};
-    const metadata = engine.getMetadata(context);
-    return c.json(metadata);
   });
 
   app.get('/:table', async (c) => {

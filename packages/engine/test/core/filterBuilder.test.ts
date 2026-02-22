@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { pgTable, text, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, boolean, PgDialect } from 'drizzle-orm/pg-core';
 import { FilterBuilder } from '../../src/core/filterBuilder';
 import { TableConfig } from '../../src/types/table';
 import { FilterParam } from '../../src/types/engine';
+
+const dialect = new PgDialect();
+const toSQL = (cond: any) => dialect.sqlToQuery(cond).sql;
 
 // ---------------------------------------------------------------------------
 // Mock schema tables
@@ -322,6 +325,7 @@ describe('FilterBuilder', () => {
       // Should return a defined condition (users.role), not undefined
       const result = builderOrders.buildFilters(joinConfig, params);
       expect(result).toBeDefined();
+      expect(toSQL(result)).toContain('"users"."role"');
     });
 
     it('resolves "email" from the join table, not the base table', () => {
@@ -330,6 +334,7 @@ describe('FilterBuilder', () => {
       };
       const result = builderOrders.buildFilters(joinConfig, params);
       expect(result).toBeDefined();
+      expect(toSQL(result)).toContain('"users"."email"');
     });
 
     it('base column "status" is still resolved from base table when not in any join', () => {
@@ -338,6 +343,7 @@ describe('FilterBuilder', () => {
       };
       const result = builderOrders.buildFilters(joinConfig, params);
       expect(result).toBeDefined();
+      expect(toSQL(result)).toContain('"orders"."status"');
     });
   });
 
