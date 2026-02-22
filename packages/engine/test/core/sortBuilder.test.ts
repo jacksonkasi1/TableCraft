@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { pgTable, text, integer } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { SortBuilder } from '../../src/core/sortBuilder';
@@ -332,6 +332,61 @@ describe('SortBuilder', () => {
       const params: SortParam[] = [{ field: 'ordersCount', order: 'desc' }];
       const sort = builder.buildSort(configWithSubquery, params, sqlExpressions);
       expect(sort).toHaveLength(1);
+    });
+  });
+
+  describe('buildSort — join column name collisions', () => {
+    // Schema with two tables that could collide on column name
+    const payments = pgTable('payments', {
+      id: integer('id').primaryKey(),
+      userId: integer('user_id'),
+      amount: integer('amount'),
+    });
+    const collisionSchema = { users, orders, payments };
+
+    const configWithJoinCollision: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+      ],
+      joins: [
+        {
+          table: 'orders',
+          on: 'orders.user_id = users.id',
+          columns: [
+            // Map orders.total to a column named 'total'
+            { name: 'total', type: 'number', sortable: true, hidden: false, filterable: false },
+          ],
+        },
+        {
+          table: 'payments',
+          on: 'payments.user_id = users.id',
+          columns: [
+            // Map payments.amount to a column ALSO named 'total' — collision!
+            { name: 'total', type: 'number', sortable: true, hidden: false, filterable: false, field: 'amount' },
+          ],
+        },
+      ],
+    };
+
+    it('warns and uses the first matching join column when join sort fields collide', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const collisionBuilder = new SortBuilder(collisionSchema);
+      const sort = collisionBuilder.buildSort(configWithJoinCollision, [
+        { field: 'total', order: 'asc' },
+      ]);
+
+      // Should emit a warning about the collision
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(warnSpy.mock.calls[0][0]).toContain('total');
+      expect(warnSpy.mock.calls[0][0]).toContain('multiple');
+
+      // Should still produce a valid sort (first-match-wins)
+      expect(sort).toHaveLength(1);
+
+      warnSpy.mockRestore();
     });
   });
 });

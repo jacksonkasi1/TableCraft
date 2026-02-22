@@ -167,6 +167,59 @@ describe('CursorPaginationBuilder.build()', () => {
     expect(built.sql.toLowerCase()).toContain(' and ');
   });
 
+  it('compound cursor WHERE uses OR-expansion for all-DESC multi-column sort', () => {
+    // ORDER BY name DESC, id DESC — cursor at (name='Bob', id=5)
+    // Correct expansion:
+    //   (name < 'Bob')
+    //   OR (name = 'Bob' AND id < 5)
+    const { PgDialect } = require('drizzle-orm/pg-core');
+    const dialect = new PgDialect();
+
+    const cursor = encodeCursor({ name: 'Bob', id: 5 });
+    const result = builder.build(config, cursor, 10, [
+      { field: 'name', order: 'desc' },
+      { field: 'id', order: 'desc' },
+    ]);
+
+    expect(result.whereCondition).toBeDefined();
+    const built = dialect.sqlToQuery(result.whereCondition!);
+
+    // Still lexicographic OR-expansion
+    expect(built.sql.toLowerCase()).toContain(' or ');
+    expect(built.sql.toLowerCase()).toContain(' and ');
+    // All-DESC branch should use '<' comparisons
+    expect(built.sql).toContain('<');
+    expect(built.params).toContain('Bob');
+    expect(built.params).toContain(5);
+  });
+
+  it('compound cursor WHERE uses OR-expansion for mixed ASC/DESC multi-column sort', () => {
+    // ORDER BY name ASC, id DESC — cursor at (name='Bob', id=5)
+    // Correct expansion:
+    //   (name > 'Bob')
+    //   OR (name = 'Bob' AND id < 5)
+    const { PgDialect } = require('drizzle-orm/pg-core');
+    const dialect = new PgDialect();
+
+    const cursor = encodeCursor({ name: 'Bob', id: 5 });
+    const result = builder.build(config, cursor, 10, [
+      { field: 'name', order: 'asc' },
+      { field: 'id', order: 'desc' },
+    ]);
+
+    expect(result.whereCondition).toBeDefined();
+    const built = dialect.sqlToQuery(result.whereCondition!);
+
+    // Still lexicographic OR-expansion
+    expect(built.sql.toLowerCase()).toContain(' or ');
+    expect(built.sql.toLowerCase()).toContain(' and ');
+    // Mixed-direction: '>' for ASC column, '<' for DESC column
+    expect(built.sql).toContain('>');
+    expect(built.sql).toContain('<');
+    expect(built.params).toContain('Bob');
+    expect(built.params).toContain(5);
+  });
+
   it('should produce no WHERE condition if cursor decodes to null', () => {
     const result = builder.build(config, 'bad-cursor', 10, [{ field: 'id', order: 'asc' }]);
     expect(result.whereCondition).toBeUndefined();

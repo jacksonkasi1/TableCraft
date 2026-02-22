@@ -85,7 +85,7 @@ TableCraft prevents this by marking `'first'` subquery columns as `sortable: fal
 
 ```
 GET /orders?sort=firstItem  →  400 Bad Request
-{ "error": "Field 'firstItem': is not sortable. ..." }
+{ "error": "Field 'firstItem' is not sortable. ..." }
 ```
 
 Use `'count'` (integer) or `'exists'` (boolean) if you need a sortable subquery field.

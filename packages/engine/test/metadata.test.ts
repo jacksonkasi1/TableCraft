@@ -359,6 +359,27 @@ describe("buildMetadata — raw TableConfig fallback path (subquery columns)", (
     ],
   };
 
+  // Pre-populated subquery column config — tests that fallback does NOT duplicate
+  const configWithPrepopulatedSubquery: TableConfig = {
+    name: 'orders',
+    base: 'orders',
+    columns: [
+      { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
+      // Pre-populated subquery column — fallback must NOT add a duplicate
+      { name: 'itemCount', type: 'number', hidden: false, sortable: true, filterable: false, computed: true },
+    ],
+    subqueries: [
+      { alias: 'itemCount', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },
+    ],
+  };
+
+  it("does not duplicate subquery columns already present in config.columns", () => {
+    const meta = buildMetadata(configWithPrepopulatedSubquery);
+
+    const itemCountColumns = meta.columns.filter((col) => col.name === 'itemCount');
+    expect(itemCountColumns).toHaveLength(1);
+  });
+
   it("should auto-add subquery columns in fallback path (count, exists, first)", () => {
     const meta = buildMetadata(rawConfigWithSubqueries);
 
