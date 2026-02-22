@@ -249,6 +249,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             columnMapping={columnMapping}
             size={config.size}
             hiddenColumns={hiddenColumns}
+            onResetColumnOrder={resetColumnOrder}
           />
         )}
 

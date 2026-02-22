@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/table",
-  "version": "0.2.5",
+  "version": "0.2.7",
   "description": "Schema-driven data table for React — built on TanStack Table + Shadcn UI with native TableCraft engine support",
   "type": "module",
   "main": "dist/index.js",
@@ -24,9 +24,9 @@
   },
   "peerDependencies": {
     "@tanstack/react-table": ">=8.0.0",
+    "exceljs": ">=4.0.0",
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0",
-    "exceljs": ">=4.0.0"
+    "react-dom": ">=18.0.0"
   },
   "peerDependenciesMeta": {
     "exceljs": {
@@ -58,6 +58,7 @@
     "@tanstack/react-table": "^8.20.0",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.1.6",
+    "jsdom": "^28.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "typescript": "^5.3.3",

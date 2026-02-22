@@ -1,5 +1,6 @@
-import { DataTable } from '@tablecraft/table';
+import { DataTable, defaultColumnOrder } from '@tablecraft/table';
 import { createOrdersAdapter, type OrdersRow } from '../generated';
+import type { OrdersColumn } from '../generated';
 
 export function OrdersPage() {
   const adapter = createOrdersAdapter({
@@ -19,6 +20,20 @@ export function OrdersPage() {
           defaultPageSize: 10,
           pageSizeOptions: [5, 10, 20, 50],
         }}
+        defaultColumnOrder={defaultColumnOrder<OrdersColumn>([
+          'id',
+          'status',
+          'statusLabel',
+          'email',
+          'total',
+          'vatAmount',
+          'itemCount',
+          'role',
+          'userId',
+          'createdAt',
+          'tenantId',
+          'deletedAt',
+        ])}
       />
     </div>
   );
