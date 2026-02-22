@@ -130,4 +130,35 @@ describe('validateInput', () => {
       }, configNested)).not.toThrow();
     });
   });
+
+  describe('sort validation with subquery columns', () => {
+    const configWithSubquery: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
+        { name: 'name', type: 'string', hidden: false, sortable: true, filterable: true },
+        // Subquery column registered by define.ts subquery() method
+        { name: 'ordersCount', type: 'number', hidden: false, sortable: true, filterable: false, computed: true },
+      ],
+      subqueries: [
+        { alias: 'ordersCount', table: 'orders', type: 'count', filter: 'orders.user_id = users.id' },
+      ],
+    };
+
+    it('should allow sorting by a subquery column registered in config.columns', () => {
+      expect(() => validateInput({
+        sort: [{ field: 'ordersCount', order: 'asc' }],
+      }, configWithSubquery)).not.toThrow();
+    });
+
+    it('should allow sorting by a mix of base and subquery columns', () => {
+      expect(() => validateInput({
+        sort: [
+          { field: 'name', order: 'asc' },
+          { field: 'ordersCount', order: 'desc' },
+        ],
+      }, configWithSubquery)).not.toThrow();
+    });
+  });
 });

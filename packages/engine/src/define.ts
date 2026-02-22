@@ -745,6 +745,20 @@ export class TableDefinitionBuilder<T extends Table = Table> {
       type,
       filter,
     });
+
+    // Register as a computed column so sorting/filtering validation passes.
+    // The actual SQL expression is built at query-time by SubqueryBuilder and
+    // merged into the sqlExpressions map by the engine.
+    this._config.columns.push({
+      name: alias,
+      type: type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'string',
+      label: alias,
+      hidden: false,
+      sortable: true,
+      filterable: false,
+      computed: true,
+    });
+
     return this;
   }
 

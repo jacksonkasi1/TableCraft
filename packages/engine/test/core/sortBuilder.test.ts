@@ -254,4 +254,49 @@ describe('SortBuilder', () => {
       expect(sort).toHaveLength(3);
     });
   });
+
+  describe('buildSort — subquery SQL expressions', () => {
+    const configWithSubquery: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [
+        { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+        { name: 'name', type: 'string', sortable: true, hidden: false, filterable: true },
+        { name: 'ordersCount', type: 'number', sortable: true, hidden: false, filterable: false, computed: true },
+      ],
+      subqueries: [
+        { alias: 'ordersCount', table: 'orders', type: 'count', filter: 'orders.user_id = users.id' },
+      ],
+    };
+
+    const subqueryExpr = sql`(SELECT count(*) FROM orders WHERE orders.user_id = users.id)`;
+    const subquerySqlExpressions = new Map([['ordersCount', subqueryExpr]]);
+
+    it('should sort by a subquery field (asc)', () => {
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'asc' }];
+      const sort = builder.buildSort(configWithSubquery, params, subquerySqlExpressions);
+      expect(sort).toHaveLength(1);
+    });
+
+    it('should sort by a subquery field (desc)', () => {
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'desc' }];
+      const sort = builder.buildSort(configWithSubquery, params, subquerySqlExpressions);
+      expect(sort).toHaveLength(1);
+    });
+
+    it('should handle mix of base column and subquery sort', () => {
+      const params: SortParam[] = [
+        { field: 'name', order: 'asc' },
+        { field: 'ordersCount', order: 'desc' },
+      ];
+      const sort = builder.buildSort(configWithSubquery, params, subquerySqlExpressions);
+      expect(sort).toHaveLength(2);
+    });
+
+    it('should drop subquery field when not in sqlExpressions map', () => {
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'asc' }];
+      const sort = builder.buildSort(configWithSubquery, params, new Map());
+      expect(sort).toHaveLength(0);
+    });
+  });
 });

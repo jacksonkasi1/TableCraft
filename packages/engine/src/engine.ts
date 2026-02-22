@@ -227,8 +227,8 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, effectiveConfig);
       for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
       for (const [name, expr] of ext.rawSelects) selection[name] = expr;
-      const subqueries = subqueryBuilder.buildSubqueries(effectiveConfig);
-      if (subqueries) Object.assign(selection, subqueries);
+      const subqueryExpressions = subqueryBuilder.buildSubqueries(effectiveConfig);
+      if (subqueryExpressions) Object.assign(selection, subqueryExpressions);
 
       // Field selection: ?select=id,name
       selection = fieldSelector.applyFieldSelection(selection, resolvedParams.select, effectiveConfig);
@@ -246,6 +246,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
         // ── Cursor-based pagination ──
         // Note: rawSelects deliberately overwrite computedExpressions when keys collide.
         const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+        if (subqueryExpressions) {
+          for (const [k, v] of Object.entries(subqueryExpressions)) sqlExpressions.set(k, v);
+        }
 
         const maxSize = config.pagination?.maxPageSize ?? 100;
         const pageSize = Math.min(resolvedParams.pageSize ?? config.pagination?.defaultPageSize ?? 10, maxSize);
@@ -277,6 +280,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
         // ── Offset-based pagination ──
         // Note: rawSelects deliberately overwrite computedExpressions when keys collide.
         const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+        if (subqueryExpressions) {
+          for (const [k, v] of Object.entries(subqueryExpressions)) sqlExpressions.set(k, v);
+        }
         const orderBy = sortBuilder.buildSort(config, resolvedParams.sort, sqlExpressions);
         const pagination = paginationBuilder.buildPagination(config, resolvedParams.page, resolvedParams.pageSize);
 
