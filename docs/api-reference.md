@@ -274,6 +274,34 @@ import type { ProductsRow, ProductsColumn } from './generated';
 
 > **Note:** The `hiddenColumns` helper function provides type safety when using generated `*Column` types from `@tablecraft/codegen`.
 
+### Default Column Order
+
+Control the initial column order on first load. When the user resets column order, it restores to this order instead of the natural definition order.
+
+Use the `defaultColumnOrder<C>()` helper with your generated `*Column` type for full autocomplete and compile-time safety — mirrors the `hiddenColumns` helper:
+
+```tsx
+import { DataTable, defaultColumnOrder } from '@tablecraft/table';
+import type { OrdersRow, OrdersColumn } from './generated';
+
+<DataTable<OrdersRow>
+  adapter={adapter}
+  defaultColumnOrder={defaultColumnOrder<OrdersColumn>([
+    'status',
+    'email',
+    'total',
+    'createdAt',
+  ])}
+/>
+```
+
+System columns like `'select'` and `'__actions'` are plain strings and are also accepted alongside your typed column IDs.
+
+> **Behaviour:**
+> - On first mount, if no saved order exists in `localStorage`, `defaultColumnOrder` is applied.
+> - If a user has previously reordered columns, their saved order takes precedence.
+> - "Reset Column Order" (in the View popover or Settings gear) resets back to `defaultColumnOrder`, not the definition order.
+
 ### All Props
 
 | Prop                  | Type                                                             | Description                               |
@@ -286,6 +314,7 @@ import type { ProductsRow, ProductsColumn } from './generated';
 | `idField`             | `keyof T`                                                        | ID field for row tracking (default: 'id') |
 | `onRowClick`          | `(row: T, index: number) => void`                                | Row click handler                         |
 | `hiddenColumns`       | `string[]`                                                       | Columns to hide from UI                   |
+| `defaultColumnOrder`  | `string[]`                                                       | Default column order (column IDs). Use `defaultColumnOrder<C>()` helper for type safety. Applied on first mount when no saved order exists; also the target when the user resets column order. |
 | `startToolbarContent` | `React.ReactNode \| (ctx: ToolbarContext<T>) => React.ReactNode` | Content before built-in toolbar controls  |
 | `toolbarContent`      | `React.ReactNode`                                                | Content after built-in toolbar controls   |
 | `renderToolbar`       | `(ctx: ToolbarContext<T>) => React.ReactNode`                    | Custom toolbar renderer                   |

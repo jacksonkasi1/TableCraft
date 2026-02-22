@@ -83,6 +83,26 @@ defineTable(schema.users)
 ## 🎨 Advanced UI Features
 
 {% tabs %}
+{% tab title="Column Order" %}
+Set the default column order on first load. Use the `defaultColumnOrder<C>()` helper with your generated `*Column` type for full autocomplete — mirrors the `hiddenColumns` helper.
+
+```tsx
+import { DataTable, defaultColumnOrder } from '@tablecraft/table';
+import type { OrdersRow, OrdersColumn } from './generated';
+
+<DataTable<OrdersRow>
+  adapter={adapter}
+  defaultColumnOrder={defaultColumnOrder<OrdersColumn>([
+    'status', 'email', 'total', 'createdAt',
+  ])}
+/>
+```
+
+- First mount with no saved order → uses `defaultColumnOrder`
+- User reorders → their order persists in `localStorage`
+- "Reset Column Order" → restores `defaultColumnOrder`
+{% endtab %}
+
 {% tab title="Resizing" %}
 Drag-to-resize columns with localStorage persistence.
 

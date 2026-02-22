@@ -15,12 +15,29 @@ declare module "@tanstack/react-table" {
  * Use this with generated *Column types for type-safe hiddenColumns.
  * @example
  * import type { ProductsColumn } from './generated/products';
- * 
+ *
  * <DataTable
  *   hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'metadata'])}
  * />
  */
 export function hiddenColumns<C extends string>(columns: C[]): C[] {
+  return columns;
+}
+
+/**
+ * Use this with generated *Column types for type-safe defaultColumnOrder.
+ * Mirrors the `hiddenColumns` helper — fix `C` to your generated column union type
+ * to get full autocomplete and compile-time safety.
+ *
+ * @example
+ * import type { OrdersColumn } from './generated/orders';
+ * import { defaultColumnOrder } from '@tablecraft/table';
+ *
+ * <DataTable
+ *   defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['status', 'email', 'total', 'createdAt'])}
+ * />
+ */
+export function defaultColumnOrder<C extends string>(columns: C[]): C[] {
   return columns;
 }
 
@@ -362,6 +379,26 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * @example hiddenColumns={['id', 'tenantId', 'metadata']}
    */
   hiddenColumns?: string[];
+  /**
+   * Default column order (array of column IDs).
+   * Applied on first mount when no saved order exists in localStorage.
+   * When the user clicks "Reset Column Order", the table resets to this order
+   * instead of the natural column definition order.
+   *
+    * Use the `defaultColumnOrder<C>()` helper with your generated `*Column` type
+    * for full autocomplete and compile-time safety — mirrors the `hiddenColumns` helper.
+    *
+    * @example
+    * import type { OrdersColumn } from './generated/orders';
+    * import { defaultColumnOrder } from '@tablecraft/table';
+    *
+    * // Type-safe with generated column union — full autocomplete:
+    * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['status', 'email', 'total', 'createdAt'])}
+    *
+    * // Including system columns (select checkbox, actions):
+    * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['select', 'status', 'email', '__actions'])}
+    */
+   defaultColumnOrder?: string[];
   /**
    * Custom toolbar content — injected into the left toolbar area.
    * Use `startToolbarPlacement` to control where it renders (default: `'after-date'`).
