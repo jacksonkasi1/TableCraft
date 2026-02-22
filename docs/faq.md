@@ -130,7 +130,41 @@ For stable cursor pagination, always include at least one base column (e.g., `id
 
 ---
 
-## Computed Columns
+## Column Order & System Columns
+
+### Why is `select` always first even though I didn't put it there?
+
+`select` (the row selection checkbox) and `__actions` (the actions column) are **system columns** — they are pinned automatically by the table on every order change:
+
+- `select` → always **first**
+- `__actions` → always **last**
+
+This happens regardless of what is stored in `localStorage`, passed via `defaultColumnOrder`, or produced by a drag-and-drop reorder. You never need to include them in your `defaultColumnOrder` array:
+
+```tsx
+// ✅ Correct — only list data columns
+defaultColumnOrder={['status', 'email', 'total', 'createdAt']}
+
+// ❌ Unnecessary — pinning is automatic
+defaultColumnOrder={['select', 'status', 'email', '__actions']}
+```
+
+### Can I put `select` or `__actions` in a custom position?
+
+No. Both are intentionally non-movable. `select` is always first so the checkbox column is never lost in the middle of the table after a reorder or page reload. `__actions` is always last so the row actions menu stays at a predictable edge position.
+
+If your design requires a different layout (e.g., actions before the data columns), the recommended approach is to pass a custom `actions` render via the `actions` prop and also supply a manual `columns` prop — this gives you full control over column definition order without relying on the automatic system column pinning.
+
+### My stored column order from a previous version put `__actions` in the wrong position. How do I fix it?
+
+The table automatically normalizes any order it loads from `localStorage` — it strips `select` and `__actions` from wherever they appear and re-pins them at first/last. So stale saved orders are corrected automatically on the next page load. No manual cleanup is needed.
+
+### How does drag-and-drop column reorder interact with `defaultColumnOrder`?
+
+1. On first mount, if no saved order exists in `localStorage`, `defaultColumnOrder` is applied (with `select`/`__actions` pinned automatically).
+2. When the user drags columns in the View popover, the new order is saved to `localStorage` and takes precedence over `defaultColumnOrder` on subsequent loads.
+3. When the user clicks "Reset Column Order", the table reverts to `defaultColumnOrder` (or the natural definition order if `defaultColumnOrder` is not set) and saves that back to `localStorage`.
+
 
 ### Can I mark a computed column as non-sortable?
 

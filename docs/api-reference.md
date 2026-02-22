@@ -334,6 +334,30 @@ import type { OrdersRow, OrdersColumn } from './generated';
 > - If a user has previously reordered columns, their saved order takes precedence.
 > - "Reset Column Order" (in the View popover or Settings gear) resets back to `defaultColumnOrder`, not the natural definition order.
 
+### System Column Pinning (`select` & `__actions`)
+
+`select` (row selection checkbox) and `__actions` (actions column) are **system columns** managed entirely by the table. They are pinned automatically on every order change:
+
+| Column | Default position | Can be moved? |
+| ------------- | ---------------- | ------------- |
+| `select` | Always **first** | No — always stays first |
+| `__actions` | Always **last** | No — always stays last |
+
+You **never need to include them in `defaultColumnOrder`** — the table pins them regardless of what order is stored or passed.
+
+```tsx
+// ✅ Correct — only list data columns
+defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['status', 'email', 'total'])}
+
+// ❌ Unnecessary — 'select' / '__actions' are pinned automatically
+defaultColumnOrder={['select', 'status', 'email', 'total', '__actions']}
+```
+
+This pinning applies to every path that sets column order:
+- Initial mount (from `defaultColumnOrder` or localStorage)
+- User drag-and-drop reorder (via the View popover)
+- "Reset Column Order"
+
 ### All Props
 
 | Prop                  | Type                                                             | Description                               |
