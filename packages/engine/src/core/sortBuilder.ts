@@ -36,7 +36,10 @@ export class SortBuilder {
 
     const baseColumns = getTableColumns(table);
 
-    // Build a whitelist of sortable fields from base columns AND join columns
+    // Build a whitelist of sortable fields from base columns AND join columns.
+    // sortable: undefined is treated as sortable (same as true) — only an
+    // explicit sortable: false disables it. This matches the introspect.ts
+    // default of sortable: true for auto-detected columns.
     const sortableFields = new Set<string>();
     for (const col of config.columns) {
       if (col.sortable !== false) {
@@ -109,13 +112,17 @@ export class SortBuilder {
    * 
    * Note: This implements a "first-match-wins" strategy. If multiple joins
    * expose a column with the same name, the first one encountered in a
-   * depth-first traversal of the join tree will be used.
+   * depth-first traversal of the join tree will be used, and a console.warn
+   * is emitted to help developers detect and resolve the collision.
    */
   private resolveJoinColumn(
     config: { joins?: JoinConfig[] },
     fieldName: string
   ): Column | undefined {
     if (!config.joins) return undefined;
+
+    // Collect all matches (table name + Column) across all joins (depth-first)
+    const matches: Array<{ table: string; column: Column }> = [];
 
     for (const join of config.joins) {
       const joinColConfig = join.columns?.find(
@@ -124,22 +131,38 @@ export class SortBuilder {
 
       if (joinColConfig) {
         const joinedTable = this.schema[join.table] as Table | undefined;
-        if (!joinedTable) continue;
-
-        const joinedCols = getTableColumns(joinedTable);
-        const dbCol = joinColConfig.field ?? fieldName;
-        const column = joinedCols[dbCol];
-        if (column) return column;
+        if (joinedTable) {
+          const joinedCols = getTableColumns(joinedTable);
+          const dbCol = joinColConfig.field ?? fieldName;
+          const column = joinedCols[dbCol];
+          if (column) {
+            matches.push({ table: join.table, column });
+          }
+        }
       }
 
       // Recurse into nested joins
       if (join.joins) {
         const nested = this.resolveJoinColumn({ joins: join.joins }, fieldName);
-        if (nested) return nested;
+        if (nested) {
+          // Treat nested match as a candidate (table name not relevant for warning)
+          matches.push({ table: join.table + '(nested)', column: nested });
+        }
       }
     }
 
-    return undefined;
+    if (matches.length === 0) return undefined;
+
+    if (matches.length > 1) {
+      console.warn(
+        `[TableCraft] Sort field '${fieldName}' exists in multiple joins ` +
+        `(${matches.map((m) => m.table).join(', ')}). ` +
+        `Using first match. ` +
+        `Use dot-syntax (e.g. '${matches[0].table}.${fieldName}') to be explicit.`
+      );
+    }
+
+    return matches[0].column;
   }
 
   private getDefaultSort(config: TableConfig): SortParam[] | undefined {

@@ -161,4 +161,54 @@ describe('validateInput', () => {
       }, configWithSubquery)).not.toThrow();
     });
   });
+
+  describe("sort validation with 'first' mode subquery columns", () => {
+    // define.ts .subquery() sets sortable: false for 'first' type
+    // because row_to_json() is non-scalar and cannot be used in ORDER BY.
+    const configWithFirstSubquery: TableConfig = {
+      name: 'orders',
+      base: 'orders',
+      columns: [
+        { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
+        // 'first' subquery — sortable: false set by define.ts
+        { name: 'firstItem', type: 'string', hidden: false, sortable: false, filterable: false, computed: true },
+        // 'count' and 'exists' subqueries — sortable: true (scalar)
+        { name: 'itemCount', type: 'number', hidden: false, sortable: true, filterable: false, computed: true },
+        { name: 'hasItems', type: 'boolean', hidden: false, sortable: true, filterable: false, computed: true },
+      ],
+      subqueries: [
+        { alias: 'firstItem', table: 'orderItems', type: 'first', filter: 'orderItems.orderId = orders.id' },
+        { alias: 'itemCount', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },
+        { alias: 'hasItems', table: 'orderItems', type: 'exists', filter: 'orderItems.orderId = orders.id' },
+      ],
+    };
+
+    it("should reject sorting by a 'first' mode subquery column (sortable: false)", () => {
+      expect(() => validateInput({
+        sort: [{ field: 'firstItem', order: 'asc' }],
+      }, configWithFirstSubquery)).toThrow(FieldError);
+    });
+
+    it("should allow sorting by a 'count' subquery column (scalar)", () => {
+      expect(() => validateInput({
+        sort: [{ field: 'itemCount', order: 'asc' }],
+      }, configWithFirstSubquery)).not.toThrow();
+    });
+
+    it("should allow sorting by an 'exists' subquery column (scalar)", () => {
+      expect(() => validateInput({
+        sort: [{ field: 'hasItems', order: 'asc' }],
+      }, configWithFirstSubquery)).not.toThrow();
+    });
+
+    it("should reject mixing 'first' mode with other sort fields — entire sort is rejected", () => {
+      // The 'first' mode field causes a FieldError even if mixed with valid fields
+      expect(() => validateInput({
+        sort: [
+          { field: 'id', order: 'asc' },
+          { field: 'firstItem', order: 'asc' },
+        ],
+      }, configWithFirstSubquery)).toThrow(FieldError);
+    });
+  });
 });

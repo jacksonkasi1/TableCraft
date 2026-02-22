@@ -227,7 +227,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, effectiveConfig);
       for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
       for (const [name, expr] of ext.rawSelects) selection[name] = expr;
-      const subqueryExpressions = subqueryBuilder.buildSubqueries(effectiveConfig);
+      const subqueryExpressions = subqueryBuilder.buildSubqueries(effectiveConfig, dialect);
       if (subqueryExpressions) Object.assign(selection, subqueryExpressions);
 
       // Field selection: ?select=id,name
@@ -404,6 +404,10 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     if (having) q = q.having(having);
 
     const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+    const subqueryExpressionsGrouped = subqueryBuilder.buildSubqueries(effectiveConfig, dialect);
+    if (subqueryExpressionsGrouped) {
+      for (const [k, v] of Object.entries(subqueryExpressionsGrouped)) sqlExpressions.set(k, v);
+    }
     const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort, sqlExpressions);
     if (orderBy.length > 0) q = q.orderBy(...orderBy);
 
@@ -481,6 +485,10 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
     const where = await buildWhereConditions({ ...params, page: undefined, pageSize: undefined }, context);
     const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+    const subqueryExpressionsExport = subqueryBuilder.buildSubqueries(effectiveConfig, dialect);
+    if (subqueryExpressionsExport) {
+      for (const [k, v] of Object.entries(subqueryExpressionsExport)) sqlExpressions.set(k, v);
+    }
     const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort, sqlExpressions);
 
     let q = db.select(selection).from(baseTable);
@@ -505,6 +513,10 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
     const where = await buildWhereConditions(params, context);
     const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+    const subqueryExpressionsExplain = subqueryBuilder.buildSubqueries(config, dialect);
+    if (subqueryExpressionsExplain) {
+      for (const [k, v] of Object.entries(subqueryExpressionsExplain)) sqlExpressions.set(k, v);
+    }
     const orderBy = sortBuilder.buildSort(config, params.sort, sqlExpressions);
     const pagination = paginationBuilder.buildPagination(config, params.page, params.pageSize);
 

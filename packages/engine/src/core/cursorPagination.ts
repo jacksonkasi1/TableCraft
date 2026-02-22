@@ -1,5 +1,6 @@
-import { Table, SQL, sql, getTableColumns, gt, lt, asc, desc } from 'drizzle-orm';
+import { Table, SQL, getTableColumns, gt, lt, eq, and, or, asc, desc } from 'drizzle-orm';
 import { TableConfig, SortConfig } from '../types/table';
+import { FieldError } from '../errors';
 
 export interface CursorResult {
   whereCondition: SQL | undefined;
@@ -14,10 +15,14 @@ export interface CursorMeta {
 
 /**
  * Cursor-based pagination.
- * Uses the sort column value as the cursor instead of OFFSET.
+ * Uses the sort column values as the cursor instead of OFFSET.
  * O(1) performance regardless of page depth.
  *
  * Cursor format: base64({ field: value, field2: value2 })
+ *
+ * Multi-column sort: the WHERE clause uses ALL sort fields in a
+ * row-value comparison to avoid duplicate/skipped rows when rows
+ * share the same primary sort value.
  */
 export class CursorPaginationBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -46,7 +51,8 @@ export class CursorPaginationBuilder {
         ? config.defaultSort
         : [{ field: 'id', order: 'asc' as const }];
 
-    // Build ORDER BY
+    // Build ORDER BY — throw a FieldError for unknown fields instead of
+    // injecting unvalidated raw SQL identifiers.
     const orderBy: SQL[] = sortFields.map((s) => {
       const col = columns[s.field];
       if (col) {
@@ -56,20 +62,68 @@ export class CursorPaginationBuilder {
         const expr = sqlExpressions.get(s.field)!;
         return s.order === 'desc' ? desc(expr) : asc(expr);
       }
-      return s.order === 'desc' ? desc(sql.identifier(s.field)) : asc(sql.identifier(s.field));
+      // Previously fell back to sql.identifier(s.field) — an unvalidated raw
+      // SQL identifier that bypasses all whitelist checks. Throw instead so
+      // the developer gets a clear, actionable error rather than a DB crash.
+      throw new FieldError(
+        s.field,
+        `cannot be used for cursor pagination: not a known column or SQL expression`
+      );
     });
 
     // Decode cursor and build WHERE
+    // Uses ALL sort fields (compound cursor) so that rows sharing the same
+    // primary sort value are not duplicated or skipped across pages.
+    //
+    // For ORDER BY col1 ASC, col2 ASC with cursor (v1, v2), the correct
+    // continuation is a lexicographic OR-expansion:
+    //
+    //   (col1 > v1)
+    //   OR (col1 = v1 AND col2 > v2)
+    //   OR (col1 = v1 AND col2 = v2 AND col3 > v3)
+    //   ...
+    //
+    // A flat AND (col1 > v1 AND col2 > v2) is WRONG — it would skip rows
+    // where col1 = v1 and col2 > v2 (same primary sort value, later secondary).
     let whereCondition: SQL | undefined;
     if (cursor) {
       const decoded = decodeCursor(cursor);
       if (decoded && sortFields.length > 0) {
-        const primary = sortFields[0];
-        const col = columns[primary.field];
-        if (col && decoded[primary.field] !== undefined) {
-          whereCondition = primary.order === 'desc'
-            ? lt(col, decoded[primary.field])
-            : gt(col, decoded[primary.field]);
+        // Collect resolvable sort fields (skip any with missing column/value)
+        const resolvable = sortFields
+          .map((s) => ({ s, col: columns[s.field] }))
+          .filter(({ s, col }) => col !== undefined && decoded[s.field] !== undefined);
+
+        if (resolvable.length === 1) {
+          // Single field — simple gt/lt
+          const { s, col } = resolvable[0];
+          whereCondition = s.order === 'desc'
+            ? lt(col!, decoded[s.field])
+            : gt(col!, decoded[s.field]);
+        } else if (resolvable.length > 1) {
+          // Multi-field: build the lexicographic OR-expansion
+          // Each "arm" of the OR is: (prefix equality conditions) AND (advance condition)
+          const orArms: SQL[] = [];
+
+          for (let i = 0; i < resolvable.length; i++) {
+            const { s, col } = resolvable[i];
+            const advance: SQL = s.order === 'desc'
+              ? lt(col!, decoded[s.field])
+              : gt(col!, decoded[s.field]);
+
+            if (i === 0) {
+              // First arm: just the advance condition on col1
+              orArms.push(advance);
+            } else {
+              // Remaining arms: prefix equality on cols 0..i-1, advance on col i
+              const prefixEqs: SQL[] = resolvable
+                .slice(0, i)
+                .map(({ s: ps, col: pc }) => eq(pc!, decoded[ps.field]));
+              orArms.push(and(...prefixEqs, advance) as SQL);
+            }
+          }
+
+          whereCondition = or(...orArms) as SQL;
         }
       }
     }
@@ -84,6 +138,8 @@ export class CursorPaginationBuilder {
 
   /**
    * From the fetched data (with 1 extra row), determine next cursor.
+   * The cursor encodes ALL sort field values from the last row so the
+   * compound WHERE condition can be reconstructed on the next request.
    */
   buildMeta(
     data: Record<string, unknown>[],
@@ -96,8 +152,15 @@ export class CursorPaginationBuilder {
     let nextCursor: string | null = null;
     if (hasMore && trimmed.length > 0) {
       const lastRow = trimmed[trimmed.length - 1];
-      const sortField = sort?.[0]?.field ?? 'id';
-      nextCursor = encodeCursor({ [sortField]: lastRow[sortField] });
+      // Encode ALL sort field values so the compound cursor WHERE is complete
+      const sortFields = sort?.length ? sort : [{ field: 'id', order: 'asc' as const }];
+      const cursorValues: Record<string, unknown> = {};
+      for (const s of sortFields) {
+        if (lastRow[s.field] !== undefined) {
+          cursorValues[s.field] = lastRow[s.field];
+        }
+      }
+      nextCursor = encodeCursor(cursorValues);
     }
 
     return {

@@ -298,5 +298,40 @@ describe('SortBuilder', () => {
       const sort = builder.buildSort(configWithSubquery, params, new Map());
       expect(sort).toHaveLength(0);
     });
+
+    // 'first' mode subqueries are marked sortable: false — they must be silently
+    // excluded from ORDER BY even if their SQL expression were in the map.
+    it("should exclude 'first' mode subquery fields that are marked sortable: false", () => {
+      const configWithFirst: TableConfig = {
+        name: 'orders',
+        base: 'users',
+        columns: [
+          { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
+          // 'first' subquery — sortable: false (as set by define.ts .subquery())
+          { name: 'firstItem', type: 'string', sortable: false, hidden: false, filterable: false, computed: true },
+        ],
+        subqueries: [
+          { alias: 'firstItem', table: 'orders', type: 'first', filter: 'orders.user_id = users.id' },
+        ],
+      };
+      // Even if the SQL expression is in the map, the sortable: false check prevents its use
+      const firstExpr = sql`(SELECT row_to_json(t) FROM (SELECT * FROM orders LIMIT 1) t)`;
+      const params: SortParam[] = [{ field: 'firstItem', order: 'asc' }];
+      const sort = builder.buildSort(configWithFirst, params, new Map([['firstItem', firstExpr]]));
+      expect(sort).toHaveLength(0);
+    });
+
+    // Simulate the queryGrouped/exportRows/explain merge: subquery expressions are
+    // merged into the sqlExpressions map BEFORE calling buildSort.
+    it('should sort correctly when subquery expressions are merged from queryGrouped/exportRows/explain paths', () => {
+      // Simulate: const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects])
+      const sqlExpressions = new Map<string, ReturnType<typeof sql>>();
+      // Simulate: subqueryExpressionsGrouped is built and merged in
+      sqlExpressions.set('ordersCount', subqueryExpr);
+
+      const params: SortParam[] = [{ field: 'ordersCount', order: 'desc' }];
+      const sort = builder.buildSort(configWithSubquery, params, sqlExpressions);
+      expect(sort).toHaveLength(1);
+    });
   });
 });

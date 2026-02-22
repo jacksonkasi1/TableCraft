@@ -413,13 +413,13 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   // ──── Computed Columns ────
 
-  computed(name: string, expression: SQL, options?: { type?: ColumnConfig['type']; label?: string }): this {
+  computed(name: string, expression: SQL, options?: { type?: ColumnConfig['type']; label?: string; sortable?: boolean }): this {
     this._config.columns.push({
       name,
       type: options?.type ?? 'string',
       label: options?.label ?? name,
       hidden: false,
-      sortable: true,
+      sortable: options?.sortable ?? true,
       filterable: false,
       computed: true,
     });
@@ -720,6 +720,14 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     return this;
   }
 
+  /**
+   * Add a raw SQL ORDER BY expression.
+   *
+   * **Warning**: This bypasses the sortable whitelist entirely. The expression
+   * is appended unconditionally to ORDER BY without any field validation.
+   * Ensure the SQL is safe and not derived from user-supplied input.
+   * Prefer `.sort()` or `.sortable()` for user-facing sort controls.
+   */
   rawOrderBy(sqlExpr: SQL): this {
     this._ext.rawOrderBys.push(sqlExpr);
     return this;
@@ -749,12 +757,16 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     // Register as a computed column so sorting/filtering validation passes.
     // The actual SQL expression is built at query-time by SubqueryBuilder and
     // merged into the sqlExpressions map by the engine.
+    //
+    // 'first' mode returns row_to_json() — a non-scalar JSON object — which
+    // cannot be used in ORDER BY. Mark it sortable: false to prevent DB errors.
+    // 'count' (integer) and 'exists' (boolean) are scalar and safe to sort.
     this._config.columns.push({
       name: alias,
       type: type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'string',
       label: alias,
       hidden: false,
-      sortable: true,
+      sortable: type !== 'first',
       filterable: false,
       computed: true,
     });
