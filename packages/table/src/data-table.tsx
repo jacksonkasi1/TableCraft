@@ -166,8 +166,10 @@ export function DataTable<T extends Record<string, unknown>>({
         ),
         enableSorting: false,
         enableHiding: false,
-        size: 40,
-        maxSize: 40,
+        enableResizing: false,
+        size: 48,
+        minSize: 48,
+        maxSize: 48,
       };
       cols = [selectColumn, ...cols];
     }
@@ -203,6 +205,23 @@ export function DataTable<T extends Record<string, unknown>>({
 
   // ─── Column order ───
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  const columnOrderRef = useRef<string[]>(columnOrder);
+  columnOrderRef.current = columnOrder;
+
+  /**
+   * Pins system columns to fixed positions regardless of what order is stored or passed:
+   * - 'select' always first (if row selection is enabled)
+   * - '__actions' always last (if actions column is present)
+   * Developer-defined defaultColumnOrder should only list data columns.
+   */
+  const normalizeColumnOrder = useCallback((order: string[]): string[] => {
+    const without = order.filter((id) => id !== "select" && id !== "__actions");
+    const result: string[] = [];
+    if (tableConfig.enableRowSelection) result.push("select");
+    result.push(...without);
+    if (actions) result.push("__actions");
+    return result;
+  }, [tableConfig.enableRowSelection, actions]);
 
   // Load column order from localStorage; fall back to defaultColumnOrder if no saved order
   useEffect(() => {
@@ -211,7 +230,7 @@ export function DataTable<T extends Record<string, unknown>>({
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.every((item: unknown) => typeof item === "string")) {
-          setColumnOrder(parsed);
+          setColumnOrder(normalizeColumnOrder(parsed));
           return;
         }
       }
@@ -220,11 +239,13 @@ export function DataTable<T extends Record<string, unknown>>({
     }
     // No saved order — use defaultColumnOrder if provided
     if (defaultColumnOrder && defaultColumnOrder.length > 0) {
-      setColumnOrder(defaultColumnOrder);
+      setColumnOrder(normalizeColumnOrder(defaultColumnOrder));
     }
   }, [tableId]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Note: defaultColumnOrder is intentionally excluded — it is only read once on mount.
-  // Changing it after mount would conflict with any user-applied order.
+  // Note: defaultColumnOrder and normalizeColumnOrder are intentionally excluded — read once on mount.
+  // Assumes enableRowSelection and actions are stable for the component's lifetime.
+  // If they change after mount, you must include them (and normalizeColumnOrder) in the 
+  // dependencies and re-run setColumnOrder accordingly.
 
   // ─── Sorting state for TanStack ───
   const sorting: SortingState = useMemo(
@@ -343,11 +364,13 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const handleColumnOrderChange = useCallback(
     (updaterOrValue: string[] | ((prev: string[]) => string[])) => {
-      const newOrder =
+      const raw =
         typeof updaterOrValue === "function"
-          ? updaterOrValue(columnOrder)
+          ? updaterOrValue(columnOrderRef.current)
           : updaterOrValue;
+      const newOrder = normalizeColumnOrder(raw);
       setColumnOrder(newOrder);
+      columnOrderRef.current = newOrder;
       try {
         localStorage.setItem(
           `tablecraft-column-order-${tableId}`,
@@ -357,14 +380,18 @@ export function DataTable<T extends Record<string, unknown>>({
         // ignore
       }
     },
-    [columnOrder, tableId]
+    [tableId, normalizeColumnOrder]
   );
 
+  // Note: Consumers must pass a stable reference for defaultColumnOrder 
+  // (hoist to module scope, use useMemo, or use the provided defaultColumnOrder<C>() helper)
+  // so resetColumnOrder and downstream children are not recreated every render.
   const resetColumnOrder = useCallback(() => {
-    const resetTo = defaultColumnOrder && defaultColumnOrder.length > 0 ? defaultColumnOrder : [];
+    const base = defaultColumnOrder && defaultColumnOrder.length > 0 ? defaultColumnOrder : [];
+    const resetTo = normalizeColumnOrder(base);
     setColumnOrder(resetTo);
     try {
-      if (resetTo.length > 0) {
+      if (base.length > 0) {
         // Persist the defaultColumnOrder as the saved state so it survives reload
         localStorage.setItem(`tablecraft-column-order-${tableId}`, JSON.stringify(resetTo));
       } else {
@@ -373,7 +400,7 @@ export function DataTable<T extends Record<string, unknown>>({
     } catch {
       // ignore
     }
-  }, [tableId, defaultColumnOrder]);
+  }, [tableId, defaultColumnOrder, normalizeColumnOrder]);
 
   // ─── Row click handler ───
   const handleRowClick = useCallback(
@@ -653,7 +680,12 @@ export function DataTable<T extends Record<string, unknown>>({
                       data-slot="table-head"
                       colSpan={header.colSpan}
                       scope="col"
-                      className="text-foreground h-10 px-4 text-left align-middle font-medium whitespace-nowrap relative group/th [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]"
+                      className={cn(
+                        "text-foreground h-10 text-left align-middle font-medium whitespace-nowrap relative group/th",
+                        header.column.id === "select"
+                          ? "w-12 px-3"
+                          : "px-4"
+                      )}
                       style={{ width: header.getSize() }}
                       data-column-resizing={header.column.getIsResizing() ? "true" : undefined}
                     >
@@ -685,7 +717,12 @@ export function DataTable<T extends Record<string, unknown>>({
                       <td
                         key={`skeleton-${i}-${header.id}`}
                         data-slot="table-cell"
-                        className="align-middle whitespace-nowrap px-4 py-2 text-left"
+                        className={cn(
+                          "align-middle whitespace-nowrap text-left",
+                          header.column.id === "select"
+                            ? "w-12 px-3 py-2"
+                            : "px-4 py-2"
+                        )}
                         style={{ width: header.getSize() }}
                       >
                         <div className="h-6 w-full animate-pulse rounded bg-muted" />
@@ -720,7 +757,13 @@ export function DataTable<T extends Record<string, unknown>>({
                       <td
                         key={cell.id}
                         data-slot="table-cell"
-                        className="align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] px-4 py-2 truncate max-w-0 text-left"
+                        className={cn(
+                          "align-middle whitespace-nowrap text-left",
+                          cell.column.id === "select"
+                            ? "w-12 px-3 py-2"
+                            : "px-4 py-2 truncate max-w-0"
+                        )}
+                        style={{ width: cell.column.getSize() }}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
