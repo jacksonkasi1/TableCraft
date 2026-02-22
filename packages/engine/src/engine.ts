@@ -31,22 +31,22 @@ import { FieldSelector } from './core/fieldSelector';
 import { detectDialect, supportsFeature, Dialect } from './core/dialect';
 import { formatResponse, applyJsTransforms } from './utils/responseFormatter';
 import { exportData } from './utils/export';
-import { TableDefinitionBuilder, RuntimeExtensions } from './define';
+import { TableDefinitionBuilder, RuntimeExtensions, drizzleOperators } from './define';
 import { TableCraftError, QueryError, DialectError } from './errors';
 import { applyRoleBasedVisibility } from './core/roleFilter';
 import { buildMetadata } from './core/metadataBuilder';
 
 // ── Config Resolution ──
 
-export type ConfigInput = TableConfig | TableDefinitionBuilder;
+export type ConfigInput = TableConfig | TableDefinitionBuilder<any>;
 
 function resolveInput(input: ConfigInput): {
   config: TableConfig;
-  ext: RuntimeExtensions;
+  ext: RuntimeExtensions<any>;
 } {
   if (input && typeof input === 'object' && '_config' in input && '_ext' in input) {
-    const b = input as TableDefinitionBuilder;
-    return { config: b.toConfig(), ext: b._ext };
+    const b = input as TableDefinitionBuilder<any>;
+    return { config: b.toConfig(), ext: b._ext as RuntimeExtensions<any> };
   }
   return {
     config: input as TableConfig,
@@ -55,6 +55,7 @@ function resolveInput(input: ConfigInput): {
       transforms: new Map(),
       rawSelects: new Map(),
       rawWheres: [],
+      dynamicWheres: [],
       rawJoins: [],
       rawOrderBys: [],
       ctes: new Map(),
@@ -122,10 +123,10 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
   // ── WHERE builder ──
 
-  function buildWhereConditions(
+  async function buildWhereConditions(
     params: EngineParams,
     context: EngineContext
-  ): SQL | undefined {
+  ): Promise<SQL | undefined> {
     const parts: (SQL | undefined)[] = [];
 
     parts.push(queryBuilder.buildBackendConditions(config, context));
@@ -172,6 +173,10 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     if (params.search) parts.push(searchBuilder.buildSearch(config, params.search));
     if (config.filterGroups?.length) parts.push(filterGroupBuilder.buildAll(config.filterGroups, config));
     for (const raw of ext.rawWheres) parts.push(raw);
+    for (const dynamicFn of ext.dynamicWheres) {
+      const result = await dynamicFn({ query: params, context }, drizzleOperators, baseTable);
+      if (result) parts.push(result);
+    }
 
     const valid = parts.filter((p): p is SQL => p !== undefined);
     return valid.length > 0 ? and(...valid) : undefined;
@@ -228,7 +233,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       // Field selection: ?select=id,name
       selection = fieldSelector.applyFieldSelection(selection, resolvedParams.select, effectiveConfig);
 
-      const where = buildWhereConditions(resolvedParams, context);
+      const where = await buildWhereConditions(resolvedParams, context);
 
       // Decide: cursor pagination or offset pagination
       const useCursor = !!resolvedParams.cursor;
@@ -239,11 +244,14 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
       if (useCursor) {
         // ── Cursor-based pagination ──
+        // Note: rawSelects deliberately overwrite computedExpressions when keys collide.
+        const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+
         const maxSize = config.pagination?.maxPageSize ?? 100;
         const pageSize = Math.min(resolvedParams.pageSize ?? config.pagination?.defaultPageSize ?? 10, maxSize);
         const sortConfig = resolvedParams.sort?.map(s => ({ field: s.field, order: s.order })) ?? config.defaultSort;
 
-        const cursorResult = cursorPagination.build(config, resolvedParams.cursor, pageSize, sortConfig);
+        const cursorResult = cursorPagination.build(config, resolvedParams.cursor, pageSize, sortConfig, sqlExpressions);
 
         let cursorWhere = where;
         if (cursorResult.whereCondition) {
@@ -267,7 +275,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
       } else {
         // ── Offset-based pagination ──
-        const orderBy = sortBuilder.buildSort(config, resolvedParams.sort);
+        // Note: rawSelects deliberately overwrite computedExpressions when keys collide.
+        const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+        const orderBy = sortBuilder.buildSort(config, resolvedParams.sort, sqlExpressions);
         const pagination = paginationBuilder.buildPagination(config, resolvedParams.page, resolvedParams.pageSize);
 
         let dataQuery = resolvedParams.distinct
@@ -378,7 +388,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     const groupByColumns = groupByBuilder.buildGroupByColumns(effectiveConfig);
     if (!groupByColumns?.length) throw new QueryError(`No valid groupBy columns on '${effectiveConfig.name}'`);
 
-    const where = buildWhereConditions(params, context);
+    const where = await buildWhereConditions(params, context);
     const having = groupByBuilder.buildHaving(effectiveConfig);
 
     let q = db.select(groupedSelect).from(baseTable);
@@ -387,7 +397,8 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     q = q.groupBy(...groupByColumns);
     if (having) q = q.having(having);
 
-    const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort);
+    const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+    const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort, sqlExpressions);
     if (orderBy.length > 0) q = q.orderBy(...orderBy);
 
     const data = await q;
@@ -442,7 +453,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     params: EngineParams = {},
     context: EngineContext = {}
   ): Promise<number> {
-    const where = buildWhereConditions(params, context);
+    const where = await buildWhereConditions(params, context);
     const result = await getCount(where);
     return result ?? 0;
   }
@@ -462,8 +473,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
       selection = fieldSelector.applyFieldSelection(selection, params.select, effectiveConfig);
     }
 
-    const where = buildWhereConditions({ ...params, page: undefined, pageSize: undefined }, context);
-    const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort);
+    const where = await buildWhereConditions({ ...params, page: undefined, pageSize: undefined }, context);
+    const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+    const orderBy = sortBuilder.buildSort(effectiveConfig, params.sort, sqlExpressions);
 
     let q = db.select(selection).from(baseTable);
     q = queryBuilder.buildJoins(q, effectiveConfig, ext.sqlJoinConditions);
@@ -485,8 +497,9 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
     let selection: Record<string, any> = queryBuilder.buildSelect(baseTable, config);
     for (const [name, expr] of ext.computedExpressions) selection[name] = expr;
 
-    const where = buildWhereConditions(params, context);
-    const orderBy = sortBuilder.buildSort(config, params.sort);
+    const where = await buildWhereConditions(params, context);
+    const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+    const orderBy = sortBuilder.buildSort(config, params.sort, sqlExpressions);
     const pagination = paginationBuilder.buildPagination(config, params.page, params.pageSize);
 
     let q = db.select(selection).from(baseTable);

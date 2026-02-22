@@ -69,6 +69,8 @@ export interface TableConfig {
   allowExportNewColumns: boolean;
 }
 
+export type StartToolbarPlacement = 'before-search' | 'after-search' | 'after-date';
+
 // ─────────────────────────────────────────────
 // Data Fetching
 // ─────────────────────────────────────────────
@@ -360,8 +362,20 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * @example hiddenColumns={['id', 'tenantId', 'metadata']}
    */
   hiddenColumns?: string[];
-  /** Custom toolbar content (rendered at the start of the toolbar) */
+  /**
+   * Custom toolbar content — injected into the left toolbar area.
+   * Use `startToolbarPlacement` to control where it renders (default: `'after-date'`).
+   */
   startToolbarContent?: React.ReactNode | ((ctx: ToolbarContext<T>) => React.ReactNode);
+  /**
+   * Controls where `startToolbarContent` is rendered in the left toolbar area.
+   * - `'before-search'` — before the search input
+   * - `'after-search'`  — after search, before the date filter. 
+   *                       NOTE: If `enableSearch` is false, this renders in the same visual position as `'before-search'`.
+   * - `'after-date'`    — after the date filter (default)
+   * @default 'after-date'
+   */
+  startToolbarPlacement?: StartToolbarPlacement;
   /** Custom toolbar content (rendered after built-in controls) */
   toolbarContent?: React.ReactNode;
   /** Render custom toolbar with selection context */

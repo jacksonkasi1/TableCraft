@@ -45,6 +45,7 @@ export function DataTable<T extends Record<string, unknown>>({
   onRowClick,
   hiddenColumns,
   startToolbarContent,
+  startToolbarPlacement,
   toolbarContent,
   renderToolbar,
   className,
@@ -604,6 +605,7 @@ export function DataTable<T extends Record<string, unknown>>({
           resetColumnOrder={resetColumnOrder}
           customToolbarContent={customToolbar}
           startToolbarContent={resolvedStartToolbarContent}
+          startToolbarPlacement={startToolbarPlacement}
           hiddenColumns={hiddenColumns as string[]}
         />
       )}

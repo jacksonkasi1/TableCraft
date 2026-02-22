@@ -37,6 +37,90 @@ function generateEnumType(options: Array<{ value: string | number | boolean }>):
   return values;
 }
 
+/**
+ * Derives a PascalCase enum const name from a table name + field name.
+ * e.g. tableName="orders", field="status" → "OrdersStatus"
+ */
+function enumConstName(tableName: string, field: string): string {
+  return toPascalCase(tableName) + toPascalCase(field);
+}
+
+/**
+ * Emits a `const` enum object + companion type for a field with options[].
+ * Example:
+ *   export const OrdersStatus = { pending: 'pending', ... } as const;
+ *   export type OrdersStatus = typeof OrdersStatus[keyof typeof OrdersStatus];
+ */
+function generateEnumConst(
+  constName: string,
+  options: Array<{ value: string | number | boolean }>
+): string {
+  const seenKeys = new Set<string>();
+  let fallbackIndex = 1;
+  const entries = options
+    .map(o => {
+      let key = String(o.value).replace(/[^a-zA-Z0-9_$]/g, '_');
+      if (!key) {
+        key = `opt_${fallbackIndex++}`;
+      } else if (/^\d/.test(key)) {
+        key = `_${key}`; // valid JS identifier
+      }
+      while (seenKeys.has(key)) {
+        key += '_';
+      }
+      seenKeys.add(key);
+      const val = JSON.stringify(o.value);
+      return `  ${key}: ${val},`;
+    })
+    .join('\n');
+
+  return (
+    `export const ${constName} = {\n${entries}\n} as const;\n` +
+    `export type ${constName} = typeof ${constName}[keyof typeof ${constName}];`
+  );
+}
+
+/**
+ * Collect all enum consts that need to be generated for a table.
+ * Deduplicates by constName so a shared field (e.g. status appearing in both
+ * columns and filters) only produces one const.
+ */
+function collectEnumConsts(
+  tableName: string,
+  columns: ColumnMeta[],
+  filters: TableMetadata['filters']
+): Array<{ constName: string; options: Array<{ value: string | number | boolean }> }> {
+  const enumMap = new Map<string, Array<{ value: string | number | boolean }>>();
+
+  // Process filters first, they take precedence for options
+  for (const f of filters) {
+    if (f.options && f.options.length > 0) {
+      const name = enumConstName(tableName, f.field);
+      // Clone options to avoid mutating the source metadata
+      enumMap.set(name, f.options.map(o => ({ ...o })));
+    }
+  }
+
+  for (const col of columns) {
+    if (col.options && col.options.length > 0) {
+      const name = enumConstName(tableName, col.name);
+      const existing = enumMap.get(name) || [];
+      // Merge, keeping existing (filter) options if they exist
+      const seenValues = new Set(existing.map(o => o.value));
+      for (const opt of col.options) {
+        if (!seenValues.has(opt.value)) {
+          // Clone options to avoid mutating the source metadata
+          existing.push({ ...opt });
+          seenValues.add(opt.value);
+        }
+      }
+      enumMap.set(name, existing);
+    }
+  }
+
+  return Array.from(enumMap.entries()).map(([constName, options]) => ({ constName, options }));
+}
+
 function generateRowInterface(
   tableName: string,
   columns: ColumnMeta[]
@@ -46,9 +130,13 @@ function generateRowInterface(
   const fields = columns
     .filter(col => !col.hidden)
     .map(col => {
-      const tsType = col.options
-        ? generateEnumType(col.options)
-        : mapColumnType(col.type);
+      let tsType: string;
+      if (col.options && col.options.length > 0) {
+        // Use the enum const type name instead of an inline union
+        tsType = enumConstName(tableName, col.name);
+      } else {
+        tsType = mapColumnType(col.type);
+      }
       const nullable = col.type === 'date' && !col.computed ? ' | null' : '';
       return `  ${col.name}: ${tsType}${nullable};`;
     })
@@ -69,10 +157,18 @@ function generateFiltersInterface(
   }
 
   const fields = filters.map(f => {
+    // Prefer filter-level options, fall back to column-level options
+    const filterOptions = f.options && f.options.length > 0 ? f.options : null;
     const col = columns.find(c => c.name === f.field);
-    const valueType = col?.options
-      ? generateEnumType(col.options)
-      : mapColumnType(f.type);
+    const colOptions = col?.options && col.options.length > 0 ? col.options : null;
+    const hasOptions = filterOptions ?? colOptions;
+
+    let valueType: string;
+    if (hasOptions) {
+      valueType = enumConstName(tableName, f.field);
+    } else {
+      valueType = mapColumnType(f.type);
+    }
 
     const operators = f.operators.filter(op => !['isNull', 'isNotNull'].includes(op));
 
@@ -83,7 +179,9 @@ function generateFiltersInterface(
     const operatorUnion = operators.map(op => `'${op}'`).join(' | ');
 
     if (f.type === 'date' || f.type === 'number') {
-      return `  ${f.field}?: { operator: ${operatorUnion}; value: ${valueType} | [${valueType}, ${valueType}] };`;
+      const hasArrayOp = ['in', 'notIn'].some(op => operators.includes(op));
+      const arrayType = hasArrayOp ? ` | ${valueType}[]` : '';
+      return `  ${f.field}?: { operator: ${operatorUnion}; value: ${valueType} | [${valueType}, ${valueType}]${arrayType} };`;
     }
 
     if (['in', 'notIn'].some(op => operators.includes(op))) {
@@ -108,6 +206,30 @@ function generateColumnType(
   return `export type ${pascalName}Column = ${columnNames};`;
 }
 
+/**
+ * Emits a typed tuple const for static (server-applied) filters so consumers
+ * know which fields are auto-applied and cannot be overridden.
+ *
+ * export const OrdersStaticFilters = ['tenantId', 'deletedAt'] as const;
+ * export type OrdersStaticFilter = (typeof OrdersStaticFilters)[number];
+ */
+function generateStaticFiltersConst(
+  tableName: string,
+  staticFilters: string[]
+): string | null {
+  if (staticFilters.length === 0) return null;
+
+  const pascalName = toPascalCase(tableName);
+  const constName = `${pascalName}StaticFilters`;
+  const typeName = `${pascalName}StaticFilter`;
+  const values = staticFilters.map(f => JSON.stringify(f)).join(', ');
+
+  return (
+    `export const ${constName} = [${values}] as const;\n` +
+    `export type ${typeName} = (typeof ${constName})[number];`
+  );
+}
+
 function generateAdapterFunction(
   tableName: string,
   apiName: string
@@ -117,8 +239,9 @@ function generateAdapterFunction(
   return `export function create${pascalName}Adapter(options: {
   baseUrl: string;
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
+  customFilters?: CustomFilters<${pascalName}Filters>;
 }): DataAdapter<${pascalName}Row> {
-  return createTableCraftAdapter<${pascalName}Row>({
+  return createTableCraftAdapter<${pascalName}Row, ${pascalName}Filters>({
     ...options,
     table: '${apiName}',
   });
@@ -129,7 +252,7 @@ export function generateTableFile(
   metadata: TableMetadata,
   version: string
 ): GeneratedTable {
-  const { name, columns, filters } = metadata;
+  const { name, columns, filters, staticFilters } = metadata;
   const pascalName = toPascalCase(name);
   const kebabName = toKebabCase(name);
 
@@ -139,24 +262,33 @@ export function generateTableFile(
 // @tablecraft-table: ${name}
 // Generated: ${new Date().toISOString()}
 
-import { createTableCraftAdapter, type DataAdapter } from '@tablecraft/table';
+import { createTableCraftAdapter, type DataAdapter, type CustomFilters } from '@tablecraft/table';
 
 `;
+
+  // Collect enum consts for columns and filters that have options[]
+  const enumConsts = collectEnumConsts(name, columns, filters);
+  const enumConstsBlock = enumConsts
+    .map(e => generateEnumConst(e.constName, e.options))
+    .join('\n\n');
 
   const rowInterface = generateRowInterface(name, columns);
   const filtersInterface = generateFiltersInterface(name, columns, filters);
   const columnType = generateColumnType(name, columns);
+  const staticFiltersConst = generateStaticFiltersConst(name, staticFilters ?? []);
   const adapterFunction = generateAdapterFunction(name, name);
 
-  const content = header + [
-    rowInterface,
-    '',
-    filtersInterface,
-    '',
-    columnType,
-    '',
-    adapterFunction,
-  ].join('\n');
+  const parts: string[] = [];
+  if (enumConstsBlock) {
+    parts.push(enumConstsBlock, '');
+  }
+  parts.push(rowInterface, '', filtersInterface, '', columnType);
+  if (staticFiltersConst) {
+    parts.push('', staticFiltersConst);
+  }
+  parts.push('', adapterFunction);
+
+  const content = header + parts.join('\n');
 
   return {
     tableName: name,

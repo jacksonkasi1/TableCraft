@@ -81,9 +81,17 @@ export const ColumnConfigSchema = z.object({
 export type ColumnConfig = z.infer<typeof ColumnConfigSchema>;
 export type ColumnDefinition = z.input<typeof ColumnConfigSchema>;
 
-// --- Join Config (Recursive) ---
+export interface JoinConfig {
+  table: string;
+  alias?: string;
+  type?: z.infer<typeof JoinTypeSchema>;
+  on: string;
+  columns?: ColumnConfig[];
+  joins?: JoinConfig[];
+}
+
 // Using z.lazy for recursive types
-export const JoinConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
+export const JoinConfigSchema: z.ZodType<JoinConfig> = z.lazy(() => z.object({
   table: z.string(), // Name of the joined table (as defined in config or db)
   alias: z.string().optional(),
   type: JoinTypeSchema.default('left').optional(),
@@ -92,7 +100,6 @@ export const JoinConfigSchema: z.ZodType<any> = z.lazy(() => z.object({
   // Recursive joins
   joins: z.array(z.lazy(() => JoinConfigSchema)).optional(),
 }));
-export type JoinConfig = z.infer<typeof JoinConfigSchema>;
 export type JoinDefinition = z.input<typeof JoinConfigSchema>;
 
 // --- Filter & Search Config ---

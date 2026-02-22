@@ -1,7 +1,7 @@
 import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
 import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search } from "lucide-react";
-import type { TableConfig, ExportConfig, ExportableData } from "./types";
+import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement } from "./types";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./export";
 import {
@@ -57,6 +57,15 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   columnMapping?: Record<string, string>;
   customToolbarContent?: React.ReactNode;
   startToolbarContent?: React.ReactNode;
+  /**
+   * Controls where `startToolbarContent` is rendered in the left toolbar area.
+   * - `'before-search'` — before the search input
+   * - `'after-search'`  — after search, before the date filter. 
+   *                       NOTE: If `enableSearch` is false, this renders in the same visual position as `'before-search'`.
+   * - `'after-date'`    — after the date filter (default)
+   * @default 'after-date'
+   */
+  startToolbarPlacement?: StartToolbarPlacement;
   hiddenColumns?: string[];
 }
 
@@ -77,6 +86,7 @@ export function DataTableToolbar<TData extends ExportableData>({
   columnMapping,
   customToolbarContent,
   startToolbarContent,
+  startToolbarPlacement = 'after-date',
   hiddenColumns,
 }: DataTableToolbarProps<TData>) {
   const entityName = exportConfig?.entityName || "items";
@@ -159,6 +169,8 @@ export function DataTableToolbar<TData extends ExportableData>({
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex flex-1 flex-wrap items-center gap-2">
         <div className="flex items-center gap-2">
+          {startToolbarPlacement === 'before-search' && startToolbarContent}
+
           {config.enableSearch && (
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -177,7 +189,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             </div>
           )}
 
-          {startToolbarContent}
+          {startToolbarPlacement === 'after-search' && startToolbarContent}
 
           {config.enableDateFilter && (
             <CalendarDatePicker
@@ -196,6 +208,8 @@ export function DataTableToolbar<TData extends ExportableData>({
               className={getInputSizeClass(config.size)}
             />
           )}
+
+          {startToolbarPlacement === 'after-date' && startToolbarContent}
         </div>
 
         {isFiltered && (

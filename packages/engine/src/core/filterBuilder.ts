@@ -5,10 +5,18 @@ import {
   getTableColumns,
   and,
 } from 'drizzle-orm';
-import { TableConfig } from '../types/table';
+import { TableConfig, JoinConfig, ColumnConfig } from '../types/table';
 import { FilterParam } from '../types/engine';
 import { applyOperator } from '../utils/operators';
 import { isDatePreset, buildDatePresetCondition } from './datePresets';
+
+// Internal: resolved column reference plus the config entry it came from
+interface ResolvedColumn {
+  column: Column;
+  colConfig: ColumnConfig | undefined;
+  /** True when this column came from a join (not the base table) */
+  fromJoin: boolean;
+}
 
 export class FilterBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -19,7 +27,7 @@ export class FilterBuilder {
    */
   buildFilters(
     config: TableConfig,
-    params: Record<string, FilterParam>
+    params: Record<string, FilterParam | FilterParam[]>
   ): SQL | undefined {
     if (!params || Object.keys(params).length === 0) {
       return undefined;
@@ -28,7 +36,7 @@ export class FilterBuilder {
     const table = this.schema[config.base] as Table;
     if (!table) return undefined;
 
-    const columns = getTableColumns(table);
+    const baseColumns = getTableColumns(table);
 
     // Build a whitelist of filterable field names
     const filterableFields = new Set<string>();
@@ -42,36 +50,53 @@ export class FilterBuilder {
       }
     }
 
-    // From columns marked filterable (default true)
+    // From base columns marked filterable (default true)
     for (const col of config.columns) {
       if (col.filterable !== false) {
         filterableFields.add(col.name);
       }
     }
 
+    // From join columns marked filterable (recursive)
+    const joinFields = new Set<string>();
+    if (config.joins) {
+      collectFilterableJoinFields(config.joins, joinFields);
+      for (const jf of joinFields) {
+        filterableFields.add(jf);
+      }
+    }
+
     const conditions: SQL[] = [];
 
-    for (const [field, param] of Object.entries(params)) {
+    for (const [field, paramOrParams] of Object.entries(params)) {
       // Security: reject fields not in the whitelist
       if (!filterableFields.has(field)) continue;
 
-      // Find the config for this field to resolve "field" property
-      const colConfig = config.columns.find(c => c.name === field);
-      const dbFieldName = colConfig?.field ?? field;
+      // Determine whether this field is a join column using the Set
+      const isJoinField = joinFields.has(field);
 
-      // Resolve the column — could be on the base table or a joined table
-      const col = this.resolveColumn(config, columns, dbFieldName);
-      if (!col) continue;
-
-      // Check if value is a date preset
-      if (isDatePreset(param.value)) {
-        const presetCondition = buildDatePresetCondition(col, param.value);
-        if (presetCondition) conditions.push(presetCondition);
+      // Resolve the column — could be on the base table or a joined table.
+      // Pass isJoinField so that base-table columns can never shadow join columns.
+      const resolved = this.resolveColumn(config, baseColumns, field, isJoinField);
+      if (!resolved) {
+        console.warn(`[FilterBuilder] Could not resolve column "${field}" — filter skipped`);
         continue;
       }
 
-      const condition = applyOperator(param.operator, col, param.value);
-      if (condition) conditions.push(condition);
+      const { column: col } = resolved;
+      const paramsList = Array.isArray(paramOrParams) ? paramOrParams : [paramOrParams];
+
+      for (const param of paramsList) {
+        // Check if value is a date preset
+        if (isDatePreset(param.value)) {
+          const presetCondition = buildDatePresetCondition(col, param.value);
+          if (presetCondition) conditions.push(presetCondition);
+          continue;
+        }
+
+        const condition = applyOperator(param.operator, col, param.value);
+        if (condition) conditions.push(condition);
+      }
     }
 
     return conditions.length > 0 ? and(...conditions) : undefined;
@@ -79,6 +104,7 @@ export class FilterBuilder {
 
   /**
    * Builds conditions for filters with type='static' (preset values in config).
+   * Supports both base columns and join columns.
    */
   buildStaticFilters(config: TableConfig): SQL | undefined {
     if (!config.filters) return undefined;
@@ -86,16 +112,21 @@ export class FilterBuilder {
     const table = this.schema[config.base] as Table;
     if (!table) return undefined;
 
-    const columns = getTableColumns(table);
+    const baseColumns = getTableColumns(table);
     const conditions: SQL[] = [];
 
     for (const filter of config.filters) {
       if (filter.type !== 'static' || filter.value === undefined) continue;
 
-      const col = columns[filter.field];
-      if (!col) continue;
+      const isJoinField = isJoinColumn(config, filter.field);
+      const resolved = this.resolveColumn(config, baseColumns, filter.field, isJoinField);
 
-      // Default to 'eq' if not specified (though schema defaults it, z.input might miss it)
+      if (!resolved) {
+        console.warn(`[FilterBuilder] Static filter: could not resolve column "${filter.field}" — skipped`);
+        continue;
+      }
+
+      const col = resolved.column;
       const op = filter.operator ?? 'eq';
       const condition = applyOperator(op, col, filter.value);
       if (condition) conditions.push(condition);
@@ -105,35 +136,127 @@ export class FilterBuilder {
   }
 
   /**
-   * Resolves a column reference. Supports "joinedTable.column" dot-syntax
-   * for columns on joined tables.
+   * Resolves a column reference. Supports:
+   * 1. Direct column on the base table (only when isJoinField is false)
+   * 2. Dot-syntax for joined tables: "users.role"
+   * 3. Plain aliased name from a joined table: "role" (searched recursively through join configs)
+   *
+   * When `isJoinField` is true the base-column lookup is skipped entirely to prevent
+   * a base-schema column with the same name from silently shadowing a join column.
    */
   private resolveColumn(
     config: TableConfig,
     baseColumns: Record<string, Column>,
-    field: string
-  ): Column | undefined {
-    // Direct column on the base table
-    if (baseColumns[field]) {
-      return baseColumns[field];
-    }
-
-    // Dot-syntax for joined tables: "orders.total"
+    field: string,
+    isJoinField: boolean
+  ): ResolvedColumn | undefined {
+    // Dot-syntax takes priority regardless of join vs base — it is explicit
     if (field.includes('.')) {
       const [tableName, colName] = field.split('.');
       const joinedTable = this.schema[tableName] as Table | undefined;
       if (!joinedTable) return undefined;
 
-      // Verify this table is actually joined
+      // Verify this table is actually joined (security check)
       const isJoined = config.joins?.some(
         (j) => j.table === tableName || j.alias === tableName
       );
       if (!isJoined) return undefined;
 
       const joinedCols = getTableColumns(joinedTable);
-      return joinedCols[colName];
+      const column = joinedCols[colName];
+      return column ? { column, colConfig: undefined, fromJoin: true } : undefined;
+    }
+
+    // If this field belongs to a join, skip the base column entirely to avoid shadowing
+    if (!isJoinField) {
+      const baseColConfig = config.columns.find(c => c.name === field);
+      const dbFieldName = baseColConfig?.field ?? field;
+      const column = baseColumns[dbFieldName];
+      if (column) {
+        return { column, colConfig: baseColConfig, fromJoin: false };
+      }
+    }
+
+    // Plain name — search join configs recursively
+    return this.resolveJoinColumn(config, field);
+  }
+
+  /**
+   * Searches join configs recursively for a column with the given plain name.
+   * Returns the drizzle Column from the joined table's schema.
+   */
+  private resolveJoinColumn(
+    config: { joins?: JoinConfig[] },
+    fieldName: string
+  ): ResolvedColumn | undefined {
+    if (!config.joins) return undefined;
+
+    for (const join of config.joins) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const joinColConfig = (join.columns as any[] | undefined)?.find(
+        (c: ColumnConfig) => c.name === fieldName
+      ) as ColumnConfig | undefined;
+
+      if (joinColConfig) {
+        const joinedTable = this.schema[join.table] as Table | undefined;
+        if (!joinedTable) continue;
+
+        const joinedCols = getTableColumns(joinedTable);
+        const dbCol = joinColConfig.field ?? fieldName;
+        const column = joinedCols[dbCol];
+        if (column) return { column, colConfig: joinColConfig, fromJoin: true };
+      }
+
+      // Recurse into nested joins
+      if (join.joins) {
+        const nested = this.resolveJoinColumn({ joins: join.joins }, fieldName);
+        if (nested) return nested;
+      }
     }
 
     return undefined;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Module-level helpers (pure, no `this` dependency)
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively populates `out` with filterable field names from all join configs.
+ */
+function collectFilterableJoinFields(joins: JoinConfig[], out: Set<string>): void {
+  for (const join of joins) {
+    if (join.columns) {
+      for (const col of join.columns) {
+        if (col.filterable !== false) {
+          out.add(col.name);
+        }
+      }
+    }
+    if (join.joins) {
+      collectFilterableJoinFields(join.joins, out);
+    }
+  }
+}
+
+/**
+ * Returns true if `fieldName` is defined in any join config (recursively).
+ * Used to prevent base-table columns from shadowing join columns.
+ */
+function isJoinColumn(config: TableConfig, fieldName: string): boolean {
+  if (!config.joins) return false;
+  return isJoinColumnInJoins(config.joins, fieldName);
+}
+
+function isJoinColumnInJoins(joins: JoinConfig[], fieldName: string): boolean {
+  for (const join of joins) {
+    if (join.columns?.some(c => c.name === fieldName)) {
+      return true;
+    }
+    if (join.joins && isJoinColumnInJoins(join.joins, fieldName)) {
+      return true;
+    }
+  }
+  return false;
 }

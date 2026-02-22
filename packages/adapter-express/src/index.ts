@@ -8,6 +8,7 @@ import {
   TableConfig,
   ConfigInput,
   EngineContext,
+  TableCraftError,
 } from '@tablecraft/engine';
 
 export interface ExpressAdapterOptions {
@@ -27,6 +28,18 @@ export interface ExpressAdapterOptions {
     context: EngineContext,
     req: Request
   ) => boolean | Promise<boolean>;
+}
+
+function handleExpressError(err: unknown, res: Response, next: NextFunction): void {
+  if (err instanceof TableCraftError) {
+    if (err.statusCode >= 500) {
+      next(err);
+    } else {
+      res.status(err.statusCode).json({ error: err.message, code: (err as any).code });
+    }
+  } else {
+    next(err);
+  }
 }
 
 /**
@@ -112,8 +125,8 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
       const result = await engine.query(params, context);
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
-    } catch (err) {
-      next(err);
+    } catch (err: unknown) {
+      handleExpressError(err, res, next);
     }
   };
 }
@@ -173,8 +186,8 @@ export function createExpressHandler(options: {
       const result = await engine.query(params, context);
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
-    } catch (err) {
-      next(err);
+    } catch (err: unknown) {
+      handleExpressError(err, res, next);
     }
   };
 }

@@ -29,7 +29,8 @@ export class CursorPaginationBuilder {
     config: TableConfig,
     cursor: string | undefined,
     pageSize: number,
-    sort?: SortConfig[]
+    sort?: SortConfig[],
+    sqlExpressions?: Map<string, SQL>
   ): CursorResult {
     const table = this.schema[config.base] as Table;
     if (!table) {
@@ -48,8 +49,14 @@ export class CursorPaginationBuilder {
     // Build ORDER BY
     const orderBy: SQL[] = sortFields.map((s) => {
       const col = columns[s.field];
-      if (!col) return s.order === 'desc' ? desc(sql.identifier(s.field)) : asc(sql.identifier(s.field));
-      return s.order === 'desc' ? desc(col) : asc(col);
+      if (col) {
+        return s.order === 'desc' ? desc(col) : asc(col);
+      }
+      if (sqlExpressions?.has(s.field)) {
+        const expr = sqlExpressions.get(s.field)!;
+        return s.order === 'desc' ? desc(expr) : asc(expr);
+      }
+      return s.order === 'desc' ? desc(sql.identifier(s.field)) : asc(sql.identifier(s.field));
     });
 
     // Decode cursor and build WHERE

@@ -36,7 +36,7 @@ function validateFilterValues(params: EngineParams, config: TableConfig): void {
     columnMap.set(col.name, col);
   }
 
-  for (const [field, filter] of Object.entries(params.filters)) {
+  for (const [field, filterOrFilters] of Object.entries(params.filters)) {
     const col = columnMap.get(field);
 
     if (!col) {
@@ -50,9 +50,11 @@ function validateFilterValues(params: EngineParams, config: TableConfig): void {
       throw new FieldError(field, 'is not filterable');
     }
 
-    if (filter.operator === 'isNull' || filter.operator === 'isNotNull') continue;
-
-    validateValueType(field, col.type, filter);
+    const filters = Array.isArray(filterOrFilters) ? filterOrFilters : [filterOrFilters];
+    for (const filter of filters) {
+      if (filter.operator === 'isNull' || filter.operator === 'isNotNull') continue;
+      validateValueType(field, col.type, filter);
+    }
   }
 }
 
@@ -63,7 +65,14 @@ function validateValueType(field: string, colType: string, filter: FilterParam):
   // For array operators, validate each element
   if (filter.operator === 'in' || filter.operator === 'notIn') {
     if (!Array.isArray(value)) {
-      throw new ValidationError(field, 'array', value);
+      // Defensive: requestParser should have already wrapped scalars into arrays.
+      // If we still get a scalar here, it means someone called the engine directly
+      // without going through parseRequest — give a clear, actionable error.
+      throw new ValidationError(
+        field,
+        `array (for '${filter.operator}' operator). If passing a single value, wrap it in an array: [${JSON.stringify(value)}]`,
+        value
+      );
     }
     for (const item of value) {
       validateSingleValue(field, colType, item);
@@ -123,12 +132,37 @@ function validateSortFields(params: EngineParams, config: TableConfig): void {
   if (!params.sort?.length) return;
 
   const sortable = new Set(
-    config.columns.filter((c) => c.sortable).map((c) => c.name)
+    config.columns.filter((c) => c.sortable !== false).map((c) => c.name)
   );
+
+  // Also collect sortable fields from joins (same pattern as FilterBuilder
+  // uses collectFilterableJoinFields for filterable fields)
+  collectSortableJoinFields(config.joins, sortable);
 
   for (const s of params.sort) {
     if (!sortable.has(s.field)) {
       throw new FieldError(s.field, 'is not sortable. Sortable: ' + [...sortable].join(', '));
+    }
+  }
+}
+
+/** Recursively collects sortable column names from join configs. */
+function collectSortableJoinFields(
+  joins: TableConfig['joins'],
+  sortable: Set<string>
+): void {
+  if (!joins?.length) return;
+  for (const join of joins) {
+    if (join.columns) {
+      for (const col of join.columns) {
+        if (col.sortable !== false) {
+          sortable.add(col.name);
+        }
+      }
+    }
+    // Recurse into nested joins
+    if (join.joins) {
+      collectSortableJoinFields(join.joins, sortable);
     }
   }
 }
