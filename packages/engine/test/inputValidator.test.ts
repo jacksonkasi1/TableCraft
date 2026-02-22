@@ -171,7 +171,7 @@ describe('validateInput', () => {
       columns: [
         { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
         // 'first' subquery — sortable: false set by define.ts
-        { name: 'firstItem', type: 'string', hidden: false, sortable: false, filterable: false, computed: true },
+        { name: 'firstItem', type: 'json', hidden: false, sortable: false, filterable: false, computed: true },
         // 'count' and 'exists' subqueries — sortable: true (scalar)
         { name: 'itemCount', type: 'number', hidden: false, sortable: true, filterable: false, computed: true },
         { name: 'hasItems', type: 'boolean', hidden: false, sortable: true, filterable: false, computed: true },

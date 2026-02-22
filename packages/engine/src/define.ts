@@ -761,15 +761,23 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     // 'first' mode returns row_to_json() — a non-scalar JSON object — which
     // cannot be used in ORDER BY. Mark it sortable: false to prevent DB errors.
     // 'count' (integer) and 'exists' (boolean) are scalar and safe to sort.
-    this._config.columns.push({
-      name: alias,
-      type: type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'string',
-      label: alias,
-      hidden: false,
-      sortable: type !== 'first',
-      filterable: false,
-      computed: true,
-    });
+    const existingCol = this._config.columns.find(c => c.name === alias);
+    if (existingCol) {
+      existingCol.type = type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'json';
+      existingCol.sortable = type !== 'first';
+      existingCol.filterable = false;
+      existingCol.computed = true;
+    } else {
+      this._config.columns.push({
+        name: alias,
+        type: type === 'exists' ? 'boolean' : type === 'count' ? 'number' : 'json',
+        label: alias,
+        hidden: false,
+        sortable: type !== 'first',
+        filterable: false,
+        computed: true,
+      });
+    }
 
     return this;
   }

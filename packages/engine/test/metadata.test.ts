@@ -447,10 +447,10 @@ describe("buildMetadata — raw TableConfig fallback path (subquery columns)", (
     expect(hasReturns.type).toBe('boolean');
   });
 
-  it("'first' type subquery column should have type 'string'", () => {
+  it("'first' type subquery column should have type 'json'", () => {
     const meta = buildMetadata(rawConfigWithSubqueries);
     const firstItem = meta.columns.find(c => c.name === 'firstItem')!;
-    expect(firstItem.type).toBe('string');
+    expect(firstItem.type).toBe('json');
   });
 
   it("define.ts builder path and fallback path should produce matching sortable/filterable for subquery columns", () => {
@@ -462,7 +462,7 @@ describe("buildMetadata — raw TableConfig fallback path (subquery columns)", (
         { name: 'id', type: 'uuid', hidden: false, sortable: true, filterable: true },
         // As set by define.ts .subquery()
         { name: 'itemCount', type: 'number', label: 'itemCount', hidden: false, sortable: true, filterable: false, computed: true },
-        { name: 'firstItem', type: 'string', label: 'firstItem', hidden: false, sortable: false, filterable: false, computed: true },
+        { name: 'firstItem', type: 'json', label: 'firstItem', hidden: false, sortable: false, filterable: false, computed: true },
       ],
       subqueries: [
         { alias: 'itemCount', table: 'orderItems', type: 'count', filter: 'orderItems.orderId = orders.id' },

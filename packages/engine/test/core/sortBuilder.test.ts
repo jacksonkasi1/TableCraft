@@ -308,7 +308,7 @@ describe('SortBuilder', () => {
         columns: [
           { name: 'id', type: 'number', sortable: true, hidden: false, filterable: true },
           // 'first' subquery — sortable: false (as set by define.ts .subquery())
-          { name: 'firstItem', type: 'string', sortable: false, hidden: false, filterable: false, computed: true },
+          { name: 'firstItem', type: 'json', sortable: false, hidden: false, filterable: false, computed: true },
         ],
         subqueries: [
           { alias: 'firstItem', table: 'orders', type: 'first', filter: 'orders.user_id = users.id' },

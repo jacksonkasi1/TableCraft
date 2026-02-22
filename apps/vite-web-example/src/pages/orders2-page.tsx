@@ -60,7 +60,7 @@ export function Orders2Page() {
       {/* Status */}
       <Select
         value={status || ALL}
-        onValueChange={(v) => setStatus(v === ALL ? '' : v)}
+        onValueChange={setStatus}
       >
         <SelectTrigger className="h-8 w-[160px]">
           <SelectValue placeholder="All statuses" />
@@ -77,7 +77,7 @@ export function Orders2Page() {
       {/* Role */}
       <Select
         value={role || ALL}
-        onValueChange={(v) => setRole(v === ALL ? '' : v)}
+        onValueChange={setRole}
       >
         <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="All roles" />

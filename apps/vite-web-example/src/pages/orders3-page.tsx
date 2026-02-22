@@ -153,7 +153,7 @@ export function Orders3Page() {
       </DropdownMenu>
 
       {/* Role single-select */}
-      <Select value={role || ALL} onValueChange={(v) => setRole(v === ALL ? '' : v)}>
+      <Select value={role || ALL} onValueChange={setRole}>
         <SelectTrigger className="h-8 w-[140px]">
           <SelectValue placeholder="All roles" />
         </SelectTrigger>
