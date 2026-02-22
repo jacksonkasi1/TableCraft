@@ -244,11 +244,14 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
 
       if (useCursor) {
         // ── Cursor-based pagination ──
+        // Note: rawSelects deliberately overwrite computedExpressions when keys collide.
+        const sqlExpressions = new Map([...ext.computedExpressions, ...ext.rawSelects]);
+
         const maxSize = config.pagination?.maxPageSize ?? 100;
         const pageSize = Math.min(resolvedParams.pageSize ?? config.pagination?.defaultPageSize ?? 10, maxSize);
         const sortConfig = resolvedParams.sort?.map(s => ({ field: s.field, order: s.order })) ?? config.defaultSort;
 
-        const cursorResult = cursorPagination.build(config, resolvedParams.cursor, pageSize, sortConfig);
+        const cursorResult = cursorPagination.build(config, resolvedParams.cursor, pageSize, sortConfig, sqlExpressions);
 
         let cursorWhere = where;
         if (cursorResult.whereCondition) {

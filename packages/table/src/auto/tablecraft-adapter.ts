@@ -227,8 +227,8 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     const merged: Record<string, unknown> = { ...(params.filters ?? {}) };
 
     for (const [key, val] of Object.entries(customFilters)) {
-      // False, null, undefined → remove the filter. (0 and "" are valid values)
-      if (val === false || val === null || val === undefined) {
+      // null, undefined → remove the filter. (0, "", and false are valid values)
+      if (val === null || val === undefined) {
         delete merged[key];
       } else if (typeof val === "object") {
         // { operator, value } form — pass through as-is
@@ -242,17 +242,17 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     return { ...params, filters: merged };
   }
 
-  async function getMetadataWithFallback(): Promise<{ metadata: TableMetadata | null; dateRangeCol: string }> {
+  async function getMetadataWithFallback(): Promise<{ metadata: TableMetadata | null; dateRangeCol: string | null }> {
     if (!cachedMetadata) {
       try {
         cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
       } catch (error) {
-        console.warn(`[TableCraft] Could not fetch metadata for "${tableName}"; date filtering will use fallback column "createdAt".`, error);
+        console.warn(`[TableCraft] Could not fetch metadata for "${tableName}"; date filtering is disabled because metadata failed.`, error);
       }
     }
     return {
       metadata: cachedMetadata,
-      dateRangeCol: cachedMetadata?.dateRangeColumn ?? 'createdAt',
+      dateRangeCol: cachedMetadata?.dateRangeColumn ?? null,
     };
   }
 

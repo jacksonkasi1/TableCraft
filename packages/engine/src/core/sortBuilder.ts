@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm';
 import { TableConfig, JoinConfig } from '../types/table';
 import { SortParam } from '../types/engine';
+import { isJoinColumnInJoins, collectSortableJoinFields } from '../utils/joinUtils';
 
 export class SortBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -149,36 +150,4 @@ export class SortBuilder {
       order: s.order ?? 'asc',
     }));
   }
-}
-
-// ---------------------------------------------------------------------------
-// Module-level helpers
-// ---------------------------------------------------------------------------
-
-/** Recursively populates `out` with sortable field names from all join configs. */
-function collectSortableJoinFields(joins: JoinConfig[], out: Set<string>): void {
-  for (const join of joins) {
-    if (join.columns) {
-      for (const col of join.columns) {
-        if (col.sortable !== false) {
-          out.add(col.name);
-        }
-      }
-    }
-    if (join.joins) {
-      collectSortableJoinFields(join.joins, out);
-    }
-  }
-}
-
-function isJoinColumnInJoins(joins: JoinConfig[], fieldName: string): boolean {
-  for (const join of joins) {
-    if (join.columns?.some(c => c.name === fieldName)) {
-      return true;
-    }
-    if (join.joins && isJoinColumnInJoins(join.joins, fieldName)) {
-      return true;
-    }
-  }
-  return false;
 }

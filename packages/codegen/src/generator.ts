@@ -96,7 +96,8 @@ function collectEnumConsts(
   for (const f of filters) {
     if (f.options && f.options.length > 0) {
       const name = enumConstName(tableName, f.field);
-      enumMap.set(name, [...f.options]);
+      // Clone options to avoid mutating the source metadata
+      enumMap.set(name, f.options.map(o => ({ ...o })));
     }
   }
 
@@ -108,7 +109,8 @@ function collectEnumConsts(
       const seenValues = new Set(existing.map(o => o.value));
       for (const opt of col.options) {
         if (!seenValues.has(opt.value)) {
-          existing.push(opt);
+          // Clone options to avoid mutating the source metadata
+          existing.push({ ...opt });
           seenValues.add(opt.value);
         }
       }
@@ -220,7 +222,7 @@ function generateStaticFiltersConst(
   const pascalName = toPascalCase(tableName);
   const constName = `${pascalName}StaticFilters`;
   const typeName = `${pascalName}StaticFilter`;
-  const values = staticFilters.map(f => `'${f}'`).join(', ');
+  const values = staticFilters.map(f => JSON.stringify(f)).join(', ');
 
   return (
     `export const ${constName} = [${values}] as const;\n` +

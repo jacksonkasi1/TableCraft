@@ -30,6 +30,18 @@ export interface ExpressAdapterOptions {
   ) => boolean | Promise<boolean>;
 }
 
+function handleExpressError(err: unknown, res: Response, next: NextFunction): void {
+  if (err instanceof TableCraftError) {
+    if (err.statusCode >= 500) {
+      next(err);
+    } else {
+      res.status(err.statusCode).json({ error: err.message, code: (err as any).code });
+    }
+  } else {
+    next(err);
+  }
+}
+
 /**
  * Creates an Express middleware for dynamic `:table` routes.
  */
@@ -114,15 +126,7 @@ export function createExpressMiddleware(options: ExpressAdapterOptions) {
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
     } catch (err: unknown) {
-      if (err instanceof TableCraftError) {
-        if (err.statusCode >= 500) {
-          next(err);
-        } else {
-          res.status(err.statusCode).json({ error: err.message });
-        }
-      } else {
-        next(err);
-      }
+      handleExpressError(err, res, next);
     }
   };
 }
@@ -183,15 +187,7 @@ export function createExpressHandler(options: {
       res.setHeader('X-Total-Count', String(result.meta.total));
       res.json(result);
     } catch (err: unknown) {
-      if (err instanceof TableCraftError) {
-        if (err.statusCode >= 500) {
-          next(err);
-        } else {
-          res.status(err.statusCode).json({ error: err.message });
-        }
-      } else {
-        next(err);
-      }
+      handleExpressError(err, res, next);
     }
   };
 }

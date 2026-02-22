@@ -151,7 +151,7 @@ export function createHonoApp(options: HonoAdapterOptions): Hono {
     } catch (err: unknown) {
       const statusCode = err instanceof TableCraftError ? err.statusCode : 500;
       const message = err instanceof Error ? err.message : 'Internal server error';
-      return c.json({ error: message }, statusCode as any);
+      return c.json({ error: message }, statusCode as ContentfulStatusCode);
     }
   });
 
@@ -210,7 +210,7 @@ export function createHonoHandler(options: {
     } catch (err: unknown) {
       const statusCode = err instanceof TableCraftError ? err.statusCode : 500;
       const message = err instanceof Error ? err.message : 'Internal server error';
-      return c.json({ error: message }, statusCode as any);
+      return c.json({ error: message }, statusCode as ContentfulStatusCode);
     }
   };
 }

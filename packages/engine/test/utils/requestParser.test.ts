@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseRequest } from '../../src/utils/requestParser';
+import type { FilterParam } from '../../src/types/engine';
 
 describe('parseRequest', () => {
   it('should parse page and pageSize', () => {
@@ -305,9 +306,10 @@ describe('parseRequest', () => {
       // __proto__ matches \w+ regex, so it will be in filters
       // but it should NOT pollute Object.prototype
       expect(({} as any).attack).toBeUndefined();
-      // The filter itself should exist as a normal property
+      // The filter itself should exist as a normal property (thanks to Object.create(null))
       if (result.filters) {
-        expect(Object.prototype.hasOwnProperty.call(result.filters, '__proto__')).toBe(true);
+        expect(Object.getPrototypeOf(result.filters)).toBeNull();
+        expect(Object.keys(result.filters)).toContain('__proto__');
       }
     });
 

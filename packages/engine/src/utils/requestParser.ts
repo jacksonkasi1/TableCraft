@@ -107,7 +107,7 @@ function parseSelect(val: string | undefined): string[] | undefined {
 }
 
 function parseFilters(raw: Record<string, string>): Record<string, FilterParam | FilterParam[]> | undefined {
-  const filters: Record<string, FilterParam | FilterParam[]> = {};
+  const filters: Record<string, FilterParam | FilterParam[]> = Object.create(null);
   const filterRegexSimple = /^filter\[([\w.-]+)]$/;
   const filterRegexOperator = /^filter\[([\w.-]+)]\[(\w+)]$/;
 

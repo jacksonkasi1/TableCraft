@@ -437,34 +437,36 @@ describe('FilterBuilder', () => {
     it('logs a warning when a whitelisted field cannot be resolved', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      // "role" is whitelisted via a join to a nonexistent table — will pass whitelist
-      // but fail to resolve, triggering a warning
-      const configMissingTable: TableConfig = {
-        ...joinConfig,
-        joins: [
-          {
-            table: 'nonexistent',
-            alias: 'x',
-            type: 'left',
-            on: 'orders.x_id = nonexistent.id',
-            columns: [
-              { name: 'role', type: 'string', filterable: true, hidden: false, sortable: true },
-            ],
-          },
-        ],
-      };
+      try {
+        // "role" is whitelisted via a join to a nonexistent table — will pass whitelist
+        // but fail to resolve, triggering a warning
+        const configMissingTable: TableConfig = {
+          ...joinConfig,
+          joins: [
+            {
+              table: 'nonexistent',
+              alias: 'x',
+              type: 'left',
+              on: 'orders.x_id = nonexistent.id',
+              columns: [
+                { name: 'role', type: 'string', filterable: true, hidden: false, sortable: true },
+              ],
+            },
+          ],
+        };
 
-      const params: Record<string, FilterParam> = {
-        role: { operator: 'eq', value: 'admin' },
-      };
+        const params: Record<string, FilterParam> = {
+          role: { operator: 'eq', value: 'admin' },
+        };
 
-      builderOrders.buildFilters(configMissingTable, params);
+        builderOrders.buildFilters(configMissingTable, params);
 
-      expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('role')
-      );
-
-      warnSpy.mockRestore();
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('role')
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 });

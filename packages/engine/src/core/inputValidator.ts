@@ -132,7 +132,7 @@ function validateSortFields(params: EngineParams, config: TableConfig): void {
   if (!params.sort?.length) return;
 
   const sortable = new Set(
-    config.columns.filter((c) => c.sortable).map((c) => c.name)
+    config.columns.filter((c) => c.sortable !== false).map((c) => c.name)
   );
 
   // Also collect sortable fields from joins (same pattern as FilterBuilder

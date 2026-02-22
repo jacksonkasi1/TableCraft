@@ -58,14 +58,12 @@ export class FilterBuilder {
     }
 
     // From join columns marked filterable (recursive)
-    if (config.joins) {
-      collectFilterableJoinFields(config.joins, filterableFields);
-    }
-
-    // Determine if fields are join columns by pre-computing a Set
     const joinFields = new Set<string>();
     if (config.joins) {
       collectFilterableJoinFields(config.joins, joinFields);
+      for (const jf of joinFields) {
+        filterableFields.add(jf);
+      }
     }
 
     const conditions: SQL[] = [];
@@ -120,7 +118,7 @@ export class FilterBuilder {
     for (const filter of config.filters) {
       if (filter.type !== 'static' || filter.value === undefined) continue;
 
-    const isJoinField = isJoinColumn(config, filter.field);
+      const isJoinField = isJoinColumn(config, filter.field);
       const resolved = this.resolveColumn(config, baseColumns, filter.field, isJoinField);
 
       if (!resolved) {
