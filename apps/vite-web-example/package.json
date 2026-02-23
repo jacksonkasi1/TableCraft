@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "cd ../.. && bun run --filter '@tablecraft/client' build && bun run --filter '@tablecraft/table' build && cd apps/vite-web-example && tsc -b && vite build",
+    "build": "cd ../.. && bun run --filter '@tablecraft/client' build && bun run --filter '@tablecraft/table' build && cd apps/vite-web-example && echo \"VITE_API_BASE_URL=$VITE_API_BASE_URL\" > .env.production && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
