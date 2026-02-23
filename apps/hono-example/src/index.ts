@@ -18,10 +18,10 @@ app.use('*', async (c, next) => {
 });
 
 // --- 1. Manual Route ---
-app.route('/manual', manualRoutes);
+app.route('/api/manual', manualRoutes);
 
 // --- 2. TableCraft Engine Route ---
-app.route('/engine', engineRoutes);
+app.route('/api/engine', engineRoutes);
 
 export default {
   port: 5000,
