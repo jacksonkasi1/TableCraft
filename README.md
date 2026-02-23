@@ -56,6 +56,12 @@ export function UsersPage() {
 }
 ```
 
+> **Tailwind CSS v4:** Add `@source "@tablecraft/table";` to your CSS file so Tailwind detects the utility classes used by the table components:
+> ```css
+> @import "tailwindcss";
+> @source "@tablecraft/table";
+> ```
+
 That's it! 🎉 No column definitions needed.
 
 ---

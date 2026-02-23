@@ -35,6 +35,17 @@ bun add exceljs
 
 > **Note:** Excel export is optional — if `exceljs` is not installed, the export feature will gracefully fall back to CSV/JSON formats.
 
+## Tailwind CSS v4 Setup
+
+If you're using **Tailwind CSS v4**, you need to add the `@source` directive so Tailwind can detect the utility classes used inside `@tablecraft/table`:
+
+```css
+@import "tailwindcss";
+@source "@tablecraft/table";
+```
+
+This tells Tailwind to scan the package's source files for class names. Without it, the table component styles may not be generated correctly.
+
 ## Features
 
 - **Auto-generated columns** — Columns generated from your table config metadata
