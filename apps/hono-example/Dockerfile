@@ -1,4 +1,4 @@
-FROM oven/bun:1
+FROM oven/bun:latest
 
 WORKDIR /app
 
@@ -7,7 +7,8 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies for the entire monorepo
-RUN bun install --frozen-lockfile
+# Do not use --frozen-lockfile to avoid lockfile version mismatch errors
+RUN bun install
 
 # Set environment to production
 ENV NODE_ENV=production
