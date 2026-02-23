@@ -12,16 +12,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 
+// ** import apis
+import { API_BASE_URL } from '../api';
+
 export function ProductsPage() {
   const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
-    baseUrl: '/api/engine',
+    baseUrl: API_BASE_URL,
     table: 'products',
   }), []);
 
   return (
     <div className="p-8 space-y-4">
       <h1 className="text-2xl font-bold">Products</h1>
-      
+
       <DataTable<ProductsRow>
         adapter={adapter}
         hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}

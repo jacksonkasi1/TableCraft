@@ -19,6 +19,7 @@ export function useDebouncedUrlNumber(key: string, defaultValue: number = 0, del
     if (currentNum !== urlValue) {
       setLocalValue(urlValue > 0 ? String(urlValue) : '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlValue]); // localValue intentionally omitted to prevent loops
 
   return [urlValue, localValue, setLocalValue] as const;

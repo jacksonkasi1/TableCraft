@@ -8,7 +8,7 @@ export interface Product {
   price: string;
   category: string;
   tags: string[] | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
   isArchived: boolean;
 }
 

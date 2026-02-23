@@ -2,15 +2,18 @@ import { DataTable, defaultColumnOrder } from '@tablecraft/table';
 import { createOrdersAdapter, type OrdersRow } from '../generated';
 import type { OrdersColumn } from '../generated';
 
+// ** import apis
+import { API_BASE_URL } from '../api';
+
 export function OrdersPage() {
   const adapter = createOrdersAdapter({
-    baseUrl: '/api/engine',
+    baseUrl: API_BASE_URL,
   });
 
   return (
     <div className="p-8 space-y-4">
       <h1 className="text-2xl font-bold">Orders</h1>
-      
+
       <DataTable<OrdersRow>
         adapter={adapter}
         config={{

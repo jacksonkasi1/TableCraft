@@ -14,9 +14,12 @@ import { Badge } from '@/components/ui/badge';
 import { MoreHorizontal } from 'lucide-react';
 import { axiosInstance } from '@/lib/api-client-axios';
 
+// ** import apis
+import { API_BASE_URL } from '../api';
+
 export function ProductsAxiosPage() {
   const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
-    baseUrl: '/api/engine',
+    baseUrl: API_BASE_URL,
     table: 'products',
     axios: axiosInstance,
   }), []);

@@ -30,6 +30,9 @@ import {
 } from '../components/ui/dropdown-menu';
 import { ChevronDown } from 'lucide-react';
 
+// ** import apis
+import { API_BASE_URL } from '../api';
+
 // ** import shared
 import { ALL, STATUS_OPTIONS, ROLE_OPTIONS, columnOverrides } from './shared/orders-shared';
 import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
@@ -38,9 +41,9 @@ import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
 
 const TOTAL_OPERATOR_OPTIONS = [
   { value: 'gte', label: 'Min ≥', short: 'Min' },
-  { value: 'gt',  label: 'Above >',  short: '>'   },
+  { value: 'gt', label: 'Above >', short: '>' },
   { value: 'lte', label: 'Max ≤', short: 'Max' },
-  { value: 'lt',  label: 'Below <',  short: '<'   },
+  { value: 'lt', label: 'Below <', short: '<' },
 ] as const;
 
 type TotalOperator = typeof TOTAL_OPERATOR_OPTIONS[number]['value'];
@@ -61,9 +64,9 @@ function stringifyStatusArray(values: string[]): string {
 
 export function Orders3Page() {
   // ── URL-synced filter state ──────────────────────────────────────────────
-  const [statusStr, setStatusStr]       = useUrlState<string>('status', '');
-  const [rawRole, setRawRole]           = useUrlState<string>('role', '');
-  const [totalOp, setTotalOp]           = useUrlState<TotalOperator>('total_op', 'gte');
+  const [statusStr, setStatusStr] = useUrlState<string>('status', '');
+  const [rawRole, setRawRole] = useUrlState<string>('role', '');
+  const [totalOp, setTotalOp] = useUrlState<TotalOperator>('total_op', 'gte');
   const [totalValue, localTotal, setLocalTotal] = useDebouncedUrlNumber('total');
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
 
@@ -78,7 +81,7 @@ export function Orders3Page() {
   const adapter = useMemo(() => {
     const statuses = parseStatusArray(statusStr);
     return createOrdersAdapter({
-      baseUrl: '/api/engine',
+      baseUrl: API_BASE_URL,
       customFilters: {
         status: statuses.length > 0
           ? { operator: 'in', value: statuses }

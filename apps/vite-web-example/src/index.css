@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "../../../packages/table/src";
+@source "@tablecraft/table";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";

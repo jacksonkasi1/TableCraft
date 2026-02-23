@@ -13,12 +13,15 @@ import { createUsersAdapter } from '../generated';
 // ** import ui
 import { Checkbox } from '../components/ui/checkbox';
 
+// ** import apis
+import { API_BASE_URL } from '../api';
+
 export function UsersPage() {
   // useUrlState keeps activeOnly in sync with the URL automatically
   const [activeOnly, setActiveOnly] = useUrlState<boolean>("active_only", false);
 
   const adapter = useMemo(() => createUsersAdapter({
-    baseUrl: '/api/engine',
+    baseUrl: API_BASE_URL,
     customFilters: {
       // Falsy values are omitted from the request automatically — no manual cleanup needed
       isActive: activeOnly || null,

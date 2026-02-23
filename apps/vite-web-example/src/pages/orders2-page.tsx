@@ -20,6 +20,9 @@ import {
   SelectValue,
 } from '../components/ui/select';
 
+// ** import apis
+import { API_BASE_URL } from '../api';
+
 // ** import shared
 import { ALL, STATUS_OPTIONS, ROLE_OPTIONS, columnOverrides } from './shared/orders-shared';
 import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
@@ -29,27 +32,27 @@ import { useDebouncedUrlNumber } from '../hooks/useDebouncedUrlNumber';
 export function Orders2Page() {
   // ── URL-synced filter state ──────────────────────────────────────────────
   const [rawStatus, setRawStatus] = useUrlState<string>('status', '');
-  const [rawRole, setRawRole]     = useUrlState<string>('role', '');
+  const [rawRole, setRawRole] = useUrlState<string>('role', '');
 
   // Normalize '__all__' (from URL or manual entry) to empty string
   const status = rawStatus === ALL ? '' : rawStatus;
-  const role   = rawRole   === ALL ? '' : rawRole;
+  const role = rawRole === ALL ? '' : rawRole;
 
   // Wrap setters to also normalize '__all__' on change
   const setStatus = (v: string) => setRawStatus(v === ALL ? '' : v);
-  const setRole   = (v: string) => setRawRole(v === ALL ? '' : v);
+  const setRole = (v: string) => setRawRole(v === ALL ? '' : v);
 
   const [minTotal, localTotal, setLocalTotal] = useDebouncedUrlNumber('min_total');
   const [includeDeleted, setIncludeDeleted] = useUrlState<boolean>('deleted', false);
 
   // ── Adapter ──────────────────────────────────────────────────────────────
   const adapter = useMemo(() => createOrdersAdapter({
-    baseUrl: '/api/engine',
+    baseUrl: API_BASE_URL,
     customFilters: {
       // Falsy / zero values are automatically omitted from requests
-      status:    status    || null,
-      role:      role      || null,
-      total:     minTotal  ? { operator: 'gte', value: minTotal } : null,
+      status: status || null,
+      role: role || null,
+      total: minTotal ? { operator: 'gte', value: minTotal } : null,
       deletedAt: includeDeleted ? { operator: 'isNotNull' } : null,
     },
   }), [status, role, minTotal, includeDeleted]);
