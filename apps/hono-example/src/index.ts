@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import manualRoutes from './routes/manual';
 import engineRoutes from './routes/engine';
 
 const app = new Hono();
 
+app.use('*', cors({ origin: '*' }));
 app.use('*', logger());
 
 // Timing Middleware
