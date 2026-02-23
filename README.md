@@ -56,11 +56,12 @@ export function UsersPage() {
 }
 ```
 
-> **Tailwind CSS v4:** Add `@source "@tablecraft/table";` to your CSS file so Tailwind detects the utility classes used by the table components:
+> **Tailwind CSS v4:** Add the `@source` directive so Tailwind detects the utility classes used by the table components:
 > ```css
 > @import "tailwindcss";
-> @source "@tablecraft/table";
+> @source "../node_modules/@tablecraft/table/src";
 > ```
+> The path is relative to your CSS file — adjust if needed.
 
 That's it! 🎉 No column definitions needed.
 

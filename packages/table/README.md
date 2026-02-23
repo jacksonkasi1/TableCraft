@@ -41,10 +41,12 @@ If you're using **Tailwind CSS v4**, you need to add the `@source` directive so 
 
 ```css
 @import "tailwindcss";
-@source "@tablecraft/table";
+@source "../node_modules/@tablecraft/table/src";
 ```
 
 This tells Tailwind to scan the package's source files for class names. Without it, the table component styles may not be generated correctly.
+
+> **Note:** The path is relative to your CSS file. Adjust if your CSS file is in a different location.
 
 ## Features
 
@@ -156,6 +158,51 @@ function UsersPage() {
 }
 ```
 
+## Troubleshooting
+
+### "Invalid hook call" Error (Duplicate React)
+
+If you see this error:
+
+```
+Invalid hook call. Hooks can only be called inside of the body of a function component.
+You might have more than one copy of React in the same app.
+```
+
+**Why it happens:** `@tablecraft/table` depends on packages like `@radix-ui/react-popover` which also depend on React. Some package managers may install a separate copy of React inside the package's own `node_modules`, causing two React instances to run at the same time — which breaks React hooks.
+
+**Fix for Vite:**
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
+});
+```
+
+**Fix for Webpack / Next.js:**
+
+```js
+// next.config.js or webpack.config.js
+module.exports = {
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      react: require.resolve("react"),
+      "react-dom": require.resolve("react-dom"),
+    };
+    return config;
+  },
+};
+```
+
+This forces your bundler to use a single copy of React across all dependencies.
+
 ## License
 
 MIT
+
