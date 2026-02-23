@@ -1,0 +1,29 @@
+node_modules
+.git
+.github
+.vscode
+.claude
+.explore
+.env
+.env.local
+dist
+temp
+docs
+plan
+studio
+assets
+
+# Ignore local dependency lock files if they conflict with bun.lock
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# App/Package specific ignores
+apps/*/node_modules
+apps/*/dist
+packages/*/node_modules
+packages/*/dist
+
+# Logs and system files
+*.log
+.DS_Store
