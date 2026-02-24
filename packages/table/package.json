@@ -18,7 +18,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "bun run --bun tsc",
     "dev": "tsc --watch",
     "test": "vitest",
     "typecheck": "bun run --bun tsc --noEmit"
