@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @source "../node_modules/@tablecraft/table/src";
+/* Vercel monorepo workaround: Forces Tailwind to scan the local workspace package directory 
+   because Vercel skips the npm install and symlinks local workspace packages instead. */
+@source "../../../packages/table/src";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
