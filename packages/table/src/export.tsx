@@ -16,7 +16,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   data: TData[];
   selectedCount: number;
   getSelectedItems?: () => Promise<TData[]>;
-  exportConfig?: ExportConfig<TData, string>;
+  exportConfig?: ExportConfig<TData>;
   tableConfig: TableConfig;
 }
 
@@ -54,32 +54,10 @@ export function DataTableExport<TData extends ExportableData>({
         : visibleColumns;
 
     const visibleColumnIds = orderedColumns.map((col) => col.id);
-    const allTableColumnIds = table
-      .getAllColumns()
-      .filter((col) => col.id !== "actions" && col.id !== "select")
-      .map((col) => col.id);
 
-    let exportHeaders: string[];
-    const cfgHeaders = exportConfig?.headers;
-
-    if (tableConfig.allowExportNewColumns === false) {
-      exportHeaders =
-        cfgHeaders && cfgHeaders.length > 0
-          ? cfgHeaders.filter((h) => visibleColumnIds.includes(h))
-          : visibleColumnIds;
-    } else {
-      if (cfgHeaders && cfgHeaders.length > 0) {
-        const existing = cfgHeaders.filter(
-          (h) => allTableColumnIds.includes(h) && visibleColumnIds.includes(h)
-        );
-        const newHeaders = cfgHeaders.filter(
-          (h) => !allTableColumnIds.includes(h)
-        );
-        exportHeaders = [...existing, ...newHeaders];
-      } else {
-        exportHeaders = visibleColumnIds;
-      }
-    }
+    // Start with all visible columns, remove any listed in removeHeaders
+    const removeSet = new Set((exportConfig?.removeHeaders as string[]) ?? []);
+    const exportHeaders = visibleColumnIds.filter((id) => !removeSet.has(id));
 
     const exportColumnMapping: Record<string, string> =
       (exportConfig?.columnMapping as Record<string, string>) ||

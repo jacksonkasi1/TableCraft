@@ -359,23 +359,21 @@ export interface ExportConfig<T = Record<string, unknown>> {
   entityName: string;
   /**
    * Map column keys to human-readable header names for the export file.
-   * Keys are type-safe — only valid column names from T are accepted.
+   * Independent from removeHeaders — you can rename any column.
    * @example { createdAt: 'Order Date', vatAmount: 'VAT (₹)' }
    */
   columnMapping?: Partial<Record<KnownStringKeys<T>, string>>;
   /** Column widths for Excel export (matched by index with headers) */
   columnWidths?: Array<{ wch: number }>;
   /**
-   * Columns to include in the export. Only these columns will appear in the file.
-   * Type-safe — only valid column names from T are accepted.
-   * If omitted, all visible columns are exported.
-   * @example ['id', 'status', 'email', 'total']
+   * Columns to exclude from the export. All other visible columns are included.
+   * Much simpler than listing every column you want — just hide 1-2 you don't need.
+   * @example ['deletedAt', 'tenantId']
    */
-  headers?: Array<KnownStringKeys<T>>;
+  removeHeaders?: Array<KnownStringKeys<T>>;
   /**
    * Transform each row before exporting.
    * Use this to format values (e.g. boolean → "Yes"/"No", date formatting).
-   * Can also add computed columns (requires `allowExportNewColumns: true`).
    */
   transformFunction?: DataTransformFunction<T>;
   /** Enable CSV export option (default: true) */
@@ -385,23 +383,13 @@ export interface ExportConfig<T = Record<string, unknown>> {
 }
 
 /**
- * Helper function for type-safe export configuration with full autocomplete.
- *
- * Similar to `defineColumnOverrides<T>()` — the double-call pattern
- * fixes `T` first, then infers column keys for headers and columnMapping.
+ * Helper for type-safe export config with full autocomplete.
  *
  * @example
- * import { defineExportConfig } from '@tablecraft/table';
- * import type { OrdersRow } from './generated/orders';
- *
  * const exportConfig = defineExportConfig<OrdersRow>()({
  *   entityName: 'orders',
- *   headers: ['id', 'status', 'email', 'total', 'createdAt'],
- *   columnMapping: { createdAt: 'Order Date', vatAmount: 'VAT (₹)' },
- *   transformFunction: (row) => ({
- *     ...row,
- *     createdAt: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '',
- *   }),
+ *   removeHeaders: ['deletedAt', 'tenantId'],
+ *   columnMapping: { createdAt: 'Order Date' },
  * });
  */
 export function defineExportConfig<T>() {

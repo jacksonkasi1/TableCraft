@@ -51,7 +51,7 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   getSelectedItems?: () => Promise<TData[]>;
   getAllItems: () => TData[];
   config: TableConfig;
-  exportConfig?: ExportConfig<TData, string>;
+  exportConfig?: ExportConfig<TData>;
   resetColumnSizing?: () => void;
   resetColumnOrder?: () => void;
   columnMapping?: Record<string, string>;

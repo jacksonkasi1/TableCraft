@@ -8,7 +8,7 @@ import { API_BASE_URL } from '../api';
 // ** Type-safe export config — only valid column names are accepted
 const exportConfig = defineExportConfig<OrdersRow>()({
   entityName: 'orders',
-  headers: ['id', 'status', 'email', 'total', 'vatAmount', 'itemCount', 'createdAt'],
+  removeHeaders: ['deletedAt', 'tenantId'],
   columnMapping: {
     createdAt: 'Order Date',
     vatAmount: 'VAT Amount',
