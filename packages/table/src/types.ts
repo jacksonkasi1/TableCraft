@@ -344,7 +344,7 @@ export interface ColumnMetadataForRenderer {
 
 export type DataTransformFunction<T> = (row: T) => Record<string, unknown>;
 
-export interface ExportConfig<T = Record<string, unknown>, C extends string = Extract<keyof T, string>> {
+export interface ExportConfig<T = Record<string, unknown>> {
   /** Display name used in filenames and toast messages (e.g. "orders") */
   entityName: string;
   /**
@@ -352,7 +352,7 @@ export interface ExportConfig<T = Record<string, unknown>, C extends string = Ex
    * Keys are type-safe — only valid column names from T are accepted.
    * @example { createdAt: 'Order Date', vatAmount: 'VAT (₹)' }
    */
-  columnMapping?: Partial<Record<C, string>>;
+  columnMapping?: Partial<Record<Extract<keyof T, string>, string>>;
   /** Column widths for Excel export (matched by index with headers) */
   columnWidths?: Array<{ wch: number }>;
   /**
@@ -361,7 +361,7 @@ export interface ExportConfig<T = Record<string, unknown>, C extends string = Ex
    * If omitted, all visible columns are exported.
    * @example ['id', 'status', 'email', 'total']
    */
-  headers?: C[];
+  headers?: Array<Extract<keyof T, string>>;
   /**
    * Transform each row before exporting.
    * Use this to format values (e.g. boolean → "Yes"/"No", date formatting).
@@ -395,10 +395,10 @@ export interface ExportConfig<T = Record<string, unknown>, C extends string = Ex
  * });
  */
 export function defineExportConfig<T>() {
-  return function <C extends Extract<keyof T, string>>(
-    config: ExportConfig<T, C>
+  return function (
+    config: ExportConfig<T>
   ): ExportConfig<T> {
-    return config as ExportConfig<T>;
+    return config;
   };
 }
 
