@@ -282,33 +282,45 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     async queryByIds(ids: (string | number)[], sortOptions?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]> {
       if (ids.length === 0) return [];
 
-      const { dateRangeCol } = await getMetadataWithFallback();
+      const { dateRangeCol, metadata } = await getMetadataWithFallback();
       const idKey = options.idField || "id";
+      const maxPageSize = metadata?.capabilities?.pagination?.maxPageSize;
+      const chunkSize = maxPageSize && maxPageSize > 0 ? maxPageSize : ids.length;
 
-      const params: QueryParams = {
-        page: 1,
-        pageSize: ids.length,
-        search: "",
-        sort: sortOptions?.sortBy || "",
-        sortOrder: sortOptions?.sortOrder || "asc",
-        filters: {
-          [idKey]: { operator: "in", value: ids },
-        },
-        dateRange: { from: "", to: "" },
+      const chunks: Array<(string | number)[]> = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        chunks.push(ids.slice(i, i + chunkSize));
+      }
+
+      const fetchChunk = async (chunkIds: (string | number)[]) => {
+        const params: QueryParams = {
+          page: 1,
+          pageSize: chunkIds.length,
+          search: "",
+          sort: sortOptions?.sortBy || "",
+          sortOrder: sortOptions?.sortOrder || "asc",
+          filters: { [idKey]: { operator: "in", value: chunkIds } },
+          dateRange: { from: "", to: "" },
+        };
+        const url = buildQueryUrl(applyCustomFilters(params), dateRangeCol);
+        const result = await request<{ data: T[] }>(url);
+        return result.data;
       };
 
-      const url = buildQueryUrl(applyCustomFilters(params), dateRangeCol);
-      const result = await request<{
-        data: T[];
-        meta: {
-          total: number | null;
-          page: number;
-          pageSize: number;
-          totalPages: number | null;
-        };
-      }>(url);
-
-      return result.data;
+      const fetched = (await Promise.all(chunks.map(fetchChunk))).flat();
+      if (sortOptions?.sortBy) {
+        const key = sortOptions.sortBy as keyof T;
+        const dir = sortOptions.sortOrder === "desc" ? -1 : 1;
+        fetched.sort((a, b) => {
+          const av = a[key] as unknown as string | number | null | undefined;
+          const bv = b[key] as unknown as string | number | null | undefined;
+          if (av === bv) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          return av > bv ? dir : -dir;
+        });
+      }
+      return fetched;
     },
 
     async meta(): Promise<TableMetadata> {

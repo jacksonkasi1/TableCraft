@@ -26,6 +26,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+request.json
 
 .explore
 apps-explore/tnks-data-table

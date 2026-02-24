@@ -59,28 +59,30 @@ export function DataTableExport<TData extends ExportableData>({
     const removeSet = new Set((exportConfig?.removeHeaders as string[]) ?? []);
     const exportHeaders = visibleColumnIds.filter((id) => !removeSet.has(id));
 
-    const exportColumnMapping: Record<string, string> =
-      (exportConfig?.columnMapping as Record<string, string>) ||
-      (() => {
-        const mapping: Record<string, string> = {};
-        orderedColumns.forEach((col) => {
-          const headerText = col.columnDef.header as string;
-          if (headerText && typeof headerText === "string") {
-            mapping[col.id] = headerText;
-          } else {
-            mapping[col.id] = col.id
-              .split(/(?=[A-Z])|_/)
-              .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-              .join(" ");
-          }
-        });
-        return mapping;
-      })();
+    const defaultMapping = (() => {
+      const mapping: Record<string, string> = {};
+      orderedColumns.forEach((col) => {
+        const headerText = col.columnDef.header as string;
+        if (headerText && typeof headerText === "string") {
+          mapping[col.id] = headerText;
+        } else {
+          mapping[col.id] = col.id
+            .split(/(?=[A-Z])|_/)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(" ");
+        }
+      });
+      return mapping;
+    })();
 
-    const exportColumnWidths = exportConfig?.columnWidths
-      ? exportHeaders.map(
-        (_, i) => exportConfig.columnWidths![i] || { wch: 15 }
-      )
+    const exportColumnMapping: Record<string, string> = {
+      ...defaultMapping,
+      ...(exportConfig?.columnMapping as Record<string, string> || {}),
+    };
+
+    const columnWidths = exportConfig?.columnWidths;
+    const exportColumnWidths = columnWidths
+      ? exportHeaders.map((_, i) => columnWidths[i] || { wch: 15 })
       : exportHeaders.map(() => ({ wch: 15 }));
 
     return { exportHeaders, exportColumnMapping, exportColumnWidths };

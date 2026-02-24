@@ -21,7 +21,7 @@ import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
 import { cn } from "./utils/cn";
 
-import type { DataTableProps, ExportableData, TableContext } from "./types";
+import type { DataTableProps, ExportableData, TableContext, ExportConfig } from "./types";
 import { useTableConfig } from "./core/table-config";
 import { useTableData } from "./core/use-table-data";
 import { useTableColumnResize } from "./core/use-column-resize";
@@ -645,7 +645,7 @@ export function DataTable<T extends Record<string, unknown>>({
           getSelectedItems={getSelectedItems as () => Promise<ExportableData[]>}
           getAllItems={getAllItems as () => ExportableData[]}
           config={effectiveConfig}
-          exportConfig={exportConfig as unknown as import("./types").ExportConfig<ExportableData>}
+          exportConfig={exportConfig as unknown as ExportConfig<ExportableData>}
           resetColumnSizing={() => {
             resetColumnSizing();
             setTimeout(() => window.dispatchEvent(new Event("resize")), 100);

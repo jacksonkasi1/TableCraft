@@ -19,7 +19,7 @@ const exportConfig = defineExportConfig<OrdersRow>()({
     createdAt: row.createdAt
       ? new Date(row.createdAt).toLocaleDateString('en-IN')
       : '',
-    total: `₹${Number(row.total).toFixed(2)}`,
+    total: `₹${row.total.toFixed(2)}`,
   }),
 });
 
