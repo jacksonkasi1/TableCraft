@@ -88,4 +88,4 @@ export type {
   ActionsRender,
 } from "./types";
 
-export { defineColumnOverrides } from "./types";
+export { defineColumnOverrides, defineExportConfig } from "./types";

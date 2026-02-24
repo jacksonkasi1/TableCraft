@@ -16,7 +16,7 @@ interface DataTableExportProps<TData extends ExportableData> {
   data: TData[];
   selectedCount: number;
   getSelectedItems?: () => Promise<TData[]>;
-  exportConfig?: ExportConfig<TData>;
+  exportConfig?: ExportConfig<TData, string>;
   tableConfig: TableConfig;
 }
 
@@ -45,12 +45,12 @@ export function DataTableExport<TData extends ExportableData>({
     const orderedColumns =
       columnOrder.length > 0
         ? [...visibleColumns].sort((a, b) => {
-            const aIdx = columnOrder.indexOf(a.id);
-            const bIdx = columnOrder.indexOf(b.id);
-            if (aIdx === -1) return 1;
-            if (bIdx === -1) return -1;
-            return aIdx - bIdx;
-          })
+          const aIdx = columnOrder.indexOf(a.id);
+          const bIdx = columnOrder.indexOf(b.id);
+          if (aIdx === -1) return 1;
+          if (bIdx === -1) return -1;
+          return aIdx - bIdx;
+        })
         : visibleColumns;
 
     const visibleColumnIds = orderedColumns.map((col) => col.id);
@@ -81,8 +81,8 @@ export function DataTableExport<TData extends ExportableData>({
       }
     }
 
-    const exportColumnMapping =
-      exportConfig?.columnMapping ||
+    const exportColumnMapping: Record<string, string> =
+      (exportConfig?.columnMapping as Record<string, string>) ||
       (() => {
         const mapping: Record<string, string> = {};
         orderedColumns.forEach((col) => {
@@ -101,8 +101,8 @@ export function DataTableExport<TData extends ExportableData>({
 
     const exportColumnWidths = exportConfig?.columnWidths
       ? exportHeaders.map(
-          (_, i) => exportConfig.columnWidths![i] || { wch: 15 }
-        )
+        (_, i) => exportConfig.columnWidths![i] || { wch: 15 }
+      )
       : exportHeaders.map(() => ({ wch: 15 }));
 
     return { exportHeaders, exportColumnMapping, exportColumnWidths };

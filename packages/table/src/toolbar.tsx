@@ -51,7 +51,7 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   getSelectedItems?: () => Promise<TData[]>;
   getAllItems: () => TData[];
   config: TableConfig;
-  exportConfig?: ExportConfig<TData>;
+  exportConfig?: ExportConfig<TData, string>;
   resetColumnSizing?: () => void;
   resetColumnOrder?: () => void;
   columnMapping?: Record<string, string>;
@@ -238,7 +238,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             data={allItems}
             selectedCount={totalSelectedItems}
             getSelectedItems={getSelectedItems}
-            exportConfig={exportConfig as ExportConfig<ExportableData>}
+            exportConfig={exportConfig}
             tableConfig={config}
           />
         )}

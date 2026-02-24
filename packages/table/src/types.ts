@@ -344,14 +344,62 @@ export interface ColumnMetadataForRenderer {
 
 export type DataTransformFunction<T> = (row: T) => Record<string, unknown>;
 
-export interface ExportConfig<T = Record<string, unknown>> {
+export interface ExportConfig<T = Record<string, unknown>, C extends string = Extract<keyof T, string>> {
+  /** Display name used in filenames and toast messages (e.g. "orders") */
   entityName: string;
-  columnMapping?: Record<string, string>;
+  /**
+   * Map column keys to human-readable header names for the export file.
+   * Keys are type-safe — only valid column names from T are accepted.
+   * @example { createdAt: 'Order Date', vatAmount: 'VAT (₹)' }
+   */
+  columnMapping?: Partial<Record<C, string>>;
+  /** Column widths for Excel export (matched by index with headers) */
   columnWidths?: Array<{ wch: number }>;
-  headers?: string[];
+  /**
+   * Columns to include in the export. Only these columns will appear in the file.
+   * Type-safe — only valid column names from T are accepted.
+   * If omitted, all visible columns are exported.
+   * @example ['id', 'status', 'email', 'total']
+   */
+  headers?: C[];
+  /**
+   * Transform each row before exporting.
+   * Use this to format values (e.g. boolean → "Yes"/"No", date formatting).
+   * Can also add computed columns (requires `allowExportNewColumns: true`).
+   */
   transformFunction?: DataTransformFunction<T>;
+  /** Enable CSV export option (default: true) */
   enableCsv?: boolean;
+  /** Enable Excel/XLSX export option (default: true) */
   enableExcel?: boolean;
+}
+
+/**
+ * Helper function for type-safe export configuration with full autocomplete.
+ *
+ * Similar to `defineColumnOverrides<T>()` — the double-call pattern
+ * fixes `T` first, then infers column keys for headers and columnMapping.
+ *
+ * @example
+ * import { defineExportConfig } from '@tablecraft/table';
+ * import type { OrdersRow } from './generated/orders';
+ *
+ * const exportConfig = defineExportConfig<OrdersRow>()({
+ *   entityName: 'orders',
+ *   headers: ['id', 'status', 'email', 'total', 'createdAt'],
+ *   columnMapping: { createdAt: 'Order Date', vatAmount: 'VAT (₹)' },
+ *   transformFunction: (row) => ({
+ *     ...row,
+ *     createdAt: row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '',
+ *   }),
+ * });
+ */
+export function defineExportConfig<T>() {
+  return function <C extends Extract<keyof T, string>>(
+    config: ExportConfig<T, C>
+  ): ExportConfig<T> {
+    return config as ExportConfig<T>;
+  };
 }
 
 // ─────────────────────────────────────────────

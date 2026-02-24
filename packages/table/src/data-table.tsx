@@ -645,7 +645,7 @@ export function DataTable<T extends Record<string, unknown>>({
           getSelectedItems={getSelectedItems as () => Promise<ExportableData[]>}
           getAllItems={getAllItems as () => ExportableData[]}
           config={effectiveConfig}
-          exportConfig={exportConfig as import("./types").ExportConfig<ExportableData>}
+          exportConfig={exportConfig as unknown as import("./types").ExportConfig<ExportableData, string>}
           resetColumnSizing={() => {
             resetColumnSizing();
             setTimeout(() => window.dispatchEvent(new Event("resize")), 100);
