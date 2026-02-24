@@ -121,7 +121,7 @@ export interface DataAdapter<T = Record<string, unknown>> {
   /** Fetch data given current table params */
   query(params: QueryParams): Promise<QueryResult<T>>;
   /** Fetch items by IDs (for cross-page selection/export) */
-  queryByIds?(ids: (string | number)[]): Promise<T[]>;
+  queryByIds?(ids: (string | number)[], options?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]>;
   /** Fetch table metadata (enables auto-column generation) */
   meta?(): Promise<TableMetadata>;
   /** Export data in a format */
@@ -398,7 +398,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
     * // Including system columns (select checkbox, actions):
     * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['select', 'status', 'email', '__actions'])}
     */
-   defaultColumnOrder?: string[];
+  defaultColumnOrder?: string[];
   /**
    * Custom toolbar content — injected into the left toolbar area.
    * Use `startToolbarPlacement` to control where it renders (default: `'after-date'`).
