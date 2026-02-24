@@ -344,6 +344,16 @@ export interface ColumnMetadataForRenderer {
 
 export type DataTransformFunction<T> = (row: T) => Record<string, unknown>;
 
+/**
+ * Extracts only the explicitly declared string keys from a type,
+ * stripping any index signature (e.g. from `Record<string, unknown>`).
+ * This enables proper autocomplete even when T extends Record<string, unknown>.
+ */
+type KnownStringKeys<T> = Extract<
+  keyof { [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K] },
+  string
+>;
+
 export interface ExportConfig<T = Record<string, unknown>> {
   /** Display name used in filenames and toast messages (e.g. "orders") */
   entityName: string;
@@ -352,7 +362,7 @@ export interface ExportConfig<T = Record<string, unknown>> {
    * Keys are type-safe — only valid column names from T are accepted.
    * @example { createdAt: 'Order Date', vatAmount: 'VAT (₹)' }
    */
-  columnMapping?: Partial<Record<Extract<keyof T, string>, string>>;
+  columnMapping?: Partial<Record<KnownStringKeys<T>, string>>;
   /** Column widths for Excel export (matched by index with headers) */
   columnWidths?: Array<{ wch: number }>;
   /**
@@ -361,7 +371,7 @@ export interface ExportConfig<T = Record<string, unknown>> {
    * If omitted, all visible columns are exported.
    * @example ['id', 'status', 'email', 'total']
    */
-  headers?: Array<Extract<keyof T, string>>;
+  headers?: Array<KnownStringKeys<T>>;
   /**
    * Transform each row before exporting.
    * Use this to format values (e.g. boolean → "Yes"/"No", date formatting).
