@@ -13,7 +13,7 @@
     "@base-ui/react": "^1.1.0",
     "@fontsource-variable/inter": "^5.2.8",
     "@tablecraft/client": "^0.1.8",
-    "@tablecraft/table": "^0.2.9",
+    "@tablecraft/table": "https://registry.npmjs.org/@tablecraft/table/-/tablecraft-table-0.2.10.tgz",
     "@tailwindcss/vite": "^4.1.17",
     "@tanstack/react-query": "^5.62.8",
     "@tanstack/react-table": "^8.20.0",
