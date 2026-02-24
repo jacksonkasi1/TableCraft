@@ -45,64 +45,44 @@ export function DataTableExport<TData extends ExportableData>({
     const orderedColumns =
       columnOrder.length > 0
         ? [...visibleColumns].sort((a, b) => {
-            const aIdx = columnOrder.indexOf(a.id);
-            const bIdx = columnOrder.indexOf(b.id);
-            if (aIdx === -1) return 1;
-            if (bIdx === -1) return -1;
-            return aIdx - bIdx;
-          })
+          const aIdx = columnOrder.indexOf(a.id);
+          const bIdx = columnOrder.indexOf(b.id);
+          if (aIdx === -1) return 1;
+          if (bIdx === -1) return -1;
+          return aIdx - bIdx;
+        })
         : visibleColumns;
 
     const visibleColumnIds = orderedColumns.map((col) => col.id);
-    const allTableColumnIds = table
-      .getAllColumns()
-      .filter((col) => col.id !== "actions" && col.id !== "select")
-      .map((col) => col.id);
 
-    let exportHeaders: string[];
-    const cfgHeaders = exportConfig?.headers;
+    // Start with all visible columns, remove any listed in removeHeaders
+    const removeSet = new Set((exportConfig?.removeHeaders as string[]) ?? []);
+    const exportHeaders = visibleColumnIds.filter((id) => !removeSet.has(id));
 
-    if (tableConfig.allowExportNewColumns === false) {
-      exportHeaders =
-        cfgHeaders && cfgHeaders.length > 0
-          ? cfgHeaders.filter((h) => visibleColumnIds.includes(h))
-          : visibleColumnIds;
-    } else {
-      if (cfgHeaders && cfgHeaders.length > 0) {
-        const existing = cfgHeaders.filter(
-          (h) => allTableColumnIds.includes(h) && visibleColumnIds.includes(h)
-        );
-        const newHeaders = cfgHeaders.filter(
-          (h) => !allTableColumnIds.includes(h)
-        );
-        exportHeaders = [...existing, ...newHeaders];
-      } else {
-        exportHeaders = visibleColumnIds;
-      }
-    }
+    const defaultMapping = (() => {
+      const mapping: Record<string, string> = {};
+      orderedColumns.forEach((col) => {
+        const headerText = col.columnDef.header as string;
+        if (headerText && typeof headerText === "string") {
+          mapping[col.id] = headerText;
+        } else {
+          mapping[col.id] = col.id
+            .split(/(?=[A-Z])|_/)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(" ");
+        }
+      });
+      return mapping;
+    })();
 
-    const exportColumnMapping =
-      exportConfig?.columnMapping ||
-      (() => {
-        const mapping: Record<string, string> = {};
-        orderedColumns.forEach((col) => {
-          const headerText = col.columnDef.header as string;
-          if (headerText && typeof headerText === "string") {
-            mapping[col.id] = headerText;
-          } else {
-            mapping[col.id] = col.id
-              .split(/(?=[A-Z])|_/)
-              .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-              .join(" ");
-          }
-        });
-        return mapping;
-      })();
+    const exportColumnMapping: Record<string, string> = {
+      ...defaultMapping,
+      ...(exportConfig?.columnMapping as Record<string, string> || {}),
+    };
 
-    const exportColumnWidths = exportConfig?.columnWidths
-      ? exportHeaders.map(
-          (_, i) => exportConfig.columnWidths![i] || { wch: 15 }
-        )
+    const columnWidths = exportConfig?.columnWidths;
+    const exportColumnWidths = columnWidths
+      ? exportHeaders.map((_, i) => columnWidths[i] || { wch: 15 })
       : exportHeaders.map(() => ({ wch: 15 }));
 
     return { exportHeaders, exportColumnMapping, exportColumnWidths };

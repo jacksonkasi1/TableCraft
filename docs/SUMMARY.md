@@ -23,6 +23,7 @@
 * [Features](features.md)
 * [Date Filtering](date-filtering.md)
 * [Custom Filters](custom-filters.md)
+* [Export Configuration](export-config.md)
 * [Type Generation](codegen.md)
 * [FAQ & Troubleshooting](faq.md)
 

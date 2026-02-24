@@ -121,7 +121,7 @@ export interface DataAdapter<T = Record<string, unknown>> {
   /** Fetch data given current table params */
   query(params: QueryParams): Promise<QueryResult<T>>;
   /** Fetch items by IDs (for cross-page selection/export) */
-  queryByIds?(ids: (string | number)[]): Promise<T[]>;
+  queryByIds?(ids: (string | number)[], options?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]>;
   /** Fetch table metadata (enables auto-column generation) */
   meta?(): Promise<TableMetadata>;
   /** Export data in a format */
@@ -344,14 +344,60 @@ export interface ColumnMetadataForRenderer {
 
 export type DataTransformFunction<T> = (row: T) => Record<string, unknown>;
 
+/**
+ * Extracts only the explicitly declared string keys from a type,
+ * stripping any index signature (e.g. from `Record<string, unknown>`).
+ * This enables proper autocomplete even when T extends Record<string, unknown>.
+ */
+type KnownStringKeys<T> = Extract<
+  keyof { [K in keyof T as string extends K ? never : number extends K ? never : K]: T[K] },
+  string
+>;
+
 export interface ExportConfig<T = Record<string, unknown>> {
+  /** Display name used in filenames and toast messages (e.g. "orders") */
   entityName: string;
-  columnMapping?: Record<string, string>;
+  /**
+   * Map column keys to human-readable header names for the export file.
+   * Independent from removeHeaders — you can rename any column.
+   * @example { createdAt: 'Order Date', vatAmount: 'VAT (₹)' }
+   */
+  columnMapping?: Partial<Record<KnownStringKeys<T>, string>>;
+  /** Column widths for Excel export (matched by index with headers) */
   columnWidths?: Array<{ wch: number }>;
-  headers?: string[];
+  /**
+   * Columns to exclude from the export. All other visible columns are included.
+   * Much simpler than listing every column you want — just hide 1-2 you don't need.
+   * @example ['deletedAt', 'tenantId']
+   */
+  removeHeaders?: Array<KnownStringKeys<T>>;
+  /**
+   * Transform each row before exporting.
+   * Use this to format values (e.g. boolean → "Yes"/"No", date formatting).
+   */
   transformFunction?: DataTransformFunction<T>;
+  /** Enable CSV export option (default: true) */
   enableCsv?: boolean;
+  /** Enable Excel/XLSX export option (default: true) */
   enableExcel?: boolean;
+}
+
+/**
+ * Helper for type-safe export config with full autocomplete.
+ *
+ * @example
+ * const exportConfig = defineExportConfig<OrdersRow>()({
+ *   entityName: 'orders',
+ *   removeHeaders: ['deletedAt', 'tenantId'],
+ *   columnMapping: { createdAt: 'Order Date' },
+ * });
+ */
+export function defineExportConfig<T>() {
+  return function (
+    config: ExportConfig<T>
+  ): ExportConfig<T> {
+    return config;
+  };
 }
 
 // ─────────────────────────────────────────────
@@ -398,7 +444,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
     * // Including system columns (select checkbox, actions):
     * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['select', 'status', 'email', '__actions'])}
     */
-   defaultColumnOrder?: string[];
+  defaultColumnOrder?: string[];
   /**
    * Custom toolbar content — injected into the left toolbar area.
    * Use `startToolbarPlacement` to control where it renders (default: `'after-date'`).

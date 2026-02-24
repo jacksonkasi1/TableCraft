@@ -21,7 +21,7 @@ import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
 import { cn } from "./utils/cn";
 
-import type { DataTableProps, ExportableData, TableContext } from "./types";
+import type { DataTableProps, ExportableData, TableContext, ExportConfig } from "./types";
 import { useTableConfig } from "./core/table-config";
 import { useTableData } from "./core/use-table-data";
 import { useTableColumnResize } from "./core/use-column-resize";
@@ -284,17 +284,24 @@ export function DataTable<T extends Record<string, unknown>>({
     const idsOnPage = new Set(itemsOnPage.map((item) => String(item[idField])));
     const idsToFetch = selectedIds.filter((id) => !idsOnPage.has(id));
 
+    // If everything selected is already exactly on the current page,
+    // their order is perfect (they are sorted exactly as they appear).
     if (idsToFetch.length === 0 || !adapter.queryByIds) {
       return itemsOnPage;
     }
 
     try {
-      const fetched = await adapter.queryByIds(idsToFetch);
-      return [...itemsOnPage, ...fetched];
+      // Cross-page export: To guarantee that rows are exported in the exact same sorted
+      // order as the table, we tell the backend to fetch ALL selected IDs (not just missing ones)
+      // and sort them according to the current table state.
+      // This perfectly avoids the problem of page 2 items appearing before page 1 items.
+      const fetchedAllSorted = await adapter.queryByIds(selectedIds, { sortBy, sortOrder });
+      return fetchedAllSorted;
     } catch {
+      // Fallback: mostly useless if cross-page, but prevents crashing
       return itemsOnPage;
     }
-  }, [data, rowSelection, totalSelectedItems, adapter, idField]);
+  }, [data, rowSelection, totalSelectedItems, adapter, idField, sortBy, sortOrder]);
 
   const getAllItems = useCallback((): T[] => data, [data]);
 
@@ -638,7 +645,7 @@ export function DataTable<T extends Record<string, unknown>>({
           getSelectedItems={getSelectedItems as () => Promise<ExportableData[]>}
           getAllItems={getAllItems as () => ExportableData[]}
           config={effectiveConfig}
-          exportConfig={exportConfig as import("./types").ExportConfig<ExportableData>}
+          exportConfig={exportConfig as unknown as ExportConfig<ExportableData>}
           resetColumnSizing={() => {
             resetColumnSizing();
             setTimeout(() => window.dispatchEvent(new Event("resize")), 100);

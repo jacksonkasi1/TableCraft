@@ -17,10 +17,10 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun run --bun tsc",
-    "dev": "bun run --bun tsc --watch",
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "vitest",
-    "typecheck": "bun run --bun tsc --noEmit"
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "axios": "^1.13.0"

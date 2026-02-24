@@ -4,7 +4,7 @@ export interface RestAdapterOptions<T> {
   /** Function that fetches data given table params */
   queryFn: (params: QueryParams) => Promise<QueryResult<T>>;
   /** Function to fetch specific items by IDs (for cross-page export) */
-  queryByIdsFn?: (ids: (string | number)[]) => Promise<T[]>;
+  queryByIdsFn?: (ids: (string | number)[], options?: { sortBy?: string; sortOrder?: "asc" | "desc" }) => Promise<T[]>;
   /** Function to fetch table metadata (enables auto-columns) */
   metaFn?: () => Promise<TableMetadata>;
 }

@@ -43,8 +43,8 @@ type CustomFilterEntry<F> =
 export type CustomFilters<TFilters> = [TFilters] extends [never]
   ? Record<string, CustomFilterValue>
   : {
-      [K in keyof TFilters]?: CustomFilterEntry<TFilters[K]>;
-    };
+    [K in keyof TFilters]?: CustomFilterEntry<TFilters[K]>;
+  };
 
 /**
  * Untyped fallback for when no Filters type is provided.
@@ -64,6 +64,8 @@ export interface TableCraftAdapterOptions<TFilters = never> {
   baseUrl: string;
   /** Table name. Example: "users" */
   table: string;
+  /** Primary key field name. Defaults to "id" */
+  idField?: string;
   /** Default headers for every request (auth tokens, etc.) */
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
   /** Custom fetch function. Defaults to global fetch. */
@@ -119,9 +121,9 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
   options: TableCraftAdapterOptions<TFilters>
 ): DataAdapter<T> {
   const { baseUrl, table: tableName } = options;
-  
+
   let customFetch: (url: string, options?: RequestInit) => Promise<MinimalResponse | Response>;
-  
+
   if (options.axios && isAxiosInstance(options.axios)) {
     customFetch = createAxiosFetchAdapter(options.axios);
   } else if (options.fetch) {
@@ -186,10 +188,10 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
           const filterValue = filter.value;
           // Skip if the filter value itself is null/undefined and it's not a nullary operator
           if (!isNullary && (filterValue === null || filterValue === undefined)) continue;
-          
+
           if (filter.operator && filter.operator !== "eq") {
             // Serialize arrays as comma-separated (the backend parser splits on comma)
-            const serialized = isNullary 
+            const serialized = isNullary
               ? "true"
               : Array.isArray(filterValue)
                 ? filterValue.join(",")
@@ -259,7 +261,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
   return {
     async query(params: QueryParams): Promise<QueryResult<T>> {
       const { dateRangeCol } = await getMetadataWithFallback();
-      
+
       const url = buildQueryUrl(applyCustomFilters(params), dateRangeCol);
       const result = await request<{
         data: T[];
@@ -277,6 +279,50 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
       };
     },
 
+    async queryByIds(ids: (string | number)[], sortOptions?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]> {
+      if (ids.length === 0) return [];
+
+      const { dateRangeCol, metadata } = await getMetadataWithFallback();
+      const idKey = options.idField || "id";
+      const maxPageSize = metadata?.capabilities?.pagination?.maxPageSize;
+      const chunkSize = maxPageSize && maxPageSize > 0 ? maxPageSize : ids.length;
+
+      const chunks: Array<(string | number)[]> = [];
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        chunks.push(ids.slice(i, i + chunkSize));
+      }
+
+      const fetchChunk = async (chunkIds: (string | number)[]) => {
+        const params: QueryParams = {
+          page: 1,
+          pageSize: chunkIds.length,
+          search: "",
+          sort: sortOptions?.sortBy || "",
+          sortOrder: sortOptions?.sortOrder || "asc",
+          filters: { [idKey]: { operator: "in", value: chunkIds } },
+          dateRange: { from: "", to: "" },
+        };
+        const url = buildQueryUrl(applyCustomFilters(params), dateRangeCol);
+        const result = await request<{ data: T[] }>(url);
+        return result.data;
+      };
+
+      const fetched = (await Promise.all(chunks.map(fetchChunk))).flat();
+      if (sortOptions?.sortBy) {
+        const key = sortOptions.sortBy as keyof T;
+        const dir = sortOptions.sortOrder === "desc" ? -1 : 1;
+        fetched.sort((a, b) => {
+          const av = a[key] as unknown as string | number | null | undefined;
+          const bv = b[key] as unknown as string | number | null | undefined;
+          if (av === bv) return 0;
+          if (av == null) return 1;
+          if (bv == null) return -1;
+          return av > bv ? dir : -dir;
+        });
+      }
+      return fetched;
+    },
+
     async meta(): Promise<TableMetadata> {
       if (!cachedMetadata) {
         cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
@@ -286,7 +332,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
 
     async export(format: "csv" | "json", params?: Partial<QueryParams>): Promise<string> {
       const { dateRangeCol } = await getMetadataWithFallback();
-      
+
       const fullParams: QueryParams = {
         page: 1,
         pageSize: 10000,

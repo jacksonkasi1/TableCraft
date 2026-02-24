@@ -238,7 +238,7 @@ export function DataTableToolbar<TData extends ExportableData>({
             data={allItems}
             selectedCount={totalSelectedItems}
             getSelectedItems={getSelectedItems}
-            exportConfig={exportConfig as ExportConfig<ExportableData>}
+            exportConfig={exportConfig}
             tableConfig={config}
           />
         )}
