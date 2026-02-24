@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/table",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "Schema-driven data table for React — built on TanStack Table + Shadcn UI with native TableCraft engine support",
   "type": "module",
   "main": "dist/index.js",
@@ -18,8 +18,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun run --bun tsc",
-    "dev": "bun run --bun tsc --watch",
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "vitest",
     "typecheck": "bun run --bun tsc --noEmit"
   },
