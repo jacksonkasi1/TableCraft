@@ -231,4 +231,69 @@ describe('validateInput', () => {
       }, configWithMissingColumn)).toThrow(FieldError);
     });
   });
+
+  // ─────────────────────────────────────────────────────
+  // NEW: select validation with join columns
+  // ─────────────────────────────────────────────────────
+  describe('select validation with join columns', () => {
+    const configWithJoin: TableConfig = {
+      name: 'orders',
+      base: 'orders',
+      columns: [
+        { name: 'id', type: 'number', hidden: false, sortable: true, filterable: true },
+        { name: 'status', type: 'string', hidden: false, sortable: true, filterable: true },
+      ],
+      joins: [{
+        table: 'users',
+        type: 'left',
+        on: 'orders.user_id = users.id',
+        columns: [
+          { name: 'email', type: 'string', hidden: false, sortable: true, filterable: true },
+          { name: 'role', type: 'string', hidden: false, sortable: false, filterable: true },
+          { name: 'internalNote', type: 'string', hidden: true, sortable: false, filterable: false },
+        ],
+      }],
+    };
+
+    it('should allow ?select= with only base columns', () => {
+      expect(() => validateInput({ select: ['id', 'status'] }, configWithJoin)).not.toThrow();
+    });
+
+    it('should allow ?select= with a valid join column', () => {
+      expect(() => validateInput({ select: ['id', 'email'] }, configWithJoin)).not.toThrow();
+    });
+
+    it('should allow ?select= mixing base and join columns', () => {
+      expect(() => validateInput({ select: ['status', 'email', 'role'] }, configWithJoin)).not.toThrow();
+    });
+
+    it('should reject ?select= with a hidden join column', () => {
+      expect(() => validateInput({ select: ['internalNote'] }, configWithJoin)).toThrow(FieldError);
+    });
+
+    it('should reject ?select= with a completely unknown field', () => {
+      expect(() => validateInput({ select: ['nonexistent'] }, configWithJoin)).toThrow(FieldError);
+    });
+
+    it('should allow ?select= with a join column from a nested join', () => {
+      const configNested: TableConfig = {
+        ...configWithJoin,
+        joins: [{
+          table: 'users',
+          type: 'left',
+          on: 'orders.user_id = users.id',
+          columns: [],
+          joins: [{
+            table: 'profiles',
+            type: 'left',
+            on: 'users.id = profiles.user_id',
+            columns: [
+              { name: 'avatarUrl', type: 'string', hidden: false, sortable: false, filterable: false },
+            ],
+          }],
+        }],
+      };
+      expect(() => validateInput({ select: ['id', 'avatarUrl'] }, configNested)).not.toThrow();
+    });
+  });
 });

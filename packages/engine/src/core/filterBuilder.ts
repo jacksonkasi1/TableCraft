@@ -9,6 +9,7 @@ import { TableConfig, JoinConfig, ColumnConfig } from '../types/table';
 import { FilterParam } from '../types/engine';
 import { applyOperator } from '../utils/operators';
 import { isDatePreset, buildDatePresetCondition } from './datePresets';
+import { collectFilterableJoinFields, isJoinColumnInJoins } from '../utils/joinUtils';
 
 // Internal: resolved column reference plus the config entry it came from
 interface ResolvedColumn {
@@ -19,7 +20,7 @@ interface ResolvedColumn {
 }
 
 export class FilterBuilder {
-  constructor(private schema: Record<string, unknown>) {}
+  constructor(private schema: Record<string, unknown>) { }
 
   /**
    * Builds dynamic WHERE conditions from user-provided filter params.
@@ -118,7 +119,7 @@ export class FilterBuilder {
     for (const filter of config.filters) {
       if (filter.type !== 'static' || filter.value === undefined) continue;
 
-      const isJoinField = isJoinColumn(config, filter.field);
+      const isJoinField = isJoinColumnInJoins(config.joins ?? [], filter.field);
       const resolved = this.resolveColumn(config, baseColumns, filter.field, isJoinField);
 
       if (!resolved) {
@@ -218,45 +219,3 @@ export class FilterBuilder {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Module-level helpers (pure, no `this` dependency)
-// ---------------------------------------------------------------------------
-
-/**
- * Recursively populates `out` with filterable field names from all join configs.
- */
-function collectFilterableJoinFields(joins: JoinConfig[], out: Set<string>): void {
-  for (const join of joins) {
-    if (join.columns) {
-      for (const col of join.columns) {
-        if (col.filterable !== false) {
-          out.add(col.name);
-        }
-      }
-    }
-    if (join.joins) {
-      collectFilterableJoinFields(join.joins, out);
-    }
-  }
-}
-
-/**
- * Returns true if `fieldName` is defined in any join config (recursively).
- * Used to prevent base-table columns from shadowing join columns.
- */
-function isJoinColumn(config: TableConfig, fieldName: string): boolean {
-  if (!config.joins) return false;
-  return isJoinColumnInJoins(config.joins, fieldName);
-}
-
-function isJoinColumnInJoins(joins: JoinConfig[], fieldName: string): boolean {
-  for (const join of joins) {
-    if (join.columns?.some(c => c.name === fieldName)) {
-      return true;
-    }
-    if (join.joins && isJoinColumnInJoins(join.joins, fieldName)) {
-      return true;
-    }
-  }
-  return false;
-}

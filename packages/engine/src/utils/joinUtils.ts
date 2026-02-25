@@ -16,6 +16,41 @@ export function collectSortableJoinFields(joins: JoinConfig[], out: Set<string>)
   }
 }
 
+/** Recursively populates `out` with filterable field names from all join configs. */
+export function collectFilterableJoinFields(joins: JoinConfig[], out: Set<string>): void {
+  for (const join of joins) {
+    if (join.columns) {
+      for (const col of join.columns) {
+        if (col.filterable !== false) {
+          out.add(col.name);
+        }
+      }
+    }
+    if (join.joins) {
+      collectFilterableJoinFields(join.joins, out);
+    }
+  }
+}
+
+/**
+ * Recursively populates `out` with selectable (non-hidden) field names from all join configs.
+ * Used by FieldSelector and validateSelectFields so that ?select=joinColumn works correctly.
+ */
+export function collectSelectableJoinFields(joins: JoinConfig[], out: Set<string>): void {
+  for (const join of joins) {
+    if (join.columns) {
+      for (const col of join.columns) {
+        if (!col.hidden) {
+          out.add(col.name);
+        }
+      }
+    }
+    if (join.joins) {
+      collectSelectableJoinFields(join.joins, out);
+    }
+  }
+}
+
 /**
  * Returns true if `fieldName` is defined in any join config (recursively).
  */

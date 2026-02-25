@@ -1,6 +1,7 @@
 import { TableConfig, ColumnConfig } from '../types/table';
 import { EngineParams, FilterParam } from '../types/engine';
 import { ValidationError, FieldError } from '../errors';
+import { collectSortableJoinFields, collectSelectableJoinFields } from '../utils/joinUtils';
 
 /**
  * Validates request params against the table config BEFORE hitting the database.
@@ -15,15 +16,17 @@ export function validateInput(params: EngineParams, config: TableConfig): void {
 function validateSelectFields(params: EngineParams, config: TableConfig): void {
   if (!params.select?.length) return;
 
-  const validNames = new Set(config.columns.map((c) => c.name));
+  // Build valid set from base columns (non-hidden only)
+  const validNames = new Set(config.columns.filter((c) => !c.hidden).map((c) => c.name));
+
+  // Also allow selectable fields from joined tables
+  if (config.joins?.length) {
+    collectSelectableJoinFields(config.joins, validNames);
+  }
 
   for (const field of params.select) {
     if (!validNames.has(field)) {
-      throw new FieldError(field, 'does not exist. Available: ' + [...validNames].join(', '));
-    }
-    const col = config.columns.find((c) => c.name === field);
-    if (col?.hidden) {
-      throw new FieldError(field, 'is not accessible');
+      throw new FieldError(field, 'does not exist or is not accessible. Available: ' + [...validNames].join(', '));
     }
   }
 }
@@ -137,7 +140,9 @@ function validateSortFields(params: EngineParams, config: TableConfig): void {
 
   // Also collect sortable fields from joins (same pattern as FilterBuilder
   // uses collectFilterableJoinFields for filterable fields)
-  collectSortableJoinFields(config.joins, sortable);
+  if (config.joins?.length) {
+    collectSortableJoinFields(config.joins, sortable);
+  }
 
   for (const s of params.sort) {
     if (!sortable.has(s.field)) {
@@ -146,26 +151,7 @@ function validateSortFields(params: EngineParams, config: TableConfig): void {
   }
 }
 
-/** Recursively collects sortable column names from join configs. */
-function collectSortableJoinFields(
-  joins: TableConfig['joins'],
-  sortable: Set<string>
-): void {
-  if (!joins?.length) return;
-  for (const join of joins) {
-    if (join.columns) {
-      for (const col of join.columns) {
-        if (col.sortable !== false) {
-          sortable.add(col.name);
-        }
-      }
-    }
-    // Recurse into nested joins
-    if (join.joins) {
-      collectSortableJoinFields(join.joins, sortable);
-    }
-  }
-}
+
 
 function isValidUUID(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
