@@ -69,10 +69,8 @@ describe('FieldSelector.applyFieldSelection — base columns', () => {
 
     it('narrows selection to requested base columns', () => {
         const result = selector.applyFieldSelection(baseSelection, ['name'], baseConfig);
-        expect(Object.keys(result)).toContain('name');
-        // id is always kept (PK safeguard)
-        expect(Object.keys(result)).toContain('id');
-        expect(Object.keys(result)).not.toContain('secret');
+        // PK guard always injects 'id'; exact membership must be correct
+        expect(Object.keys(result).sort()).toEqual(['id', 'name'].sort());
     });
 
     it('excludes hidden base columns even when explicitly requested', () => {
@@ -89,18 +87,14 @@ describe('FieldSelector.applyFieldSelection — base columns', () => {
 describe('FieldSelector.applyFieldSelection — join columns (bug fix)', () => {
     it('includes a valid join column in the narrowed selection', () => {
         const result = selector.applyFieldSelection(joinSelection, ['id', 'email'], joinConfig);
-        expect(Object.keys(result)).toContain('email');
-        expect(Object.keys(result)).toContain('id');
-        expect(Object.keys(result)).not.toContain('status');
-        expect(Object.keys(result)).not.toContain('role');
+        // Exact: only the requested fields plus PK (already included in request)
+        expect(Object.keys(result).sort()).toEqual(['email', 'id'].sort());
     });
 
     it('includes base and join columns together', () => {
         const result = selector.applyFieldSelection(joinSelection, ['status', 'email', 'role'], joinConfig);
-        expect(Object.keys(result)).toContain('status');
-        expect(Object.keys(result)).toContain('email');
-        expect(Object.keys(result)).toContain('role');
-        expect(Object.keys(result)).not.toContain('internalNote');
+        // Exact: requested fields + PK guard injects 'id'
+        expect(Object.keys(result).sort()).toEqual(['email', 'id', 'role', 'status'].sort());
     });
 
     it('excludes a hidden join column even if requested', () => {
@@ -139,7 +133,8 @@ describe('FieldSelector.applyFieldSelection — join columns (bug fix)', () => {
         };
 
         const result = selector.applyFieldSelection(selection, ['id', 'avatarUrl'], nestedConfig);
-        expect(Object.keys(result)).toContain('avatarUrl');
+        // Exact: both requested fields (no PK injection since 'id' already in request)
+        expect(Object.keys(result).sort()).toEqual(['avatarUrl', 'id'].sort());
     });
 });
 
