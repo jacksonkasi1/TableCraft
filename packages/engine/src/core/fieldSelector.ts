@@ -1,5 +1,6 @@
 import { Column, SQL } from 'drizzle-orm';
 import { TableConfig } from '../types/table';
+import { collectSelectableJoinFields } from '../utils/joinUtils';
 
 /**
  * Filters the selection to only include requested fields.
@@ -17,10 +18,16 @@ export class FieldSelector {
   ): Record<string, SQL | Column> {
     if (!requestedFields?.length) return selection;
 
-    // Build a whitelist of allowed (non-hidden) fields
+    // Build a whitelist of allowed (non-hidden) fields — base columns first
     const allowed = new Set(
       config.columns.filter((c) => !c.hidden).map((c) => c.name)
     );
+
+    // Also allow selectable fields from joined tables so that
+    // ?select=joinColumn correctly includes them in the SQL selection.
+    if (config.joins?.length) {
+      collectSelectableJoinFields(config.joins, allowed);
+    }
 
     const filtered: Record<string, SQL | Column> = {};
 
