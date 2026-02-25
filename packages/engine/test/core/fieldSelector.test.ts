@@ -77,8 +77,9 @@ describe('FieldSelector.applyFieldSelection — base columns', () => {
 
     it('excludes hidden base columns even when explicitly requested', () => {
         const result = selector.applyFieldSelection(baseSelection, ['secret'], baseConfig);
-        // 'secret' is hidden — it should be excluded; falls back to full selection
-        expect(Object.keys(result)).not.toContain('secret');
+        // 'secret' is hidden — filtered is empty after the loop, but the PK guard
+        // injects 'id', so the result contains only the primary key.
+        expect(Object.keys(result)).toEqual(['id']);
     });
 });
 
@@ -104,8 +105,9 @@ describe('FieldSelector.applyFieldSelection — join columns (bug fix)', () => {
 
     it('excludes a hidden join column even if requested', () => {
         const result = selector.applyFieldSelection(joinSelection, ['internalNote'], joinConfig);
-        // Hidden — should be excluded; falls back to full selection
-        expect(Object.keys(result)).not.toContain('internalNote');
+        // 'internalNote' is hidden — filtered is empty after the loop, but the PK guard
+        // injects 'id', so the result contains only the primary key.
+        expect(Object.keys(result)).toEqual(['id']);
     });
 
     it('includes join columns from a nested join', () => {
