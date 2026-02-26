@@ -14,4 +14,4 @@
 ## 📦 Build & Verify
 - [x] Run `typecheck` on the package.
 - [x] Build the package.
-- [ ] Verify changes in `vite-web-example`.
+- [x] Verify changes in `vite-web-example`. ✅ Done — verified via Vercel deployment and CSS @source fix.

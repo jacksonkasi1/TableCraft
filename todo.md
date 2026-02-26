@@ -269,11 +269,12 @@
 
 | Category | Total Tasks | Done | Pending |
 |----------|-------------|------|---------|
-| Action Plan | 45 | 14 | 31 |
-| Future Plan | 33 | 4 | 29 |
-| Long-term Vision | 10 | 0 | 10 |
-| Seeking Contributors | 14 | 0 | 14 |
-| **Total** | **102** | **18** | **84** |
+| Action Plan (§1–6) | 45 | 34 | 11 |
+| Future Plan (§7–11) | 33 | 4 | 29 |
+| Long-term Vision (§12–14) | 10 | 0 | 10 |
+| Seeking Contributors (§15–16) | 14 | 0 | 14 |
+| Changelog Known Issues | 11 | 3 | 8 |
+| **Total** | **113** | **41** | **72** |
 
 ---
 
@@ -286,7 +287,7 @@
 
 ---
 
-*Last updated: 2026-02-22*
+*Last updated: 2026-02-26*
 
 ---
 
@@ -410,9 +411,9 @@
 **Remaining known issues (from this session):**
 
 - [ ] `viewer` role is in schema comments but never seeded — dropdown option may return empty
-- [ ] `validateSelectFields` likely needs same join column support for `?select=email`
-- [ ] `fieldSelector` has no join column awareness
-- [ ] SortBuilder/FilterBuilder/InputValidator each duplicate join-collection logic — extract shared util
+- [x] `validateSelectFields` likely needs same join column support for `?select=email` — ✅ Fixed in PR #22
+- [x] `fieldSelector` has no join column awareness — ✅ Fixed in PR #22
+- [x] SortBuilder/FilterBuilder/InputValidator each duplicate join-collection logic — extract shared util — ✅ Extracted to `packages/engine/src/utils/joinUtils.ts` in PR #22
 - [ ] Docs: add simple/medium/complex examples showing the same DX at each level
 - [ ] Docs: document how joins expose columns for sort/filter/select
 - [ ] Docs: document customFilters API, isNull/isNotNull operators

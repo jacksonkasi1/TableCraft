@@ -323,7 +323,7 @@ The engine will be split into multiple scoped packages to reduce dependencies an
 
 ### 4. Verification
 - [x] **Unit Tests**: Test metadata generation, role filtering, and date presets.
-- [ ] **Integration**: Verify client SDK against example app.
+- [ ] **Integration**: Verify `@tablecraft/client` is actually imported/used in example app (currently declared as dep in vite-web-example but not imported — likely superseded by `createTableCraftAdapter` in `@tablecraft/table`).
 
 ## Phase 10: Final Polish (Pending)
 
@@ -372,11 +372,11 @@ The engine will be split into multiple scoped packages to reduce dependencies an
 - [ ] Full integration test with demo app
 
 ### Demo App Update (apps/hono-example)
-- [ ] **Reflect Changes**
-    - [ ] Update `package.json` to include `@tablecraft/plugin-cache` (if used)
-    - [ ] Update `src/tablecraft.config.ts` (or equivalent) to use new `defineTable` API
+- [x] **Reflect Changes**
+    - [x] Update `package.json` to include `@tablecraft/plugin-cache` (if used)
+    - [x] Update `src/tablecraft.config.ts` (or equivalent) to use new `defineTable` API
 - [ ] **Developer Experience Examples**
-    - [ ] Implement examples for `hide`, `search`, `sort`, `computed`, `join`, `tenant`
+    - [x] Implement examples for `hide`, `search`, `sort`, `computed`, `join`, `tenant`
     - [ ] Add tests for these examples in `test/dev-experience.test.ts`
 
 ### Verification
@@ -388,204 +388,204 @@ The engine will be split into multiple scoped packages to reduce dependencies an
 
 # Universal Table Implementation Plan (TODO)
 
-## Phase 11: Package Foundation & Core Refactor
+## Phase 11: Package Foundation & Core Refactor (Completed)
 
 ### 11.1 Scaffold Package (`packages/table`)
-- [ ] Create `packages/table/package.json` with proper peer dependencies
-- [ ] Create `packages/table/tsconfig.json`
-- [ ] Create build script with `tsup` (ESM bundle + declarations)
-- [ ] Create `packages/table/src/index.ts` entry point
-- [ ] Add to root `workspaces` (already covered by `packages/*`)
+- [x] Create `packages/table/package.json` with proper peer dependencies
+- [x] Create `packages/table/tsconfig.json`
+- [x] Create build script with `tsup` (ESM bundle + declarations)
+- [x] Create `packages/table/src/index.ts` entry point
+- [x] Add to root `workspaces` (already covered by `packages/*`)
 
 ### 11.2 Core Types (`src/types.ts`)
-- [ ] Define `TableConfig` interface (enableRowSelection, enableSearch, enablePagination, etc.)
-- [ ] Define `QueryParams` interface (page, pageSize, search, sort, sortOrder, filters, dateRange)
-- [ ] Define `QueryResult<T>` interface (data, meta)
-- [ ] Define `DataAdapter<T>` interface (query, queryByIds?, meta?, export?)
-- [ ] Define `CellRenderer` type (React component for cell rendering)
-- [ ] Define `ColumnMetadataForRenderer` interface
-- [ ] Define `ExportConfig` interface
-- [ ] Define `DataTableProps<T>` interface (adapter, columns?, config?, renderers?, exportConfig?, etc.)
-- [ ] Define `ToolbarContext<T>` interface
-- [ ] Re-export `TableMetadata`, `ColumnMetadata`, `FilterMetadata` from `@tablecraft/client`
+- [x] Define `TableConfig` interface (enableRowSelection, enableSearch, enablePagination, etc.)
+- [x] Define `QueryParams` interface (page, pageSize, search, sort, sortOrder, filters, dateRange)
+- [x] Define `QueryResult<T>` interface (data, meta)
+- [x] Define `DataAdapter<T>` interface (query, queryByIds?, meta?, export?)
+- [x] Define `CellRenderer` type (React component for cell rendering)
+- [x] Define `ColumnMetadataForRenderer` interface
+- [x] Define `ExportConfig` interface
+- [x] Define `DataTableProps<T>` interface (adapter, columns?, config?, renderers?, exportConfig?, etc.)
+- [x] Define `ToolbarContext<T>` interface
+- [x] Re-export `TableMetadata`, `ColumnMetadata`, `FilterMetadata` from `@tablecraft/client`
 
 ### 11.3 Framework-Agnostic URL State Hook (`src/core/use-url-state.ts`)
-- [ ] Port URL state hook from `tnks-data-table` (remove `next/navigation` dependency)
-- [ ] Use pure `window.location.search` + `history.replaceState`
-- [ ] Keep batch update system (microtask batching)
-- [ ] Port `history-sync.ts` (patch pushState/replaceState for event emission)
-- [ ] Port `url-events.ts` (custom event name constant)
-- [ ] Port conditional state hook (`createConditionalStateHook`)
+- [x] Port URL state hook from `tnks-data-table` (remove `next/navigation` dependency)
+- [x] Use pure `window.location.search` + `history.replaceState`
+- [x] Keep batch update system (microtask batching)
+- [x] Port `history-sync.ts` (patch pushState/replaceState for event emission)
+- [x] Port `url-events.ts` (custom event name constant)
+- [x] Port conditional state hook (`createConditionalStateHook`)
 
 ### 11.4 Table Config (`src/core/table-config.ts`)
-- [ ] Port `TableConfig` defaults and `useTableConfig()` hook
-- [ ] Add new defaults: `defaultPageSize`, `pageSizeOptions`
+- [x] Port `TableConfig` defaults and `useTableConfig()` hook
+- [x] Add new defaults: `defaultPageSize`, `pageSizeOptions`
 
 ### 11.5 Column Resize Hook (`src/core/use-column-resize.ts`)
-- [ ] Port `useTableColumnResize` hook from `tnks-data-table`
-- [ ] Keep localStorage persistence with debounce
+- [x] Port `useTableColumnResize` hook from `tnks-data-table`
+- [x] Keep localStorage persistence with debounce
 
 ### 11.6 Utility Functions (`src/utils/`)
-- [ ] Create `src/utils/cn.ts` — bundled `cn()` (no `@/lib/utils` dependency)
-- [ ] Port `src/utils/search.ts` — search preprocessing/sanitization
-- [ ] Port `src/utils/deep-utils.ts` — `isDeepEqual`, `debounce`, `resetUrlState`
-- [ ] Port `src/utils/keyboard-navigation.ts` — keyboard handlers
-- [ ] Port `src/utils/export-utils.ts` — CSV built-in, Excel optional (exceljs peer dep)
-- [ ] Port `src/utils/date-format.ts` — date formatting
-- [ ] Port `src/utils/column-sizing.ts` — column size init/tracking
+- [x] Create `src/utils/cn.ts` — bundled `cn()` (no `@/lib/utils` dependency)
+- [x] Port `src/utils/search.ts` — search preprocessing/sanitization
+- [x] Port `src/utils/deep-utils.ts` — `isDeepEqual`, `debounce`, `resetUrlState`
+- [x] Port `src/utils/keyboard-navigation.ts` — keyboard handlers
+- [x] Port `src/utils/export-utils.ts` — CSV built-in, Excel optional (exceljs peer dep)
+- [x] Port `src/utils/date-format.ts` — date formatting
+- [x] Port `src/utils/column-sizing.ts` — column size init/tracking
 
 ### Verification
-- [ ] `bun run build` passes for `packages/table`
-- [ ] `bun run typecheck` passes for `packages/table`
+- [x] `bun run build` passes for `packages/table`
+- [x] `bun run typecheck` passes for `packages/table`
 
-## Phase 12: Core Data Hook & UI Components
+## Phase 12: Core Data Hook & UI Components (Completed)
 
 ### 12.1 Core Data Hook (`src/core/use-table-data.ts`)
-- [ ] Implement `useTableData(adapter, config)` — the brain of the table
-- [ ] Manage URL state: page, pageSize, search, sort, sortOrder, dateRange, columnVisibility, columnFilters
-- [ ] Call `adapter.query()` on param change with AbortController
-- [ ] Return: `{ data, meta, isLoading, isError, error, params, setParam }`
-- [ ] Handle page reset on filter/search/pageSize change
+- [x] Implement `useTableData(adapter, config)` — the brain of the table
+- [x] Manage URL state: page, pageSize, search, sort, sortOrder, dateRange, columnVisibility, columnFilters
+- [x] Call `adapter.query()` on param change with AbortController
+- [x] Return: `{ data, meta, isLoading, isError, error, params, setParam }`
+- [x] Handle page reset on filter/search/pageSize change
 
 ### 12.2 Main DataTable Component (`src/data-table.tsx`)
-- [ ] Refactor from ~700 lines to ~200 lines using extracted hooks
-- [ ] Wire `useTableData`, `useColumnResize`, `useTableConfig`
-- [ ] Auto-generate columns from metadata when no manual columns provided
-- [ ] Simplified row selection (no subrow complexity)
-- [ ] Column order state with localStorage persistence
-- [ ] Keyboard navigation support
-- [ ] Row click handler with interactive element conflict prevention
-- [ ] Loading skeleton state
-- [ ] Empty state
-- [ ] Error state
+- [x] Refactor from ~700 lines to ~200 lines using extracted hooks
+- [x] Wire `useTableData`, `useColumnResize`, `useTableConfig`
+- [x] Auto-generate columns from metadata when no manual columns provided
+- [x] Simplified row selection (no subrow complexity)
+- [x] Column order state with localStorage persistence
+- [x] Keyboard navigation support
+- [x] Row click handler with interactive element conflict prevention
+- [x] Loading skeleton state
+- [x] Empty state
+- [x] Error state
 
 ### 12.3 Toolbar Component (`src/toolbar.tsx`)
-- [ ] Port toolbar with simplified props
-- [ ] Search input with debounce
-- [ ] Date range picker integration
-- [ ] Reset filters button
-- [ ] Export button slot
-- [ ] View options button slot
-- [ ] Settings popover (reset column sizes, reset order, clear selection, show all columns)
-- [ ] Custom toolbar content slot
+- [x] Port toolbar with simplified props
+- [x] Search input with debounce
+- [x] Date range picker integration
+- [x] Reset filters button
+- [x] Export button slot
+- [x] View options button slot
+- [x] Settings popover (reset column sizes, reset order, clear selection, show all columns)
+- [x] Custom toolbar content slot
 
 ### 12.4 Pagination Component (`src/pagination.tsx`)
-- [ ] Port pagination with cleanup (remove direct `window.history` manipulation)
-- [ ] Page size selector
-- [ ] First/Prev/Next/Last buttons
-- [ ] "X of Y rows selected" display
-- [ ] Size variants (sm, default, lg)
+- [x] Port pagination with cleanup (remove direct `window.history` manipulation)
+- [x] Page size selector
+- [x] First/Prev/Next/Last buttons
+- [x] "X of Y rows selected" display
+- [x] Size variants (sm, default, lg)
 
 ### 12.5 Column Header Component (`src/column-header.tsx`)
-- [ ] Port sortable column header (dropdown: Asc, Desc, Hide)
-- [ ] Keep as-is — clean component
+- [x] Port sortable column header (dropdown: Asc, Desc, Hide)
+- [x] Keep as-is — clean component
 
 ### 12.6 Column Resizer Component (`src/resizer.tsx`)
-- [ ] Port column resize handle
-- [ ] Keep as-is — clean component
+- [x] Port column resize handle
+- [x] Keep as-is — clean component
 
 ### 12.7 View Options Component (`src/view-options.tsx`)
-- [ ] Port column visibility toggle + drag-to-reorder
-- [ ] Keep search within columns
-- [ ] Keep reset column order
+- [x] Port column visibility toggle + drag-to-reorder
+- [x] Keep search within columns
+- [x] Keep reset column order
 
 ### 12.8 Export Component (`src/export.tsx`)
-- [ ] Port export dropdown (simplified — no subrow export)
-- [ ] Export selected as CSV/Excel
-- [ ] Export current page as CSV/Excel
-- [ ] Export all pages as CSV/Excel (when adapter supports)
-- [ ] Respect column visibility and order in export
+- [x] Port export dropdown (simplified — no subrow export)
+- [x] Export selected as CSV/Excel
+- [x] Export current page as CSV/Excel
+- [x] Export all pages as CSV/Excel (when adapter supports)
+- [x] Respect column visibility and order in export
 
 ### 12.9 Expand Icon Component (`src/expand-icon.tsx`)
-- [ ] Port expand icon for future row expansion support
+- [x] Port expand icon for future row expansion support
 
 ### Verification
-- [ ] `bun run build` passes for `packages/table`
-- [ ] `bun run typecheck` passes for `packages/table`
+- [x] `bun run build` passes for `packages/table`
+- [x] `bun run typecheck` passes for `packages/table`
 
-## Phase 13: Cell Renderers & Auto-Column Generation
+## Phase 13: Cell Renderers & Auto-Column Generation (Completed)
 
 ### 13.1 Cell Renderer Registry (`src/renderers/index.ts`)
-- [ ] Create `resolveRenderer(type, customRenderers?)` function
-- [ ] Map column types to React components
-- [ ] Allow user overrides via `renderers` prop
+- [x] Create `resolveRenderer(type, customRenderers?)` function
+- [x] Map column types to React components
+- [x] Allow user overrides via `renderers` prop
 
 ### 13.2 Built-in Cell Renderers
-- [ ] `src/renderers/text.tsx` — default text (truncated)
-- [ ] `src/renderers/number.tsx` — number with optional formatting
-- [ ] `src/renderers/date.tsx` — date with format support
-- [ ] `src/renderers/boolean.tsx` — checkbox or Yes/No display
-- [ ] `src/renderers/badge.tsx` — status badge with color from `options`
-- [ ] `src/renderers/link.tsx` — clickable URL
-- [ ] `src/renderers/image.tsx` — image/avatar with fallback
-- [ ] `src/renderers/progress.tsx` — progress bar
-- [ ] `src/renderers/tags.tsx` — array of badges
-- [ ] `src/renderers/actions.tsx` — row action buttons
+- [x] `src/renderers/text.tsx` — default text (truncated)
+- [x] `src/renderers/number.tsx` — number with optional formatting
+- [x] `src/renderers/date.tsx` — date with format support
+- [x] `src/renderers/boolean.tsx` — checkbox or Yes/No display
+- [x] `src/renderers/badge.tsx` — status badge with color from `options`
+- [x] `src/renderers/link.tsx` — clickable URL
+- [x] `src/renderers/image.tsx` — image/avatar with fallback
+- [x] `src/renderers/progress.tsx` — progress bar
+- [x] `src/renderers/tags.tsx` — array of badges
+- [x] `src/renderers/actions.tsx` — row action buttons
 
-### 13.3 Auto-Column Generation (`src/auto/auto-columns.ts`)
-- [ ] Implement `generateColumns<T>(metadata, customRenderers?)` function
-- [ ] Map `TableMetadata.columns` → `ColumnDef<T>[]`
-- [ ] Use `DataTableColumnHeader` for sortable headers
-- [ ] Use cell renderer registry for cell rendering
-- [ ] Respect `hidden`, `sortable`, `width`, `minWidth`, `maxWidth`
+### 13.3 Auto-Column Generation (`src/auto/auto-columns.tsx`)
+- [x] Implement `generateColumns<T>(metadata, customRenderers?)` function
+- [x] Map `TableMetadata.columns` → `ColumnDef<T>[]`
+- [x] Use `DataTableColumnHeader` for sortable headers
+- [x] Use cell renderer registry for cell rendering
+- [x] Respect `hidden`, `sortable`, `width`, `minWidth`, `maxWidth`
 
 ### 13.4 Auto-Filter Generation (`src/auto/auto-filters.ts`)
-- [ ] Implement `generateFilterConfig(metadata)` function
-- [ ] Map `FilterMetadata` to filter UI configuration
-- [ ] Support `options` → select/multi-select
-- [ ] Support `datePresets` → preset buttons
+- [x] Implement `generateFilterConfig(metadata)` function
+- [x] Map `FilterMetadata` to filter UI configuration
+- [x] Support `options` → select/multi-select
+- [x] Support `datePresets` → preset buttons
 
 ### 13.5 Auto-Columns Hook
-- [ ] Create `useAutoColumns(adapter, manualColumns?, renderers?)` hook
-- [ ] If `manualColumns` provided, use them directly
-- [ ] If not, call `adapter.meta()` and generate columns
-- [ ] Cache metadata to avoid refetching
+- [x] Create `useAutoColumns(adapter, manualColumns?, renderers?)` hook
+- [x] If `manualColumns` provided, use them directly
+- [x] If not, call `adapter.meta()` and generate columns
+- [x] Cache metadata to avoid refetching
 
 ### Verification
-- [ ] `bun run build` passes for `packages/table`
-- [ ] `bun run typecheck` passes for `packages/table`
+- [x] `bun run build` passes for `packages/table`
+- [x] `bun run typecheck` passes for `packages/table`
 
-## Phase 14: Adapters (Data Source Bridges)
+## Phase 14: Adapters (Data Source Bridges) (Completed)
 
 ### 14.1 TableCraft Adapter (`src/auto/tablecraft-adapter.ts`)
-- [ ] Implement `createTableCraftAdapter<T>(options)` function
-- [ ] Options: `baseUrl`, `table`, `headers?`, `fetch?`
-- [ ] Use `@tablecraft/client` internally
-- [ ] Map `QueryParams` → client `query()` params
-- [ ] Implement `meta()` via client `meta()`
-- [ ] Implement `export()` via client `export()`
+- [x] Implement `createTableCraftAdapter<T>(options)` function
+- [x] Options: `baseUrl`, `table`, `headers?`, `fetch?`
+- [x] Use `@tablecraft/client` internally
+- [x] Map `QueryParams` → client `query()` params
+- [x] Implement `meta()` via client `meta()`
+- [x] Implement `export()` via client `export()`
 
 ### 14.2 Simple REST Adapter (`src/auto/rest-adapter.ts`)
-- [ ] Implement `createRestAdapter<T>(options)` function
-- [ ] Accept `queryFn: (params) => Promise<QueryResult<T>>`
-- [ ] Accept optional `queryByIdsFn`, `metaFn`
-- [ ] Zero assumptions about backend API shape
+- [x] Implement `createRestAdapter<T>(options)` function
+- [x] Accept `queryFn: (params) => Promise<QueryResult<T>>`
+- [x] Accept optional `queryByIdsFn`, `metaFn`
+- [x] Zero assumptions about backend API shape
 
 ### 14.3 Static Data Adapter (`src/auto/static-adapter.ts`)
-- [ ] Implement `createStaticAdapter<T>(data, options?)` function
-- [ ] Client-side pagination, sorting, filtering
-- [ ] For small datasets / prototyping
+- [x] Implement `createStaticAdapter<T>(data, options?)` function
+- [x] Client-side pagination, sorting, filtering
+- [x] For small datasets / prototyping
 
 ### Verification
-- [ ] `bun run build` passes for `packages/table`
-- [ ] `bun run typecheck` passes for `packages/table`
+- [x] `bun run build` passes for `packages/table`
+- [x] `bun run typecheck` passes for `packages/table`
 
-## Phase 15: Shadcn Registry & Exports
+## Phase 15: Shadcn Registry & Exports (Partially Complete)
 
 ### 15.1 Package Exports (`src/index.ts`)
-- [ ] Export `DataTable` component
-- [ ] Export `DataTableColumnHeader` component
-- [ ] Export `DataTablePagination` component
-- [ ] Export `DataTableToolbar` component
-- [ ] Export `DataTableViewOptions` component
-- [ ] Export `DataTableExport` component
-- [ ] Export `DataTableResizer` component
-- [ ] Export `ExpandIcon` component
-- [ ] Export all adapters (`createTableCraftAdapter`, `createRestAdapter`, `createStaticAdapter`)
-- [ ] Export all hooks (`useTableData`, `useUrlState`, `useTableConfig`, `useColumnResize`)
-- [ ] Export all types
-- [ ] Export all cell renderers
-- [ ] Export `resolveRenderer` and `generateColumns`
+- [x] Export `DataTable` component
+- [x] Export `DataTableColumnHeader` component
+- [x] Export `DataTablePagination` component
+- [x] Export `DataTableToolbar` component
+- [x] Export `DataTableViewOptions` component
+- [x] Export `DataTableExport` component
+- [x] Export `DataTableResizer` component
+- [x] Export `ExpandIcon` component
+- [x] Export all adapters (`createTableCraftAdapter`, `createRestAdapter`, `createStaticAdapter`)
+- [x] Export all hooks (`useTableData`, `useUrlState`, `useTableConfig`, `useColumnResize`)
+- [x] Export all types
+- [x] Export all cell renderers
+- [x] Export `resolveRenderer` and `generateColumns`
 
 ### 15.2 Shadcn Registry (`packages/table/registry.json`)
 - [ ] Create registry manifest for `npx shadcn@latest add` support
@@ -593,17 +593,17 @@ The engine will be split into multiple scoped packages to reduce dependencies an
 - [ ] List all dependencies and registryDependencies
 
 ### 15.3 Peer Dependency Strategy
-- [ ] `react`, `react-dom`, `@tanstack/react-table`, `tailwindcss` — required peers
-- [ ] `exceljs` — optional peer (Excel export)
-- [ ] `@tablecraft/client` — optional peer (TableCraft adapter)
-- [ ] `date-fns` — optional peer (date formatting)
-- [ ] `sonner` — required (toast notifications for export)
+- [x] `react`, `react-dom`, `@tanstack/react-table` — required peers
+- [x] `exceljs` — optional peer (Excel export)
+- [x] `@tablecraft/client` — optional peer (TableCraft adapter)
+- [x] `date-fns` — optional peer (date formatting)
+- [x] `sonner` — required (toast notifications for export)
 
 ### Verification
-- [ ] `bun run build` passes for `packages/table`
-- [ ] `bun run typecheck` passes for `packages/table`
+- [x] `bun run build` passes for `packages/table`
+- [x] `bun run typecheck` passes for `packages/table`
 
-## Phase 16: Testing & Polish
+## Phase 16: Testing & Polish (Pending)
 
 ### 16.1 Unit Tests
 - [ ] URL state hook tests
@@ -613,26 +613,26 @@ The engine will be split into multiple scoped packages to reduce dependencies an
 - [ ] Export utility tests (CSV)
 - [ ] Adapter tests (TableCraft, REST, Static)
 - [ ] Deep equality utility tests
+- [ ] Add tests for `test/dev-experience.test.ts` in hono-example
 
 ### 16.2 Build Verification
 - [ ] `bun run build` — all packages
 - [ ] `bun run typecheck` — all packages
 - [ ] `bun test` — all packages
 
-## Phase 17: Demo App & Documentation
+## Phase 17: Demo App & Documentation (Pending)
 
-### 17.1 Example App (`apps/table-demo`)
-- [ ] Create demo app (Vite + React or Next.js)
-- [ ] Pattern 1: Zero-config with TableCraft adapter (auto-columns from `/_meta`)
-- [ ] Pattern 2: Custom columns + TableCraft adapter
+### 17.1 Example App (`apps/vite-web-example` — existing)
+- [x] Pattern 1: Zero-config with TableCraft adapter (auto-columns from `/_meta`)
+- [x] Pattern 2: Custom columns + TableCraft adapter
 - [ ] Pattern 3: REST adapter + manual columns
 - [ ] Pattern 4: Static data adapter
-- [ ] Show custom cell renderers
-- [ ] Show toolbar customization
-- [ ] Show export functionality
+- [x] Show custom cell renderers
+- [x] Show toolbar customization
+- [x] Show export functionality
 
 ### 17.2 Documentation
-- [ ] README with quick start (3 usage patterns)
+- [x] README with quick start (3 usage patterns)
 - [ ] API reference for `DataTableProps`
 - [ ] Cell renderer customization guide
 - [ ] Adapter creation guide
