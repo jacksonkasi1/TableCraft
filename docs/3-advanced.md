@@ -148,34 +148,68 @@ export const monthlySales = defineTable(orders)
 
 Subquery columns let you attach a correlated subquery to every row — useful for counts, existence checks, or fetching a single related record without a full join.
 
+The `filter` parameter accepts **three forms** — pick whichever fits your style:
+
+### Form 1 — Drizzle `sql\`...\`` expression *(recommended for Drizzle users)*
+
+Import `sql` from `drizzle-orm` and reference your schema columns directly.
+TableCraft passes the expression through unchanged — the full power of Drizzle is available.
+You own the safety of the expression.
+
 ```typescript
+import { sql } from 'drizzle-orm';
 import { defineTable } from '@tablecraft/engine';
 import { orders, orderItems } from '../db/schema';
 
 export const orderConfig = defineTable(orders)
   // Count how many items are in each order
+  .subquery('itemCount', orderItems, 'count',
+    sql`${orderItems.orderId} = ${orders.id}`)
+
+  // With an extra condition — anything valid in Drizzle works here
+  .subquery('activeItemCount', orderItems, 'count',
+    sql`${orderItems.orderId} = ${orders.id} AND ${orderItems.status} = ${'active'}`)
+
+  // Check whether any items exist (boolean flag)
+  .subquery('hasItems', orderItems, 'exists',
+    sql`${orderItems.orderId} = ${orders.id}`)
+
+  // Fetch the first item row as a JSON object (PostgreSQL only)
+  .subquery('firstItem', orderItems, 'first',
+    sql`${orderItems.orderId} = ${orders.id}`);
+```
+
+### Form 2 — Structured `SubqueryCondition[]` *(typed, injection-safe)*
+
+Pass an array of condition objects. Each has `left`, `op` (default `'eq'`), and `right`.
+Operands are `{ column: 'table.column' }` or `{ value: literal }`.
+Conditions are AND-combined; literal values are parameterized automatically.
+
+```typescript
+export const orderConfig = defineTable(orders)
   .subquery('itemCount', orderItems, 'count', [
     { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
   ])
 
-  // Check whether any items exist (boolean flag)
-  .subquery('hasItems', orderItems, 'exists', [
+  // Multiple conditions — AND-combined:
+  .subquery('activeItemCount', orderItems, 'count', [
     { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
-  ])
-
-  // Fetch the first item row as a JSON object (PostgreSQL only)
-  .subquery('firstItem', orderItems, 'first', [
-    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+    { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } },
   ]);
 ```
 
-Multiple conditions are AND-combined. Literal values can be used on either side:
+Available operators: `eq` `neq` `gt` `gte` `lt` `lte` `like` `ilike`
+
+### Form 3 — Raw SQL string *(@deprecated)*
+
+Still accepted for backwards compatibility.
+Must be a hardcoded developer-authored string — never user input.
+Prefer form 1 or 2 for new code.
 
 ```typescript
-.subquery('activeItemCount', orderItems, 'count', [
-  { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
-  { left: { column: 'order_items.status' }, op: 'eq', right: { value: 'active' } },
-])
+// @deprecated
+.subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
+```
 
 ### Subquery types
 

@@ -178,20 +178,29 @@ Adds a virtual column calculated in the database.
 
 ### `.subquery(alias, table, type, filter?)`
 
-Runs a subquery for every row.
+Runs a correlated subquery for every row. The `filter` parameter accepts **three forms**:
 
-Pass a `filterConditions` array (preferred) to safely join the subquery to the outer table:
+**1. Drizzle `sql\`...\`` expression** — best DX, use your schema columns directly:
+
+```typescript
+import { sql } from 'drizzle-orm';
+
+.subquery('orderCount', s.orders, 'count',
+  sql`${s.orders.userId} = ${s.users.id}`)
+```
+
+**2. Structured `SubqueryCondition[]`** — typed, injection-safe:
 
 ```typescript
 .subquery('orderCount', s.orders, 'count', [
-  { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } }
+  { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
 ])
 ```
 
-A legacy plain-string filter is still accepted but deprecated:
+**3. Raw SQL string** — @deprecated, developer-authored constants only:
 
 ```typescript
-// deprecated — prefer filterConditions array
+// @deprecated — prefer form 1 or 2
 .subquery('orderCount', s.orders, 'count', 'orders.user_id = users.id')
 ```
 

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { sql } from 'drizzle-orm';
 import { pgTable, integer, varchar } from 'drizzle-orm/pg-core';
 import { SubqueryBuilder } from '../../src/core/subqueryBuilder';
 import { TableConfig } from '../../src/types/table';
@@ -308,5 +309,103 @@ describe('SubqueryBuilder — dialect gating with filterConditions', () => {
     for (const dialect of ['postgresql', 'mysql', 'sqlite', 'unknown'] as const) {
       expect(() => builder.buildSubqueries(cfg, dialect)).not.toThrow();
     }
+  });
+});
+
+// ── filterSql: Drizzle SQL expression path ────────────────────────────────────
+
+describe('SubqueryBuilder — filterSql Drizzle SQL expression path', () => {
+  const baseColumns: TableConfig['columns'] = [
+    { name: 'id', type: 'number', hidden: false, sortable: true, filterable: true },
+  ];
+
+  it('accepts a drizzle sql`` expression for count', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: baseColumns,
+      subqueries: [{
+        alias: 'ordersCount',
+        table: 'orders',
+        type: 'count',
+        filterSql: sql`${orders.userId} = ${users.id}`,
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['ordersCount']).toBeDefined();
+  });
+
+  it('accepts a drizzle sql`` expression for exists', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: baseColumns,
+      subqueries: [{
+        alias: 'hasOrders',
+        table: 'orders',
+        type: 'exists',
+        filterSql: sql`${orders.userId} = ${users.id}`,
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['hasOrders']).toBeDefined();
+  });
+
+  it('accepts a drizzle sql`` expression for first (postgresql)', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: baseColumns,
+      subqueries: [{
+        alias: 'lastOrder',
+        table: 'orders',
+        type: 'first',
+        filterSql: sql`${orders.userId} = ${users.id}`,
+      }],
+    };
+    const result = builder.buildSubqueries(config, 'postgresql');
+    expect(result).toBeDefined();
+    expect(result!['lastOrder']).toBeDefined();
+  });
+
+  it('filterSql takes priority over filterConditions when both present', () => {
+    // If filterSql is present it should be used (no error thrown), even if
+    // filterConditions is also set. We verify by checking a result is returned.
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: baseColumns,
+      subqueries: [{
+        alias: 'ordersCount',
+        table: 'orders',
+        type: 'count',
+        filterSql: sql`${orders.userId} = ${users.id}`,
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['ordersCount']).toBeDefined();
+  });
+
+  it('filterSql with a compound expression (AND + literal)', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: baseColumns,
+      subqueries: [{
+        alias: 'activeOrders',
+        table: 'orders',
+        type: 'count',
+        filterSql: sql`${orders.userId} = ${users.id} AND ${orders.status} = ${'active'}`,
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['activeOrders']).toBeDefined();
   });
 });

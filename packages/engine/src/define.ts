@@ -752,49 +752,81 @@ export class TableDefinitionBuilder<T extends Table = Table> {
   /**
    * Attach a correlated subquery to every row.
    *
-   * The `filter` parameter controls the WHERE clause:
+   * The `filter` parameter controls the subquery's WHERE clause and accepts
+   * **three forms** — pick whichever fits your style:
    *
-   * **Structured form (preferred):** pass an array of `SubqueryCondition` objects.
-   * Each condition has `left`, `op` (default `'eq'`), and `right` operands.
-   * Operands are either `{ column: 'table.column' }` or `{ value: literal }`.
-   * Conditions are AND-combined. Literal values are parameterized (safe from injection).
+   * ---
+   *
+   * ### 1. Drizzle `sql\`...\`` expression *(best DX — use your schema columns directly)*
+   *
+   * Import `sql` from `drizzle-orm` and write the WHERE clause exactly as you
+   * would in any Drizzle query. TableCraft passes the expression through unchanged,
+   * so the full power of Drizzle is available — joins, functions, OR logic, anything.
+   * You own the safety of the expression.
    *
    * ```ts
-   * // Simple column-to-column equality (most common):
-   * .subquery('itemCount', s.orderItems, 'count', [
+   * import { sql } from 'drizzle-orm';
+   * import { orders, orderItems } from '../db/schema';
+   *
+   * .subquery('itemCount', orderItems, 'count',
+   *   sql`${orderItems.orderId} = ${orders.id}`)
+   *
+   * // With an extra condition:
+   * .subquery('activeItemCount', orderItems, 'count',
+   *   sql`${orderItems.orderId} = ${orders.id} AND ${orderItems.status} = ${'active'}`)
+   * ```
+   *
+   * ---
+   *
+   * ### 2. Structured `SubqueryCondition[]` *(typed, injection-safe)*
+   *
+   * Pass an array of condition objects. Each has `left`, `op` (default `'eq'`),
+   * and `right` operands — either `{ column: 'table.column' }` or `{ value: literal }`.
+   * Conditions are AND-combined. Literal values are parameterized automatically.
+   *
+   * ```ts
+   * // Simple column-to-column join:
+   * .subquery('itemCount', orderItems, 'count', [
    *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
    * ])
    *
-   * // Column + literal value:
-   * .subquery('activeItemCount', s.orderItems, 'count', [
+   * // With a literal value filter:
+   * .subquery('activeItemCount', orderItems, 'count', [
    *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
    *   { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } },
    * ])
-   *
-   * // Non-equality operator:
-   * .subquery('bigItems', s.orderItems, 'count', [
-   *   { left: { column: 'order_items.order_id' }, op: 'eq',  right: { column: 'orders.id' } },
-   *   { left: { column: 'order_items.qty' },      op: 'gte', right: { value: 5 } },
-   * ])
    * ```
    *
-   * **Deprecated raw string form:** still accepted for backwards compatibility.
-   * Must be a developer-authored constant, never user input.
+   * ---
+   *
+   * ### 3. Raw SQL string *(@deprecated — developer-authored constants only)*
+   *
+   * Still accepted for backwards compatibility. Must be a hardcoded string authored
+   * by the developer — never derived from user input. Prefer form 1 or 2 instead.
+   *
    * ```ts
-   * .subquery('itemCount', s.orderItems, 'count', 'order_items.order_id = orders.id')
+   * // @deprecated
+   * .subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
    * ```
+   *
+   * ---
+   *
+   * Omitting `filter` creates an uncorrelated subquery (full table scan).
    */
   subquery(
     alias: string,
     table: Table,
     type: 'count' | 'exists' | 'first',
-    filter?: string | SubqueryCondition[]
+    filter?: string | SubqueryCondition[] | SQL
   ): this {
     if (!this._config.subqueries) this._config.subqueries = [];
 
     let entry: NonNullable<TableConfig['subqueries']>[number];
     if (filter === undefined || filter === null) {
       entry = { alias, table: getTableName(table), type };
+    } else if (filter instanceof SQL) {
+      // Drizzle SQL expression — stored as runtime-only filterSql (not JSON-serializable)
+      entry = { alias, table: getTableName(table), type, filterSql: filter };
     } else if (typeof filter === 'string') {
       // @deprecated raw string — kept for backwards compatibility
       entry = { alias, table: getTableName(table), type, filter };

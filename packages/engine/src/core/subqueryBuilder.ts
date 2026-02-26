@@ -78,11 +78,15 @@ export class SubqueryBuilder {
    * Builds the WHERE clause SQL for a subquery.
    *
    * Priority:
-   * 1. `filterConditions` — structured array of conditions (preferred)
-   * 2. `filter` — raw string (@deprecated, developer-authored only, not user input)
-   * 3. fallback — `true` (uncorrelated, scans whole table)
+   * 1. `filterSql`        — Drizzle SQL expression (full Drizzle DX, passed through as-is)
+   * 2. `filterConditions` — structured array of conditions (typed, safe, recommended)
+   * 3. `filter`           — raw SQL string (@deprecated, developer-authored only)
+   * 4. fallback           — `true` (uncorrelated, scans whole table)
    */
   private buildFilter(sub: SubqueryConfig): SQL {
+    if (sub.filterSql) {
+      return sub.filterSql;
+    }
     if (sub.filterConditions && sub.filterConditions.length > 0) {
       return this.buildStructuredFilter(sub.filterConditions);
     }
