@@ -143,7 +143,12 @@ export const SubqueryConfigSchema = z.object({
   alias: z.string(),
   table: z.string(),
   type: z.enum(['count', 'exists', 'first']), // Simplistic subquery types for now
-  filter: z.string().optional(), // Condition for the subquery
+  filter: z.string().optional(), // @deprecated — use filterCondition instead
+  /** Structured correlation condition. Preferred over the raw `filter` string. */
+  filterCondition: z.object({
+    leftColumn: z.string(),
+    rightColumn: z.string(),
+  }).optional(),
 });
 export type SubqueryConfig = z.infer<typeof SubqueryConfigSchema>;
 

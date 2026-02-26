@@ -31,7 +31,7 @@ async function seed() {
     const usersData = Array.from({ length: 10 }).map((_, i) => ({
       tenantId: tenant.id,
       email: `${tenant.slug}-user${i + 1}@example.com`,
-      role: i === 0 ? 'admin' : 'member',
+      role: i === 0 ? 'admin' : i % 5 === 0 ? 'viewer' : 'member',
       isActive: true,
     }));
     const createdUsers = await db.insert(users).values(usersData).returning();

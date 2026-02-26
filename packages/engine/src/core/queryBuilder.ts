@@ -8,6 +8,7 @@ import {
 } from 'drizzle-orm';
 import { TableConfig, JoinConfig } from '../types/table';
 import { applyOperator } from '../utils/operators';
+import { ConfigError } from '../errors';
 
 export class QueryBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -45,15 +46,19 @@ export class QueryBuilder {
       if (!col) continue;
 
       if (colConfig.dbTransform && colConfig.dbTransform.length > 0) {
-        // Apply SQL transforms (only works if col is a Column object with name)
-        const colName = (col as Column).name; 
-        // TODO: This might break if col is already SQL or alias, but for now we assume Column
-        if (colName) {
-           let expressionStr = colConfig.dbTransform.reduce((acc, func) => `${func}(${acc})`, '?');
-           selection[colConfig.name] = sql.raw(expressionStr.replace('?', colName));
-        } else {
-           selection[colConfig.name] = col;
+        // Apply SQL transforms. col must be a Column object with a .name string;
+        // SQL expressions (e.g. from computed columns) do not have .name and
+        // cannot be wrapped in a function call.
+        if (!('name' in col) || typeof (col as Column).name !== 'string') {
+          throw new ConfigError(
+            `[TableCraft] dbTransform on '${colConfig.name}' failed: ` +
+            `the resolved column is not a plain Column (it may be a SQL expression). ` +
+            `Use rawSelect() with an explicit SQL expression instead.`
+          );
         }
+        const colName = (col as Column).name;
+        const expressionStr = colConfig.dbTransform.reduce((acc, func) => `${func}(${acc})`, colName);
+        selection[colConfig.name] = sql.raw(expressionStr);
       } else {
         selection[colConfig.name] = col;
       }
@@ -79,8 +84,14 @@ export class QueryBuilder {
             const colName = colConfig.field ?? colConfig.name;
             const col = tableCols[colName];
             if (col) {
-               // TODO: Handle name collisions?
-               selection[colConfig.name] = col;
+              if (colConfig.name in selection) {
+                throw new ConfigError(
+                  `[TableCraft] Name collision: join column '${colConfig.name}' from table '${join.table}' ` +
+                  `conflicts with an existing selection key. ` +
+                  `Rename the column using the 'field' property or give it a unique alias.`
+                );
+              }
+              selection[colConfig.name] = col;
             }
           }
         }

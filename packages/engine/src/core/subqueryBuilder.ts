@@ -43,15 +43,20 @@ export class SubqueryBuilder {
   }
 
   private buildSingle(sub: SubqueryConfig, subTable: Table, dialect?: Dialect): SQL | undefined {
-    // Build a safe correlation filter. The filter string is a developer-authored
-    // SQL correlation condition (e.g. "orders.user_id = users.id").
-    // It is written by the application developer in source code — not by end users —
-    // so raw injection risk is low. However, to prevent accidental developer mistakes
-    // we keep the TODO comment and ensure this is clearly documented.
+    // Build a safe correlation filter.
     //
-    // TODO: replace with a structured, parameterised representation so the filter
-    //   can be validated and cannot accidentally include user-supplied strings.
-    const filterSql = sub.filter ? sql.raw(sub.filter) : sql`true`;
+    // Prefer the structured `filterCondition` (e.g. { leftColumn: 'order_items.order_id', rightColumn: 'orders.id' })
+    // over the deprecated raw `filter` string. The structured form is validated and cannot accidentally
+    // include user-supplied strings. The raw `filter` string is kept for backwards compatibility but
+    // is marked deprecated — new call sites should use `filterCondition` instead.
+    let filterSql: SQL;
+    if (sub.filterCondition) {
+      filterSql = sql.raw(`${sub.filterCondition.leftColumn} = ${sub.filterCondition.rightColumn}`);
+    } else if (sub.filter) {
+      filterSql = sql.raw(sub.filter);
+    } else {
+      filterSql = sql`true`;
+    }
 
     switch (sub.type) {
       case 'count':

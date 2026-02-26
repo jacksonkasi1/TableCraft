@@ -16,7 +16,7 @@ export const drizzleOperators = {
 };
 
 // ** import types
-import { EngineParams, EngineContext } from './types/engine';
+import type { EngineParams, EngineContext, CountMode } from './types/engine';
 import {
   TableConfig,
   ColumnConfig,
@@ -67,6 +67,8 @@ export interface RuntimeExtensions<T extends Table = Table> {
   rawOrderBys: SQL[];
   ctes: Map<string, SQL>;
   sqlJoinConditions: Map<string, SQL>;
+  /** How row counting is performed. Defaults to 'exact' when not set. */
+  countMode?: CountMode;
   hooks?: {
     beforeQuery?: (params: any, context: any) => any;
     afterQuery?: (data: Record<string, unknown>[], params: any, context: any) => any;
@@ -750,12 +752,19 @@ export class TableDefinitionBuilder<T extends Table = Table> {
     alias: string,
     table: Table,
     type: 'count' | 'exists' | 'first',
-    filter?: string
+    filter?: string | { leftColumn: string; rightColumn: string }
   ): this {
     if (!this._config.subqueries) this._config.subqueries = [];
 
+    // Accept either a legacy raw string or the new structured filterCondition object.
+    const entry =
+      filter === undefined || filter === null
+        ? { alias, table: getTableName(table), type }
+        : typeof filter === 'string'
+        ? { alias, table: getTableName(table), type, filter }
+        : { alias, table: getTableName(table), type, filterCondition: filter };
+
     // Dedupe subquery entries by alias — replace if exists
-    const entry = { alias, table: getTableName(table), type, filter };
     const existingIdx = this._config.subqueries.findIndex(e => e.alias === alias);
     if (existingIdx >= 0) {
       this._config.subqueries[existingIdx] = entry;
@@ -837,8 +846,8 @@ export class TableDefinitionBuilder<T extends Table = Table> {
    * 'estimated' = PostgreSQL's reltuples — fast but approximate
    * 'none' = skip counting entirely — fastest
    */
-  countMode(mode: 'exact' | 'estimated' | 'none'): this {
-    (this._config as any)._countMode = mode;
+  countMode(mode: CountMode): this {
+    this._ext.countMode = mode;
     return this;
   }
 

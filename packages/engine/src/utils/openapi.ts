@@ -41,7 +41,28 @@ export function generateOpenApiSpec(config: TableConfig): Record<string, unknown
         maximum: config.pagination?.maxPageSize ?? 100,
       },
     },
+    {
+      name: 'cursor',
+      in: 'query',
+      required: false,
+      schema: { type: 'string' },
+      description: 'Opaque cursor for cursor-based pagination. When provided, page/pageSize are ignored.',
+    },
     { name: 'sort', in: 'query', required: false, schema: { type: 'string' }, description: 'Comma-separated fields. Prefix with - for desc.' },
+    {
+      name: 'select',
+      in: 'query',
+      required: false,
+      schema: { type: 'string' },
+      description: 'Comma-separated list of fields to include in the response.',
+    },
+    {
+      name: 'distinct',
+      in: 'query',
+      required: false,
+      schema: { type: 'boolean' },
+      description: 'When true, applies SELECT DISTINCT to the query.',
+    },
     ...filterParams,
   ];
 
@@ -94,10 +115,12 @@ export function generateOpenApiSpec(config: TableConfig): Record<string, unknown
                       meta: {
                         type: 'object',
                         properties: {
-                          total: { type: 'integer' },
+                          total: { type: 'integer', nullable: true },
                           page: { type: 'integer' },
                           pageSize: { type: 'integer' },
-                          totalPages: { type: 'integer' },
+                          totalPages: { type: 'integer', nullable: true },
+                          nextCursor: { type: 'string', nullable: true, description: 'Cursor for the next page (cursor-based pagination only).' },
+                          countMode: { type: 'string', enum: ['exact', 'estimated', 'none'], description: 'How the total row count was computed.' },
                         },
                       },
                       ...(config.aggregations && config.aggregations.length > 0
