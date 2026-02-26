@@ -23,10 +23,14 @@ export const orders = defineTable(s.orders)
   // Computed column (SQL) - VAT (e.g. 20%)
   .computed('vatAmount', sql`${s.orders.total} * 0.2`, { type: 'number', label: 'VAT' })
   // Subquery: Item Count (count — sortable)
-  .subquery('itemCount', s.orderItems, 'count', { leftColumn: 'order_items.order_id', rightColumn: 'orders.id' })
+  .subquery('itemCount', s.orderItems, 'count', [
+    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  ])
 
   // Subquery: First Item (first — NOT sortable; uses row_to_json, PostgreSQL only)
-  // .subquery('firstItem', s.orderItems, 'first', 'order_items.order_id = orders.id')
+  // .subquery('firstItem', s.orderItems, 'first', [
+  //   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  // ])
 
   // Tenant isolation (using context.tenantId)
   .tenant('tenantId')

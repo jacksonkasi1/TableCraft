@@ -3,9 +3,21 @@ import {
   SQL,
   sql,
 } from 'drizzle-orm';
-import { TableConfig, SubqueryConfig } from '../types/table';
+import { TableConfig, SubqueryConfig, SubqueryCondition } from '../types/table';
 import { Dialect } from './dialect';
 import { DialectError } from '../errors';
+
+// Maps our operator enum to the SQL operator string
+const OP_MAP: Record<NonNullable<SubqueryCondition['op']>, string> = {
+  eq:    '=',
+  neq:   '!=',
+  gt:    '>',
+  gte:   '>=',
+  lt:    '<',
+  lte:   '<=',
+  like:  'LIKE',
+  ilike: 'ILIKE',
+};
 
 export class SubqueryBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -43,20 +55,7 @@ export class SubqueryBuilder {
   }
 
   private buildSingle(sub: SubqueryConfig, subTable: Table, dialect?: Dialect): SQL | undefined {
-    // Build a safe correlation filter.
-    //
-    // Prefer the structured `filterCondition` (e.g. { leftColumn: 'order_items.order_id', rightColumn: 'orders.id' })
-    // over the deprecated raw `filter` string. The structured form is validated and cannot accidentally
-    // include user-supplied strings. The raw `filter` string is kept for backwards compatibility but
-    // is marked deprecated — new call sites should use `filterCondition` instead.
-    let filterSql: SQL;
-    if (sub.filterCondition) {
-      filterSql = sql.raw(`${sub.filterCondition.leftColumn} = ${sub.filterCondition.rightColumn}`);
-    } else if (sub.filter) {
-      filterSql = sql.raw(sub.filter);
-    } else {
-      filterSql = sql`true`;
-    }
+    const filterSql = this.buildFilter(sub);
 
     switch (sub.type) {
       case 'count':
@@ -65,8 +64,6 @@ export class SubqueryBuilder {
         return sql`EXISTS (SELECT 1 FROM ${subTable} WHERE ${filterSql})`;
       case 'first': {
         // 'first' uses row_to_json() which is PostgreSQL-only.
-        // Throw a clear DialectError rather than silently generating invalid SQL
-        // that will crash at query-execution time with a cryptic DB error.
         if (dialect && dialect !== 'unknown' && dialect !== 'postgresql') {
           throw new DialectError('first', dialect);
         }
@@ -75,5 +72,41 @@ export class SubqueryBuilder {
       default:
         return undefined;
     }
+  }
+
+  /**
+   * Builds the WHERE clause SQL for a subquery.
+   *
+   * Priority:
+   * 1. `filterConditions` — structured array of conditions (preferred)
+   * 2. `filter` — raw string (@deprecated, developer-authored only, not user input)
+   * 3. fallback — `true` (uncorrelated, scans whole table)
+   */
+  private buildFilter(sub: SubqueryConfig): SQL {
+    if (sub.filterConditions && sub.filterConditions.length > 0) {
+      return this.buildStructuredFilter(sub.filterConditions);
+    }
+    if (sub.filter) {
+      return sql.raw(sub.filter);
+    }
+    return sql`true`;
+  }
+
+  /**
+   * Converts a `SubqueryCondition[]` into a single AND-combined SQL expression.
+   *
+   * Column references  → emitted via sql.raw() — developer-defined, not user input
+   * Literal values     → parameterized via sql`${value}` to prevent injection
+   */
+  private buildStructuredFilter(conditions: SubqueryCondition[]): SQL {
+    const parts = conditions.map((cond) => {
+      const leftSql  = 'column' in cond.left  ? sql.raw(cond.left.column)  : sql`${cond.left.value as any}`;
+      const rightSql = 'column' in cond.right ? sql.raw(cond.right.column) : sql`${cond.right.value as any}`;
+      const opStr = OP_MAP[cond.op ?? 'eq'];
+      return sql`${leftSql} ${sql.raw(opStr)} ${rightSql}`;
+    });
+
+    // AND-combine all parts
+    return parts.reduce((acc, part) => sql`${acc} AND ${part}`);
   }
 }

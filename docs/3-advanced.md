@@ -154,14 +154,28 @@ import { orders, orderItems } from '../db/schema';
 
 export const orderConfig = defineTable(orders)
   // Count how many items are in each order
-  .subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
+  .subquery('itemCount', orderItems, 'count', [
+    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  ])
 
   // Check whether any items exist (boolean flag)
-  .subquery('hasItems', orderItems, 'exists', 'order_items.order_id = orders.id')
+  .subquery('hasItems', orderItems, 'exists', [
+    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  ])
 
   // Fetch the first item row as a JSON object (PostgreSQL only)
-  .subquery('firstItem', orderItems, 'first', 'order_items.order_id = orders.id');
+  .subquery('firstItem', orderItems, 'first', [
+    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  ]);
 ```
+
+Multiple conditions are AND-combined. Literal values can be used on either side:
+
+```typescript
+.subquery('activeItemCount', orderItems, 'count', [
+  { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  { left: { column: 'order_items.status' }, op: 'eq', right: { value: 'active' } },
+])
 
 ### Subquery types
 

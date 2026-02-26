@@ -139,16 +139,41 @@ export const AggregationConfigSchema = z.object({
 });
 export type AggregationConfig = z.infer<typeof AggregationConfigSchema>;
 
+/**
+ * A single condition in a structured subquery filter.
+ *
+ * Operands are either a column reference (table.column) or a literal value.
+ * Examples:
+ *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } }
+ *   { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } }
+ *   { left: { column: 'order_items.qty' },       op: 'gt', right: { value: 0 } }
+ */
+export const SubqueryConditionSchema = z.object({
+  left: z.union([
+    z.object({ column: z.string() }),
+    z.object({ value: z.unknown() }),
+  ]),
+  op: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike']).default('eq'),
+  right: z.union([
+    z.object({ column: z.string() }),
+    z.object({ value: z.unknown() }),
+  ]),
+});
+export type SubqueryCondition = z.infer<typeof SubqueryConditionSchema>;
+
 export const SubqueryConfigSchema = z.object({
   alias: z.string(),
   table: z.string(),
-  type: z.enum(['count', 'exists', 'first']), // Simplistic subquery types for now
-  filter: z.string().optional(), // @deprecated — use filterCondition instead
-  /** Structured correlation condition. Preferred over the raw `filter` string. */
-  filterCondition: z.object({
-    leftColumn: z.string(),
-    rightColumn: z.string(),
-  }).optional(),
+  type: z.enum(['count', 'exists', 'first']),
+  /** @deprecated — pass a `filterConditions` array instead */
+  filter: z.string().optional(),
+  /**
+   * Structured correlation conditions (AND-combined).
+   * Preferred over the raw `filter` string.
+   * Each condition supports column references and literal values on either side,
+   * plus a comparison operator.
+   */
+  filterConditions: z.array(SubqueryConditionSchema).optional(),
 });
 export type SubqueryConfig = z.infer<typeof SubqueryConfigSchema>;
 

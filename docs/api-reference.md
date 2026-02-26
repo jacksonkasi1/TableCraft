@@ -180,7 +180,18 @@ Adds a virtual column calculated in the database.
 
 Runs a subquery for every row.
 
+Pass a `filterConditions` array (preferred) to safely join the subquery to the outer table:
+
 ```typescript
+.subquery('orderCount', s.orders, 'count', [
+  { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } }
+])
+```
+
+A legacy plain-string filter is still accepted but deprecated:
+
+```typescript
+// deprecated — prefer filterConditions array
 .subquery('orderCount', s.orders, 'count', 'orders.user_id = users.id')
 ```
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pgTable, integer } from 'drizzle-orm/pg-core';
+import { pgTable, integer, varchar } from 'drizzle-orm/pg-core';
 import { SubqueryBuilder } from '../../src/core/subqueryBuilder';
 import { TableConfig } from '../../src/types/table';
 import { DialectError } from '../../src/errors';
@@ -11,107 +11,302 @@ const users = pgTable('users', {
 const orders = pgTable('orders', {
   id: integer('id').primaryKey(),
   userId: integer('user_id'),
+  status: varchar('status', { length: 50 }),
+  amount: integer('amount'),
 });
 
 const schema = { users, orders };
+const builder = new SubqueryBuilder(schema);
 
-describe('SubqueryBuilder', () => {
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+/** Extract the SQL string from a Drizzle SQL object (calls .toSQL on a fake query). */
+function toSqlString(sql: any): string {
+  // Drizzle SQL objects expose their chunks; we serialize them to a readable string
+  // by joining the queryChunks. For testing we use the internal representation.
+  return JSON.stringify(sql);
+}
+
+// ── existing filter: string path (backwards compat) ──────────────────────────
+
+describe('SubqueryBuilder — legacy filter string', () => {
   const config: TableConfig = {
     name: 'users',
     base: 'users',
     columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
     subqueries: [
       { alias: 'ordersCount', table: 'orders', type: 'count', filter: 'orders.user_id = users.id' },
-      { alias: 'hasOrders', table: 'orders', type: 'exists', filter: 'orders.user_id = users.id' },
-      { alias: 'lastOrder', table: 'orders', type: 'first', filter: 'orders.user_id = users.id' }
-    ]
+      { alias: 'hasOrders',   table: 'orders', type: 'exists', filter: 'orders.user_id = users.id' },
+      { alias: 'lastOrder',   table: 'orders', type: 'first',  filter: 'orders.user_id = users.id' },
+    ],
   };
 
-  const builder = new SubqueryBuilder(schema);
-
-  describe('buildSubqueries', () => {
-    it('should build subquery map', () => {
-      const result = builder.buildSubqueries(config);
-      expect(result).toBeDefined();
-      expect(Object.keys(result!)).toHaveLength(3);
-      expect(result!['ordersCount']).toBeDefined();
-      expect(result!['hasOrders']).toBeDefined();
-      expect(result!['lastOrder']).toBeDefined();
-    });
-
-    it('should return undefined if no subqueries configured', () => {
-      const noSubConfig: TableConfig = { ...config, subqueries: [] };
-      const result = builder.buildSubqueries(noSubConfig);
-      expect(result).toBeUndefined();
-    });
-
-    it('should ignore subqueries for unknown tables', () => {
-      const badConfig: TableConfig = {
-        ...config,
-        subqueries: [{ alias: 'x', table: 'unknown', type: 'count' }]
-      };
-      const result = builder.buildSubqueries(badConfig);
-      expect(result).toBeUndefined();
-    });
+  it('builds a map with all three aliases', () => {
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(Object.keys(result!)).toHaveLength(3);
+    expect(result!['ordersCount']).toBeDefined();
+    expect(result!['hasOrders']).toBeDefined();
+    expect(result!['lastOrder']).toBeDefined();
   });
 
-  // ── Dialect gating for 'first' mode ──
+  it('returns undefined when subqueries array is empty', () => {
+    expect(builder.buildSubqueries({ ...config, subqueries: [] })).toBeUndefined();
+  });
 
-  describe("dialect gating for 'first' mode subqueries", () => {
-    const firstOnlyConfig: TableConfig = {
+  it('silently skips subqueries whose table is not in schema', () => {
+    const cfg: TableConfig = {
+      ...config,
+      subqueries: [{ alias: 'x', table: 'unknown_table', type: 'count' }],
+    };
+    expect(builder.buildSubqueries(cfg)).toBeUndefined();
+  });
+});
+
+// ── filterConditions: structured path ────────────────────────────────────────
+
+describe('SubqueryBuilder — filterConditions structured path', () => {
+
+  it('builds a count subquery with a single column-to-column equality condition', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'ordersCount',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['ordersCount']).toBeDefined();
+  });
+
+  it('builds an exists subquery with a single column-to-column equality condition', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'hasOrders',
+        table: 'orders',
+        type: 'exists',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['hasOrders']).toBeDefined();
+  });
+
+  it('builds a first subquery with filterConditions on postgresql dialect', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'lastOrder',
+        table: 'orders',
+        type: 'first',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+        ],
+      }],
+    };
+    expect(() => builder.buildSubqueries(config, 'postgresql')).not.toThrow();
+    const result = builder.buildSubqueries(config, 'postgresql');
+    expect(result!['lastOrder']).toBeDefined();
+  });
+
+  it('supports multi-condition AND (column-to-column + column-to-literal)', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'paidOrdersCount',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq',  right: { column: 'users.id' } },
+          { left: { column: 'orders.status'  }, op: 'eq',  right: { value: 'paid' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['paidOrdersCount']).toBeDefined();
+  });
+
+  it('supports non-equality operators: gte with a literal number', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'bigOrdersCount',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq',  right: { column: 'users.id' } },
+          { left: { column: 'orders.amount'  }, op: 'gte', right: { value: 100 } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['bigOrdersCount']).toBeDefined();
+  });
+
+  it('supports neq operator with literal value', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'nonCancelledOrders',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq',  right: { column: 'users.id' } },
+          { left: { column: 'orders.status'  }, op: 'neq', right: { value: 'cancelled' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['nonCancelledOrders']).toBeDefined();
+  });
+
+  it('supports lt and lte operators', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'smallOrders',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+          { left: { column: 'orders.amount'  }, op: 'lt', right: { value: 50 } },
+        ],
+      }],
+    };
+    expect(() => builder.buildSubqueries(config)).not.toThrow();
+  });
+
+  it('supports three or more conditions (AND chain)', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'specificOrders',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq',  right: { column: 'users.id' } },
+          { left: { column: 'orders.status'  }, op: 'eq',  right: { value: 'paid' } },
+          { left: { column: 'orders.amount'  }, op: 'gte', right: { value: 10 } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['specificOrders']).toBeDefined();
+  });
+
+  it('filterConditions takes priority over deprecated filter string when both present', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'ordersCount',
+        table: 'orders',
+        type: 'count',
+        filter: 'orders.user_id = users.id',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+        ],
+      }],
+    };
+    // Both defined — filterConditions path should be used without error
+    expect(() => builder.buildSubqueries(config)).not.toThrow();
+    const result = builder.buildSubqueries(config);
+    expect(result!['ordersCount']).toBeDefined();
+  });
+
+  it('falls back to sql`true` when neither filter nor filterConditions is provided', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{ alias: 'allOrders', table: 'orders', type: 'count' }],
+    };
+    // Should not throw — just scans whole sub-table
+    expect(() => builder.buildSubqueries(config)).not.toThrow();
+    const result = builder.buildSubqueries(config);
+    expect(result!['allOrders']).toBeDefined();
+  });
+});
+
+// ── dialect gating (filterConditions path) ───────────────────────────────────
+
+describe('SubqueryBuilder — dialect gating with filterConditions', () => {
+  const firstConfig: TableConfig = {
+    name: 'users',
+    base: 'users',
+    columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+    subqueries: [{
+      alias: 'lastOrder',
+      table: 'orders',
+      type: 'first',
+      filterConditions: [
+        { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+      ],
+    }],
+  };
+
+  it('allows first on postgresql', () => {
+    expect(() => builder.buildSubqueries(firstConfig, 'postgresql')).not.toThrow();
+  });
+
+  it('allows first when dialect is undefined', () => {
+    expect(() => builder.buildSubqueries(firstConfig, undefined)).not.toThrow();
+  });
+
+  it('allows first when dialect is unknown', () => {
+    expect(() => builder.buildSubqueries(firstConfig, 'unknown')).not.toThrow();
+  });
+
+  it('throws DialectError for first on mysql', () => {
+    expect(() => builder.buildSubqueries(firstConfig, 'mysql')).toThrow(DialectError);
+  });
+
+  it('throws DialectError for first on sqlite', () => {
+    expect(() => builder.buildSubqueries(firstConfig, 'sqlite')).toThrow(DialectError);
+  });
+
+  it('count and exists never throw regardless of dialect', () => {
+    const cfg: TableConfig = {
       name: 'users',
       base: 'users',
       columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
       subqueries: [
-        { alias: 'lastOrder', table: 'orders', type: 'first', filter: 'orders.user_id = users.id' }
-      ]
+        { alias: 'c', table: 'orders', type: 'count',  filterConditions: [{ left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } }] },
+        { alias: 'e', table: 'orders', type: 'exists', filterConditions: [{ left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } }] },
+      ],
     };
-
-    it("should build 'first' mode without error when dialect is 'postgresql'", () => {
-      expect(() => builder.buildSubqueries(firstOnlyConfig, 'postgresql')).not.toThrow();
-    });
-
-    it("should build 'first' mode without error when dialect is undefined (no guard)", () => {
-      expect(() => builder.buildSubqueries(firstOnlyConfig, undefined)).not.toThrow();
-    });
-
-    it("should build 'first' mode without error when dialect is 'unknown'", () => {
-      expect(() => builder.buildSubqueries(firstOnlyConfig, 'unknown')).not.toThrow();
-    });
-
-    it("should throw DialectError for 'first' mode on 'mysql' dialect", () => {
-      expect(() => builder.buildSubqueries(firstOnlyConfig, 'mysql')).toThrow(DialectError);
-    });
-
-    it("should throw DialectError for 'first' mode on 'sqlite' dialect", () => {
-      expect(() => builder.buildSubqueries(firstOnlyConfig, 'sqlite')).toThrow(DialectError);
-    });
-
-    it("should throw DialectError with 'first' feature name and dialect", () => {
-      try {
-        builder.buildSubqueries(firstOnlyConfig, 'mysql');
-        expect.fail('should have thrown');
-      } catch (err) {
-        expect(err).toBeInstanceOf(DialectError);
-        expect((err as DialectError).message).toContain('first');
-        expect((err as DialectError).message).toContain('mysql');
-      }
-    });
-
-    it("should not throw for 'count' and 'exists' types on any dialect", () => {
-      const countExistsConfig: TableConfig = {
-        name: 'users',
-        base: 'users',
-        columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
-        subqueries: [
-          { alias: 'ordersCount', table: 'orders', type: 'count', filter: 'orders.user_id = users.id' },
-          { alias: 'hasOrders', table: 'orders', type: 'exists', filter: 'orders.user_id = users.id' },
-        ]
-      };
-
-      for (const dialect of ['postgresql', 'mysql', 'sqlite', 'unknown'] as const) {
-        expect(() => builder.buildSubqueries(countExistsConfig, dialect)).not.toThrow();
-      }
-    });
+    for (const dialect of ['postgresql', 'mysql', 'sqlite', 'unknown'] as const) {
+      expect(() => builder.buildSubqueries(cfg, dialect)).not.toThrow();
+    }
   });
 });

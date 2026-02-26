@@ -27,6 +27,7 @@ import {
   IncludeConfig,
   ColumnFormat,
   DatePreset,
+  SubqueryCondition,
 } from './types/table';
 import {
   introspectTable,
@@ -748,21 +749,58 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   // ──── Subqueries ────
 
+  /**
+   * Attach a correlated subquery to every row.
+   *
+   * The `filter` parameter controls the WHERE clause:
+   *
+   * **Structured form (preferred):** pass an array of `SubqueryCondition` objects.
+   * Each condition has `left`, `op` (default `'eq'`), and `right` operands.
+   * Operands are either `{ column: 'table.column' }` or `{ value: literal }`.
+   * Conditions are AND-combined. Literal values are parameterized (safe from injection).
+   *
+   * ```ts
+   * // Simple column-to-column equality (most common):
+   * .subquery('itemCount', s.orderItems, 'count', [
+   *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+   * ])
+   *
+   * // Column + literal value:
+   * .subquery('activeItemCount', s.orderItems, 'count', [
+   *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+   *   { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } },
+   * ])
+   *
+   * // Non-equality operator:
+   * .subquery('bigItems', s.orderItems, 'count', [
+   *   { left: { column: 'order_items.order_id' }, op: 'eq',  right: { column: 'orders.id' } },
+   *   { left: { column: 'order_items.qty' },      op: 'gte', right: { value: 5 } },
+   * ])
+   * ```
+   *
+   * **Deprecated raw string form:** still accepted for backwards compatibility.
+   * Must be a developer-authored constant, never user input.
+   * ```ts
+   * .subquery('itemCount', s.orderItems, 'count', 'order_items.order_id = orders.id')
+   * ```
+   */
   subquery(
     alias: string,
     table: Table,
     type: 'count' | 'exists' | 'first',
-    filter?: string | { leftColumn: string; rightColumn: string }
+    filter?: string | SubqueryCondition[]
   ): this {
     if (!this._config.subqueries) this._config.subqueries = [];
 
-    // Accept either a legacy raw string or the new structured filterCondition object.
-    const entry =
-      filter === undefined || filter === null
-        ? { alias, table: getTableName(table), type }
-        : typeof filter === 'string'
-        ? { alias, table: getTableName(table), type, filter }
-        : { alias, table: getTableName(table), type, filterCondition: filter };
+    let entry: NonNullable<TableConfig['subqueries']>[number];
+    if (filter === undefined || filter === null) {
+      entry = { alias, table: getTableName(table), type };
+    } else if (typeof filter === 'string') {
+      // @deprecated raw string — kept for backwards compatibility
+      entry = { alias, table: getTableName(table), type, filter };
+    } else {
+      entry = { alias, table: getTableName(table), type, filterConditions: filter };
+    }
 
     // Dedupe subquery entries by alias — replace if exists
     const existingIdx = this._config.subqueries.findIndex(e => e.alias === alias);
