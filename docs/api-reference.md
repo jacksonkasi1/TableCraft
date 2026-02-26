@@ -180,7 +180,19 @@ Adds a virtual column calculated in the database.
 
 Runs a correlated subquery for every row. The `filter` parameter accepts **three forms**:
 
-**1. Drizzle `sql\`...\`` expression** — best DX, use your schema columns directly:
+**1. Drizzle operators** — best DX, use `eq`, `and`, `or`, `gt`, `like` etc. exactly as in any Drizzle query:
+
+```typescript
+import { eq, and, gt } from 'drizzle-orm';
+
+.subquery('orderCount', s.orders, 'count',
+  eq(s.orders.userId, s.users.id))
+
+.subquery('bigOrderCount', s.orders, 'count',
+  and(eq(s.orders.userId, s.users.id), gt(s.orders.total, 100)))
+```
+
+Or use `sql\`...\`` tagged templates for raw fragments:
 
 ```typescript
 import { sql } from 'drizzle-orm';

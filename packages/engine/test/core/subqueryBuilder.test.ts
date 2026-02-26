@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sql } from 'drizzle-orm';
+import { sql, eq, and, or, gt, like } from 'drizzle-orm';
 import { pgTable, integer, varchar } from 'drizzle-orm/pg-core';
 import { SubqueryBuilder } from '../../src/core/subqueryBuilder';
 import { TableConfig } from '../../src/types/table';
@@ -407,5 +407,94 @@ describe('SubqueryBuilder — filterSql Drizzle SQL expression path', () => {
     const result = builder.buildSubqueries(config);
     expect(result).toBeDefined();
     expect(result!['activeOrders']).toBeDefined();
+  });
+});
+
+// ── filterSql: Drizzle eq/and/or/gt/like helper path ─────────────────────────
+
+describe('SubqueryBuilder — filterSql with Drizzle helper functions', () => {
+  const baseColumns: TableConfig['columns'] = [
+    { name: 'id', type: 'number', hidden: false, sortable: true, filterable: true },
+  ];
+
+  it('accepts eq() for a simple join condition', () => {
+    const config: TableConfig = {
+      name: 'users', base: 'users', columns: baseColumns,
+      subqueries: [{
+        alias: 'ordersCount', table: 'orders', type: 'count',
+        filterSql: eq(orders.userId, users.id),
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['ordersCount']).toBeDefined();
+  });
+
+  it('accepts and(eq(), eq()) for multiple conditions', () => {
+    const config: TableConfig = {
+      name: 'users', base: 'users', columns: baseColumns,
+      subqueries: [{
+        alias: 'activeOrders', table: 'orders', type: 'count',
+        filterSql: and(eq(orders.userId, users.id), eq(orders.status, 'active')),
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['activeOrders']).toBeDefined();
+  });
+
+  it('accepts and(eq(), gt()) for a range condition', () => {
+    const config: TableConfig = {
+      name: 'users', base: 'users', columns: baseColumns,
+      subqueries: [{
+        alias: 'bigOrders', table: 'orders', type: 'count',
+        filterSql: and(eq(orders.userId, users.id), gt(orders.amount, 100)),
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['bigOrders']).toBeDefined();
+  });
+
+  it('accepts and(eq(), or(gt(), eq())) for nested OR logic', () => {
+    const config: TableConfig = {
+      name: 'users', base: 'users', columns: baseColumns,
+      subqueries: [{
+        alias: 'interestingOrders', table: 'orders', type: 'count',
+        filterSql: and(
+          eq(orders.userId, users.id),
+          or(gt(orders.amount, 500), eq(orders.status, 'pending')),
+        ),
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['interestingOrders']).toBeDefined();
+  });
+
+  it('accepts like() for a LIKE condition', () => {
+    const config: TableConfig = {
+      name: 'users', base: 'users', columns: baseColumns,
+      subqueries: [{
+        alias: 'cancelledOrders', table: 'orders', type: 'count',
+        filterSql: and(eq(orders.userId, users.id), like(orders.status, 'cancel%')),
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['cancelledOrders']).toBeDefined();
+  });
+
+  it('works for exists subquery type with eq()', () => {
+    const config: TableConfig = {
+      name: 'users', base: 'users', columns: baseColumns,
+      subqueries: [{
+        alias: 'hasOrders', table: 'orders', type: 'exists',
+        filterSql: eq(orders.userId, users.id),
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    expect(result!['hasOrders']).toBeDefined();
   });
 });
