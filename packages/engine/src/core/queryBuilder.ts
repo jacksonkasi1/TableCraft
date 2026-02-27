@@ -57,7 +57,12 @@ export class QueryBuilder {
           );
         }
         const colName = (col as Column).name;
-        const expressionStr = colConfig.dbTransform.reduce((acc, func) => `${func}(${acc})`, colName);
+        const expressionStr = colConfig.dbTransform.reduce((acc, func) => {
+          if (func.includes('?')) {
+            return func.replace('?', acc);
+          }
+          return `${func}(${acc})`;
+        }, colName);
         selection[colConfig.name] = sql.raw(expressionStr);
       } else {
         selection[colConfig.name] = col;
@@ -84,7 +89,7 @@ export class QueryBuilder {
             const colName = colConfig.field ?? colConfig.name;
             const col = tableCols[colName];
             if (col) {
-              if (colConfig.name in selection) {
+              if (Object.prototype.hasOwnProperty.call(selection, colConfig.name)) {
                 throw new ConfigError(
                   `[TableCraft] Name collision: join column '${colConfig.name}' from table '${join.table}' ` +
                   `conflicts with an existing selection key. ` +

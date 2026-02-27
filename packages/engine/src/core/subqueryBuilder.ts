@@ -55,7 +55,7 @@ export class SubqueryBuilder {
   }
 
   private buildSingle(sub: SubqueryConfig, subTable: Table, dialect?: Dialect): SQL | undefined {
-    const filterSql = this.buildFilter(sub);
+    const filterSql = this.buildFilter(sub, dialect);
 
     switch (sub.type) {
       case 'count':
@@ -83,12 +83,12 @@ export class SubqueryBuilder {
    * 3. `filter`           — raw SQL string (@deprecated, developer-authored only)
    * 4. fallback           — `true` (uncorrelated, scans whole table)
    */
-  private buildFilter(sub: SubqueryConfig): SQL {
+  private buildFilter(sub: SubqueryConfig, dialect?: Dialect): SQL {
     if (sub.filterSql) {
       return sub.filterSql;
     }
     if (sub.filterConditions && sub.filterConditions.length > 0) {
-      return this.buildStructuredFilter(sub.filterConditions);
+      return this.buildStructuredFilter(sub.filterConditions, dialect);
     }
     if (sub.filter) {
       return sql.raw(sub.filter);
@@ -102,11 +102,20 @@ export class SubqueryBuilder {
    * Column references  → emitted via sql.raw() — developer-defined, not user input
    * Literal values     → parameterized via sql`${value}` to prevent injection
    */
-  private buildStructuredFilter(conditions: SubqueryCondition[]): SQL {
+  private buildStructuredFilter(conditions: SubqueryCondition[], dialect?: Dialect): SQL {
     const parts = conditions.map((cond) => {
       const leftSql  = 'column' in cond.left  ? sql.raw(cond.left.column)  : sql`${cond.left.value as any}`;
       const rightSql = 'column' in cond.right ? sql.raw(cond.right.column) : sql`${cond.right.value as any}`;
-      const opStr = OP_MAP[cond.op ?? 'eq'];
+      const op = cond.op ?? 'eq';
+
+      if (op === 'ilike') {
+        if (dialect && dialect !== 'unknown' && dialect !== 'postgresql') {
+          // MySQL/SQLite don't support ILIKE directly. We rewrite to LOWER() LIKE LOWER().
+          return sql`LOWER(${leftSql}) LIKE LOWER(${rightSql})`;
+        }
+      }
+
+      const opStr = OP_MAP[op];
       return sql`${leftSql} ${sql.raw(opStr)} ${rightSql}`;
     });
 

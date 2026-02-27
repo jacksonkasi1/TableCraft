@@ -4,6 +4,7 @@ import { pgTable, integer, varchar } from 'drizzle-orm/pg-core';
 import { SubqueryBuilder } from '../../src/core/subqueryBuilder';
 import { TableConfig } from '../../src/types/table';
 import { DialectError } from '../../src/errors';
+import { inspect } from 'util';
 
 const users = pgTable('users', {
   id: integer('id').primaryKey(),
@@ -23,9 +24,7 @@ const builder = new SubqueryBuilder(schema);
 
 /** Extract the SQL string from a Drizzle SQL object (calls .toSQL on a fake query). */
 function toSqlString(sql: any): string {
-  // Drizzle SQL objects expose their chunks; we serialize them to a readable string
-  // by joining the queryChunks. For testing we use the internal representation.
-  return JSON.stringify(sql);
+  return inspect(sql, { depth: null });
 }
 
 // ── existing filter: string path (backwards compat) ──────────────────────────
@@ -163,6 +162,92 @@ describe('SubqueryBuilder — filterConditions structured path', () => {
     const result = builder.buildSubqueries(config);
     expect(result).toBeDefined();
     expect(result!['bigOrdersCount']).toBeDefined();
+    const sqlStr = toSqlString(result!['bigOrdersCount']);
+    expect(sqlStr).toContain('>=');
+  });
+
+  it('supports non-equality operators: gt with a literal number', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'largeOrdersCount',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+          { left: { column: 'orders.amount'  }, op: 'gt', right: { value: 500 } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    const sqlStr = toSqlString(result!['largeOrdersCount']);
+    expect(sqlStr).toContain('>');
+  });
+
+  it('supports string operators: like on a literal pattern', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'companyEmailLogins',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq',   right: { column: 'users.id' } },
+          { left: { column: 'orders.status'  }, op: 'like', right: { value: 'cancel%' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config);
+    expect(result).toBeDefined();
+    const sqlStr = toSqlString(result!['companyEmailLogins']).toUpperCase();
+    expect(sqlStr).toContain('LIKE');
+  });
+
+  it('supports string operators: ilike on a literal pattern (postgres)', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'caseInsensitiveCompanyEmailLogins',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.user_id' }, op: 'eq',    right: { column: 'users.id' } },
+          { left: { column: 'orders.status'  }, op: 'ilike', right: { value: 'cancel%' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config, 'postgresql');
+    expect(result).toBeDefined();
+    const sqlStr = toSqlString(result!['caseInsensitiveCompanyEmailLogins']).toUpperCase();
+    expect(sqlStr).toContain('ILIKE');
+  });
+
+  it('rewrites ilike to LOWER() LIKE LOWER() on mysql/sqlite', () => {
+    const config: TableConfig = {
+      name: 'users',
+      base: 'users',
+      columns: [{ name: 'id', type: 'number', hidden: false, sortable: true, filterable: true }],
+      subqueries: [{
+        alias: 'caseInsensitiveCompanyEmailLogins',
+        table: 'orders',
+        type: 'count',
+        filterConditions: [
+          { left: { column: 'orders.status'  }, op: 'ilike', right: { value: 'cancel%' } },
+        ],
+      }],
+    };
+    const result = builder.buildSubqueries(config, 'mysql');
+    expect(result).toBeDefined();
+    const sqlStr = toSqlString(result!['caseInsensitiveCompanyEmailLogins']).toUpperCase();
+    expect(sqlStr).toContain('LOWER');
+    expect(sqlStr).toContain('LIKE');
   });
 
   it('supports neq operator with literal value', () => {
