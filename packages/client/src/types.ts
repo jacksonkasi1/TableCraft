@@ -6,6 +6,7 @@ export interface AxiosLike {
     params?: Record<string, unknown>;
     data?: unknown;
     signal?: AbortSignal;
+    withCredentials?: boolean;
   }): Promise<{ data: T; status: number; statusText: string; headers: Record<string, string> }>;
   get<T = unknown>(
     url: string,
@@ -13,7 +14,7 @@ export interface AxiosLike {
       headers?: Record<string, string>;
       params?: Record<string, unknown>;
       signal?: AbortSignal;
-    }
+    },
   ): Promise<{ data: T; status: number; statusText: string; headers: Record<string, string> }>;
 }
 
@@ -25,7 +26,9 @@ export interface ClientOptions {
   /** Axios instance (or any compatible object). If provided, takes precedence over fetch. */
   axios?: AxiosLike;
   /** Default headers for every request (auth tokens, etc.) */
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
+  headers?:
+    | Record<string, string>
+    | (() => Record<string, string> | Promise<Record<string, string>>);
 }
 
 export interface QueryParams {
@@ -63,7 +66,7 @@ export interface ColumnMetadata {
   /** Whether this column is computed (SQL expression, not a real DB column) */
   computed?: boolean;
   /** Where the column comes from */
-  source?: 'base' | 'join' | 'computed' | 'subquery';
+  source?: "base" | "join" | "computed" | "subquery";
   /** For join columns — which joined table this came from */
   joinTable?: string;
   format?: string;
@@ -87,7 +90,7 @@ export interface FilterMetadata {
 
 export interface AggregationMetadata {
   alias: string;
-  type: 'count' | 'sum' | 'avg' | 'min' | 'max';
+  type: "count" | "sum" | "avg" | "min" | "max";
   field: string;
 }
 
@@ -140,7 +143,7 @@ export interface TableClient<T = Record<string, unknown>> {
   /** Get row count */
   count(params?: QueryParams): Promise<number>;
   /** Export data as string */
-  export(format: 'csv' | 'json', params?: QueryParams): Promise<string>;
+  export(format: "csv" | "json", params?: QueryParams): Promise<string>;
   /** Build the URL without fetching (for debugging) */
   buildUrl(params?: QueryParams): string;
 }

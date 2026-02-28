@@ -23,9 +23,9 @@ type FilterValueOf<F> = F extends { value: infer V } ? V : never;
  *    `null` / `undefined` / `false`
  */
 type CustomFilterEntry<F> =
-  | F                        // full { operator, value } form — type-safe operators & value
-  | FilterValueOf<F>         // scalar shorthand (value only, implies 'eq')
-  | { operator: 'isNull' | 'isNotNull' }  // null-check operators (no value needed)
+  | F // full { operator, value } form — type-safe operators & value
+  | FilterValueOf<F> // scalar shorthand (value only, implies 'eq')
+  | { operator: "isNull" | "isNotNull" } // null-check operators (no value needed)
   | null
   | undefined
   | false;
@@ -43,8 +43,8 @@ type CustomFilterEntry<F> =
 export type CustomFilters<TFilters> = [TFilters] extends [never]
   ? Record<string, CustomFilterValue>
   : {
-    [K in keyof TFilters]?: CustomFilterEntry<TFilters[K]>;
-  };
+      [K in keyof TFilters]?: CustomFilterEntry<TFilters[K]>;
+    };
 
 /**
  * Untyped fallback for when no Filters type is provided.
@@ -57,7 +57,7 @@ export type CustomFilterValue =
   | null
   | undefined
   | { operator: string; value?: string | number | boolean | null }
-  | { operator: 'isNull' | 'isNotNull' };
+  | { operator: "isNull" | "isNotNull" };
 
 export interface TableCraftAdapterOptions<TFilters = never> {
   /** Base URL of your TableCraft API. Example: "/api/data" */
@@ -67,11 +67,18 @@ export interface TableCraftAdapterOptions<TFilters = never> {
   /** Primary key field name. Defaults to "id" */
   idField?: string;
   /** Default headers for every request (auth tokens, etc.) */
-  headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>);
+  headers?:
+    | Record<string, string>
+    | (() => Record<string, string> | Promise<Record<string, string>>);
   /** Custom fetch function. Defaults to global fetch. */
   fetch?: typeof fetch;
   /** Axios instance (or any compatible object). If provided, takes precedence over fetch. */
   axios?: unknown;
+  /**
+   * Whether to include credentials (cookies) with every request when using an Axios instance.
+   * Defaults to `true`. Set to `false` if you want to opt out of sending cookies.
+   */
+  withCredentials?: boolean;
   /**
    * Type-safe custom filters merged into every query.
    *
@@ -118,14 +125,14 @@ export interface TableCraftAdapterOptions<TFilters = never> {
  * ```
  */
 export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = never>(
-  options: TableCraftAdapterOptions<TFilters>
+  options: TableCraftAdapterOptions<TFilters>,
 ): DataAdapter<T> {
   const { baseUrl, table: tableName } = options;
 
   let customFetch: (url: string, options?: RequestInit) => Promise<MinimalResponse | Response>;
 
   if (options.axios && isAxiosInstance(options.axios)) {
-    customFetch = createAxiosFetchAdapter(options.axios);
+    customFetch = createAxiosFetchAdapter(options.axios, options.withCredentials ?? true);
   } else if (options.fetch) {
     customFetch = options.fetch;
   } else {
@@ -204,9 +211,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
             url.searchParams.set(`filter[${field}]`, serialized);
           }
         } else {
-          const serialized = Array.isArray(value)
-            ? value.join(",")
-            : String(value);
+          const serialized = Array.isArray(value) ? value.join(",") : String(value);
           url.searchParams.set(`filter[${field}]`, serialized);
         }
       }
@@ -244,12 +249,18 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     return { ...params, filters: merged };
   }
 
-  async function getMetadataWithFallback(): Promise<{ metadata: TableMetadata | null; dateRangeCol: string | null }> {
+  async function getMetadataWithFallback(): Promise<{
+    metadata: TableMetadata | null;
+    dateRangeCol: string | null;
+  }> {
     if (!cachedMetadata) {
       try {
         cachedMetadata = await request<TableMetadata>(`${tableUrl}/_meta`);
       } catch (error) {
-        console.warn(`[TableCraft] Could not fetch metadata for "${tableName}"; date filtering is disabled because metadata failed.`, error);
+        console.warn(
+          `[TableCraft] Could not fetch metadata for "${tableName}"; date filtering is disabled because metadata failed.`,
+          error,
+        );
       }
     }
     return {
@@ -279,7 +290,10 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
       };
     },
 
-    async queryByIds(ids: (string | number)[], sortOptions?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]> {
+    async queryByIds(
+      ids: (string | number)[],
+      sortOptions?: { sortBy?: string; sortOrder?: "asc" | "desc" },
+    ): Promise<T[]> {
       if (ids.length === 0) return [];
 
       const { dateRangeCol, metadata } = await getMetadataWithFallback();
