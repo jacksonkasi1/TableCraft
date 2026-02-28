@@ -3,9 +3,21 @@ import {
   SQL,
   sql,
 } from 'drizzle-orm';
-import { TableConfig, SubqueryConfig } from '../types/table';
+import { TableConfig, SubqueryConfig, SubqueryCondition } from '../types/table';
 import { Dialect } from './dialect';
 import { DialectError } from '../errors';
+
+// Maps our operator enum to the SQL operator string
+const OP_MAP: Record<NonNullable<SubqueryCondition['op']>, string> = {
+  eq:    '=',
+  neq:   '!=',
+  gt:    '>',
+  gte:   '>=',
+  lt:    '<',
+  lte:   '<=',
+  like:  'LIKE',
+  ilike: 'ILIKE',
+};
 
 export class SubqueryBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -43,15 +55,7 @@ export class SubqueryBuilder {
   }
 
   private buildSingle(sub: SubqueryConfig, subTable: Table, dialect?: Dialect): SQL | undefined {
-    // Build a safe correlation filter. The filter string is a developer-authored
-    // SQL correlation condition (e.g. "orders.user_id = users.id").
-    // It is written by the application developer in source code — not by end users —
-    // so raw injection risk is low. However, to prevent accidental developer mistakes
-    // we keep the TODO comment and ensure this is clearly documented.
-    //
-    // TODO: replace with a structured, parameterised representation so the filter
-    //   can be validated and cannot accidentally include user-supplied strings.
-    const filterSql = sub.filter ? sql.raw(sub.filter) : sql`true`;
+    const filterSql = this.buildFilter(sub, dialect);
 
     switch (sub.type) {
       case 'count':
@@ -60,8 +64,6 @@ export class SubqueryBuilder {
         return sql`EXISTS (SELECT 1 FROM ${subTable} WHERE ${filterSql})`;
       case 'first': {
         // 'first' uses row_to_json() which is PostgreSQL-only.
-        // Throw a clear DialectError rather than silently generating invalid SQL
-        // that will crash at query-execution time with a cryptic DB error.
         if (dialect && dialect !== 'unknown' && dialect !== 'postgresql') {
           throw new DialectError('first', dialect);
         }
@@ -70,5 +72,56 @@ export class SubqueryBuilder {
       default:
         return undefined;
     }
+  }
+
+  /**
+   * Builds the WHERE clause SQL for a subquery.
+   *
+   * Priority:
+   * 1. `filterSql`        — Drizzle SQL expression (full Drizzle DX, passed through as-is)
+   * 2. `filterConditions` — structured array of conditions (typed, safe, recommended)
+   * 3. `filter`           — raw SQL string (@deprecated, developer-authored only)
+   * 4. fallback           — `true` (uncorrelated, scans whole table)
+   */
+  private buildFilter(sub: SubqueryConfig, dialect?: Dialect): SQL {
+    if (sub.filterSql) {
+      return sub.filterSql;
+    }
+    if (sub.filterConditions && sub.filterConditions.length > 0) {
+      return this.buildStructuredFilter(sub.filterConditions, dialect);
+    }
+    if (sub.filter) {
+      return sql.raw(sub.filter);
+    }
+    return sql`true`;
+  }
+
+  /**
+   * Converts a `SubqueryCondition[]` into a single AND-combined SQL expression.
+   *
+   * Column references  → emitted via sql.raw() — developer-defined, not user input
+   * Literal values     → parameterized via sql`${value}` to prevent injection
+   */
+  private buildStructuredFilter(conditions: SubqueryCondition[], dialect?: Dialect): SQL {
+    if (conditions.length === 0) return sql`true`;
+
+    const parts = conditions.map((cond) => {
+      const leftSql  = 'column' in cond.left  ? sql.raw(cond.left.column)  : sql`${cond.left.value as any}`;
+      const rightSql = 'column' in cond.right ? sql.raw(cond.right.column) : sql`${cond.right.value as any}`;
+      const op = cond.op ?? 'eq';
+
+      if (op === 'ilike') {
+        if (dialect && dialect !== 'unknown' && dialect !== 'postgresql') {
+          // MySQL/SQLite don't support ILIKE directly. We rewrite to LOWER() LIKE LOWER().
+          return sql`LOWER(${leftSql}) LIKE LOWER(${rightSql})`;
+        }
+      }
+
+      const opStr = OP_MAP[op];
+      return sql`${leftSql} ${sql.raw(opStr)} ${rightSql}`;
+    });
+
+    // AND-combine all parts
+    return parts.reduce((acc, part) => sql`${acc} AND ${part}`);
   }
 }

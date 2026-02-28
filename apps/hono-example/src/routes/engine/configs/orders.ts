@@ -1,5 +1,5 @@
 import { defineTable } from '@tablecraft/engine';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import * as s from '@/db/schema';
 
 // 4. Orders — Complex: Joins, Computed, Tenant, Soft Delete, Access
@@ -22,11 +22,13 @@ export const orders = defineTable(s.orders)
   `, { type: 'string', label: 'Status Label' })
   // Computed column (SQL) - VAT (e.g. 20%)
   .computed('vatAmount', sql`${s.orders.total} * 0.2`, { type: 'number', label: 'VAT' })
-  // Subquery: Item Count (count — sortable)
-  .subquery('itemCount', s.orderItems, 'count', 'order_items.order_id = orders.id')
+  // Subquery: Item Count — using Drizzle eq() directly
+  .subquery('itemCount', s.orderItems, 'count',
+    eq(s.orderItems.orderId, s.orders.id))
 
   // Subquery: First Item (first — NOT sortable; uses row_to_json, PostgreSQL only)
-  // .subquery('firstItem', s.orderItems, 'first', 'order_items.order_id = orders.id')
+  // .subquery('firstItem', s.orderItems, 'first',
+  //   eq(s.orderItems.orderId, s.orders.id))
 
   // Tenant isolation (using context.tenantId)
   .tenant('tenantId')

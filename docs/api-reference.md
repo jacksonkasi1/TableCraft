@@ -178,9 +178,41 @@ Adds a virtual column calculated in the database.
 
 ### `.subquery(alias, table, type, filter?)`
 
-Runs a subquery for every row.
+Runs a correlated subquery for every row. The `filter` parameter accepts **three forms**:
+
+**1. Drizzle operators** — best DX, use `eq`, `and`, `or`, `gt`, `like` etc. exactly as in any Drizzle query:
 
 ```typescript
+import { eq, and, gt } from 'drizzle-orm';
+
+.subquery('orderCount', s.orders, 'count',
+  eq(s.orders.userId, s.users.id))
+
+.subquery('bigOrderCount', s.orders, 'count',
+  and(eq(s.orders.userId, s.users.id), gt(s.orders.total, 100)))
+```
+
+Or use `sql\`...\`` tagged templates for raw fragments:
+
+```typescript
+import { sql } from 'drizzle-orm';
+
+.subquery('orderCount', s.orders, 'count',
+  sql`${s.orders.userId} = ${s.users.id}`)
+```
+
+**2. Structured `SubqueryCondition[]`** — typed, injection-safe:
+
+```typescript
+.subquery('orderCount', s.orders, 'count', [
+  { left: { column: 'orders.user_id' }, op: 'eq', right: { column: 'users.id' } },
+])
+```
+
+**3. Raw SQL string** — @deprecated, developer-authored constants only:
+
+```typescript
+// @deprecated — prefer form 1 or 2
 .subquery('orderCount', s.orders, 'count', 'orders.user_id = users.id')
 ```
 

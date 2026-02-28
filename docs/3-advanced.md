@@ -148,19 +148,89 @@ export const monthlySales = defineTable(orders)
 
 Subquery columns let you attach a correlated subquery to every row — useful for counts, existence checks, or fetching a single related record without a full join.
 
+The `filter` parameter accepts **three forms** — pick whichever fits your style:
+
+### Form 1 — Drizzle operators *(recommended — use your schema exactly as you would anywhere else)*
+
+Import `eq`, `and`, `or`, `gt`, `like` etc. from `drizzle-orm` and pass them directly.
+These all return a `SQL` object — TableCraft passes it through unchanged.
+You own the safety of the expression. No restrictions.
+
 ```typescript
+import { eq, and, or, gt, like } from 'drizzle-orm';
 import { defineTable } from '@tablecraft/engine';
 import { orders, orderItems } from '../db/schema';
 
 export const orderConfig = defineTable(orders)
-  // Count how many items are in each order
-  .subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
+  // Simple join condition using eq()
+  .subquery('itemCount', orderItems, 'count',
+    eq(orderItems.orderId, orders.id))
+
+  // Multiple conditions — use and() exactly as in a normal Drizzle query
+  .subquery('activeItemCount', orderItems, 'count',
+    and(
+      eq(orderItems.orderId, orders.id),
+      eq(orderItems.status, 'active'),
+    ))
+
+  // or(), gt(), like() — anything Drizzle supports works here
+  .subquery('bigOrPendingCount', orderItems, 'count',
+    and(
+      eq(orderItems.orderId, orders.id),
+      or(
+        gt(orderItems.quantity, 5),
+        eq(orderItems.status, 'pending'),
+      ),
+    ))
 
   // Check whether any items exist (boolean flag)
-  .subquery('hasItems', orderItems, 'exists', 'order_items.order_id = orders.id')
+  .subquery('hasItems', orderItems, 'exists',
+    eq(orderItems.orderId, orders.id))
 
   // Fetch the first item row as a JSON object (PostgreSQL only)
-  .subquery('firstItem', orderItems, 'first', 'order_items.order_id = orders.id');
+  .subquery('firstItem', orderItems, 'first',
+    eq(orderItems.orderId, orders.id));
+```
+
+You can also use `sql\`...\`` tagged templates if you need raw SQL fragments:
+
+```typescript
+import { sql } from 'drizzle-orm';
+
+.subquery('itemCount', orderItems, 'count',
+  sql`${orderItems.orderId} = ${orders.id}`)
+```
+
+### Form 2 — Structured `SubqueryCondition[]` *(typed, injection-safe)*
+
+Pass an array of condition objects. Each has `left`, `op` (default `'eq'`), and `right`.
+Operands are `{ column: 'table.column' }` or `{ value: literal }`.
+Conditions are AND-combined; literal values are parameterized automatically.
+
+```typescript
+export const orderConfig = defineTable(orders)
+  .subquery('itemCount', orderItems, 'count', [
+    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+  ])
+
+  // Multiple conditions — AND-combined:
+  .subquery('activeItemCount', orderItems, 'count', [
+    { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+    { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } },
+  ]);
+```
+
+Available operators: `eq` `neq` `gt` `gte` `lt` `lte` `like` `ilike`
+
+### Form 3 — Raw SQL string *(@deprecated)*
+
+Still accepted for backwards compatibility.
+Must be a hardcoded developer-authored string — never user input.
+Prefer form 1 or 2 for new code.
+
+```typescript
+// @deprecated
+.subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
 ```
 
 ### Subquery types

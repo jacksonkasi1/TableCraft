@@ -16,7 +16,7 @@ export const drizzleOperators = {
 };
 
 // ** import types
-import { EngineParams, EngineContext } from './types/engine';
+import type { EngineParams, EngineContext, CountMode } from './types/engine';
 import {
   TableConfig,
   ColumnConfig,
@@ -27,6 +27,7 @@ import {
   IncludeConfig,
   ColumnFormat,
   DatePreset,
+  SubqueryCondition,
 } from './types/table';
 import {
   introspectTable,
@@ -67,6 +68,8 @@ export interface RuntimeExtensions<T extends Table = Table> {
   rawOrderBys: SQL[];
   ctes: Map<string, SQL>;
   sqlJoinConditions: Map<string, SQL>;
+  /** How row counting is performed. Defaults to 'exact' when not set. */
+  countMode?: CountMode;
   hooks?: {
     beforeQuery?: (params: any, context: any) => any;
     afterQuery?: (data: Record<string, unknown>[], params: any, context: any) => any;
@@ -746,16 +749,92 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   // ──── Subqueries ────
 
+  /**
+   * Attach a correlated subquery to every row.
+   *
+   * The `filter` parameter controls the subquery's WHERE clause and accepts
+   * **three forms** — pick whichever fits your style:
+   *
+   * ---
+   *
+   * ### 1. Drizzle `sql\`...\`` expression *(best DX — use your schema columns directly)*
+   *
+   * Import `sql` from `drizzle-orm` and write the WHERE clause exactly as you
+   * would in any Drizzle query. TableCraft passes the expression through unchanged,
+   * so the full power of Drizzle is available — joins, functions, OR logic, anything.
+   * You own the safety of the expression.
+   *
+   * ```ts
+   * import { sql } from 'drizzle-orm';
+   * import { orders, orderItems } from '../db/schema';
+   *
+   * .subquery('itemCount', orderItems, 'count',
+   *   sql`${orderItems.orderId} = ${orders.id}`)
+   *
+   * // With an extra condition:
+   * .subquery('activeItemCount', orderItems, 'count',
+   *   sql`${orderItems.orderId} = ${orders.id} AND ${orderItems.status} = ${'active'}`)
+   * ```
+   *
+   * ---
+   *
+   * ### 2. Structured `SubqueryCondition[]` *(typed, injection-safe)*
+   *
+   * Pass an array of condition objects. Each has `left`, `op` (default `'eq'`),
+   * and `right` operands — either `{ column: 'table.column' }` or `{ value: literal }`.
+   * Conditions are AND-combined. Literal values are parameterized automatically.
+   *
+   * ```ts
+   * // Simple column-to-column join:
+   * .subquery('itemCount', orderItems, 'count', [
+   *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+   * ])
+   *
+   * // With a literal value filter:
+   * .subquery('activeItemCount', orderItems, 'count', [
+   *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } },
+   *   { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } },
+   * ])
+   * ```
+   *
+   * ---
+   *
+   * ### 3. Raw SQL string *(@deprecated — developer-authored constants only)*
+   *
+   * Still accepted for backwards compatibility. Must be a hardcoded string authored
+   * by the developer — never derived from user input. Prefer form 1 or 2 instead.
+   *
+   * ```ts
+   * // @deprecated
+   * .subquery('itemCount', orderItems, 'count', 'order_items.order_id = orders.id')
+   * ```
+   *
+   * ---
+   *
+   * Omitting `filter` creates an uncorrelated subquery (full table scan).
+   */
   subquery(
     alias: string,
     table: Table,
     type: 'count' | 'exists' | 'first',
-    filter?: string
+    filter?: string | SubqueryCondition[] | SQL
   ): this {
     if (!this._config.subqueries) this._config.subqueries = [];
 
+    let entry: NonNullable<TableConfig['subqueries']>[number];
+    if (filter === undefined || filter === null) {
+      entry = { alias, table: getTableName(table), type };
+    } else if (filter instanceof SQL) {
+      // Drizzle SQL expression — stored as runtime-only filterSql (not JSON-serializable)
+      entry = { alias, table: getTableName(table), type, filterSql: filter };
+    } else if (typeof filter === 'string') {
+      // @deprecated raw string — kept for backwards compatibility
+      entry = { alias, table: getTableName(table), type, filter };
+    } else {
+      entry = { alias, table: getTableName(table), type, filterConditions: filter };
+    }
+
     // Dedupe subquery entries by alias — replace if exists
-    const entry = { alias, table: getTableName(table), type, filter };
     const existingIdx = this._config.subqueries.findIndex(e => e.alias === alias);
     if (existingIdx >= 0) {
       this._config.subqueries[existingIdx] = entry;
@@ -837,8 +916,8 @@ export class TableDefinitionBuilder<T extends Table = Table> {
    * 'estimated' = PostgreSQL's reltuples — fast but approximate
    * 'none' = skip counting entirely — fastest
    */
-  countMode(mode: 'exact' | 'estimated' | 'none'): this {
-    (this._config as any)._countMode = mode;
+  countMode(mode: CountMode): this {
+    this._ext.countMode = mode;
     return this;
   }
 

@@ -60,6 +60,7 @@ function resolveInput(input: ConfigInput): {
       rawOrderBys: [],
       ctes: new Map(),
       sqlJoinConditions: new Map(),
+      countMode: undefined,
     },
   };
 }
@@ -119,7 +120,7 @@ export function createTableEngine(options: CreateEngineOptions): TableEngine {
   const fieldSelector = new FieldSelector();
 
   const baseTable = schema[config.base] as Table;
-  const countMode: CountMode = (config as any)._countMode ?? 'exact';
+  const countMode: CountMode = ext.countMode ?? 'exact';
 
   // ── WHERE builder ──
 

@@ -3,6 +3,7 @@
 /* Vercel monorepo workaround: Forces Tailwind to scan the local workspace package directory 
    because Vercel skips the npm install and symlinks local workspace packages instead. */
 @source "../../../packages/table/src";
+@import "@tablecraft/table/styles.css";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
@@ -51,7 +52,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0.00 0);
+  --primary: oklch(0.87 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -79,7 +80,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Inter Variable', sans-serif;
+  --font-sans: "Inter Variable", sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -132,30 +133,6 @@
   html {
     @apply font-sans;
   }
-}
-
-/* ------------------ TABLE STYLES ------------------ */
-
-/* Custom cursor pointer for interactive elements in the data table */
-button,
-.rdp-button,
-.rdp-day,
-select,
-input[type="checkbox"],
-input[type="radio"],
-[role="button"],
-[role="tab"],
-.react-day-picker button,
-[data-slot="select-trigger"],
-[data-slot="checkbox"],
-.day-range-start,
-.day-range-end,
-.day-range-middle,
-[data-radix-collection-item],
-[data-slot="button"],
-[data-slot="day"],
-[data-slot="select-item"] {
-  cursor: pointer !important;
 }
 
 /* Fix specifically for calendar date picker buttons and elements */
@@ -228,7 +205,6 @@ input[type="week"] {
 
 /* Table column resizing styles - ENHANCED VERSION */
 @layer components {
-
   /* Prevent layout shifts during resize */
   .resizable-table {
     table-layout: fixed;
@@ -277,7 +253,6 @@ input[type="week"] {
 
 /* Custom cursor for column resizing */
 @layer components {
-
   /* Better cursor for column resize */
   .cursor-col-resize {
     cursor: col-resize;
@@ -297,10 +272,11 @@ input[type="week"] {
 
 /* Custom hover and interaction styles for the resizer */
 @layer components {
-
   /* Resize handle hover effects */
   .resizable-table [data-resizing] {
-    transition: opacity 0.15s ease, transform 0.1s ease;
+    transition:
+      opacity 0.15s ease,
+      transform 0.1s ease;
   }
 
   .resizable-table [data-resizing]:hover {
@@ -315,7 +291,9 @@ input[type="week"] {
 
   /* Ensure the grip icon is positioned correctly */
   .resizable-table [data-resizing] svg {
-    transition: opacity 0.15s ease, color 0.15s ease;
+    transition:
+      opacity 0.15s ease,
+      color 0.15s ease;
   }
 
   .resizable-table [data-resizing]:hover svg {

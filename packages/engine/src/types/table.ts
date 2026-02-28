@@ -1,3 +1,4 @@
+import type { SQL } from 'drizzle-orm';
 import { z } from 'zod';
 
 // --- Primitives ---
@@ -139,13 +140,70 @@ export const AggregationConfigSchema = z.object({
 });
 export type AggregationConfig = z.infer<typeof AggregationConfigSchema>;
 
+/**
+ * A single condition in a structured subquery filter.
+ *
+ * Operands are either a column reference (table.column) or a literal value.
+ * Examples:
+ *   { left: { column: 'order_items.order_id' }, op: 'eq', right: { column: 'orders.id' } }
+ *   { left: { column: 'order_items.status' },   op: 'eq', right: { value: 'active' } }
+ *   { left: { column: 'order_items.qty' },       op: 'gt', right: { value: 0 } }
+ */
+export const SubqueryConditionSchema = z.object({
+  left: z.union([
+    z.object({ column: z.string() }),
+    z.object({ value: z.unknown() }),
+  ]),
+  op: z.enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike']).default('eq'),
+  right: z.union([
+    z.object({ column: z.string() }),
+    z.object({ value: z.unknown() }),
+  ]),
+});
+export type SubqueryCondition = z.infer<typeof SubqueryConditionSchema>;
+
 export const SubqueryConfigSchema = z.object({
   alias: z.string(),
   table: z.string(),
-  type: z.enum(['count', 'exists', 'first']), // Simplistic subquery types for now
-  filter: z.string().optional(), // Condition for the subquery
+  type: z.enum(['count', 'exists', 'first']),
+  /** @deprecated — pass a `filterConditions` array or a Drizzle `SQL` expression instead */
+  filter: z.string().optional(),
+  /**
+   * Structured correlation conditions (AND-combined).
+   * Each condition supports column references and literal values on either side,
+   * plus a comparison operator.
+   */
+  filterConditions: z.array(SubqueryConditionSchema).optional(),
 });
-export type SubqueryConfig = z.infer<typeof SubqueryConfigSchema>;
+
+/**
+ * Runtime subquery config.
+ * Extends the Zod-validated schema with `filterSql` — a Drizzle `SQL` expression
+ * that cannot be represented as a plain JSON-serializable value.
+ *
+ * Priority order in SubqueryBuilder.buildFilter():
+ *   1. `filterSql`        — Drizzle SQL expression (most flexible, full Drizzle DX)
+ *   2. `filterConditions` — typed structured conditions (safe, recommended)
+ *   3. `filter`           — raw SQL string (@deprecated, developer-authored only)
+ *   4. fallback           — `true` (uncorrelated, scans whole table)
+ */
+export type SubqueryConfig = z.infer<typeof SubqueryConfigSchema> & {
+  /**
+   * A Drizzle `sql\`...\`` expression used as the subquery WHERE clause.
+   * Evaluated at query-build time. Takes priority over `filterConditions` and `filter`.
+   *
+   * Use `sql` imported from `drizzle-orm`, and reference your Drizzle table columns directly.
+   * You own the safety of this expression — TableCraft passes it through as-is.
+   *
+   * @example
+   * import { sql } from 'drizzle-orm';
+   * import { orders, orderItems } from '../db/schema';
+   *
+   * .subquery('itemCount', orderItems, 'count',
+   *   sql`${orderItems.orderId} = ${orders.id}`)
+   */
+  filterSql?: SQL;
+};
 
 export const BackendConditionSchema = z.object({
   field: z.string(),
@@ -275,5 +333,8 @@ export const TableConfigSchema = z.object({
   // NEW: Global date range filter column
   dateRangeColumn: z.string().optional(),
 });
-export type TableConfig = z.infer<typeof TableConfigSchema>;
+export type TableConfig = Omit<z.infer<typeof TableConfigSchema>, 'subqueries'> & {
+  /** Runtime subquery configs — may include `filterSql` (Drizzle SQL expression). */
+  subqueries?: SubqueryConfig[];
+};
 export type TableDefinition = z.input<typeof TableConfigSchema>;

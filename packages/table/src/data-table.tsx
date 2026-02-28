@@ -768,7 +768,9 @@ export function DataTable<T extends Record<string, unknown>>({
                           "align-middle whitespace-nowrap text-left",
                           cell.column.id === "select"
                             ? "w-12 px-3 py-2"
-                            : "px-4 py-2 truncate max-w-0"
+                            : cell.column.id === "__actions"
+                              ? "w-12 px-2 py-2"
+                              : "px-4 py-2 truncate max-w-0"
                         )}
                         style={{ width: cell.column.getSize() }}
                       >

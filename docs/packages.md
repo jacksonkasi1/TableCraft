@@ -13,12 +13,13 @@ pnpm add @tablecraft/engine
 ```
 
 **Features:**
-*   Table configuration with `defineTable()`
-*   Query building with filtering, sorting, pagination
-*   Computed columns and transforms
-*   Relationships and joins
-*   Metadata API
-{% endtab %}
+
+- Table configuration with `defineTable()`
+- Query building with filtering, sorting, pagination
+- Computed columns and transforms
+- Relationships and joins
+- Metadata API
+  {% endtab %}
 
 {% tab title="@tablecraft/table" %}
 React DataTable component with zero-config setup.
@@ -27,13 +28,21 @@ React DataTable component with zero-config setup.
 pnpm add @tablecraft/table
 ```
 
+**Styles setup (Tailwind CSS v4):**
+
+```css
+@import "@tablecraft/table/styles.css";
+@source "../node_modules/@tablecraft/table/src";
+```
+
 **Features:**
-*   Auto-generates columns from metadata
-*   Server-side pagination, filtering, sorting
-*   Date range picker
-*   Column visibility & resizing
-*   Export to CSV/JSON
-{% endtab %}
+
+- Auto-generates columns from metadata
+- Server-side pagination, filtering, sorting
+- Date range picker
+- Column visibility & resizing
+- Export to CSV/JSON
+  {% endtab %}
 
 {% tab title="@tablecraft/client" %}
 Frontend SDK for direct API calls (non-React).
@@ -43,10 +52,11 @@ pnpm add @tablecraft/client
 ```
 
 **Features:**
-*   Type-safe query builder
-*   Direct API calls
-*   Metadata fetching
-{% endtab %}
+
+- Type-safe query builder
+- Direct API calls
+- Metadata fetching
+  {% endtab %}
 
 {% tab title="@tablecraft/codegen" %}
 TypeScript type generator from API metadata.
@@ -56,11 +66,12 @@ pnpm add -D @tablecraft/codegen
 ```
 
 **Features:**
-*   Generate Row & Filters interfaces
-*   Generate typed adapter factories
-*   CLI tool for CI/CD
-{% endtab %}
-{% endtabs %}
+
+- Generate Row & Filters interfaces
+- Generate typed adapter factories
+- CLI tool for CI/CD
+  {% endtab %}
+  {% endtabs %}
 
 ## Backend Adapters
 
@@ -73,9 +84,10 @@ pnpm add @tablecraft/adapter-hono
 ```
 
 ```typescript
-import { createHonoApp } from '@tablecraft/adapter-hono';
-app.route('/engine', createHonoApp({ db, schema, configs }));
+import { createHonoApp } from "@tablecraft/adapter-hono";
+app.route("/engine", createHonoApp({ db, schema, configs }));
 ```
+
 {% endtab %}
 
 {% tab title="Express" %}
@@ -86,9 +98,10 @@ pnpm add @tablecraft/adapter-express
 ```
 
 ```typescript
-import { createExpressRouter } from '@tablecraft/adapter-express';
-app.use('/engine', createExpressRouter({ db, schema, configs }));
+import { createExpressRouter } from "@tablecraft/adapter-express";
+app.use("/engine", createExpressRouter({ db, schema, configs }));
 ```
+
 {% endtab %}
 
 {% tab title="Next.js" %}
@@ -103,6 +116,7 @@ pnpm add @tablecraft/adapter-next
 import { createNextHandler } from '@tablecraft/adapter-next';
 export { GET, POST } = createNextHandler({ db, schema, configs });
 ```
+
 {% endtab %}
 
 {% tab title="Elysia" %}
@@ -113,9 +127,10 @@ pnpm add @tablecraft/adapter-elysia
 ```
 
 ```typescript
-import { createElysiaPlugin } from '@tablecraft/adapter-elysia';
+import { createElysiaPlugin } from "@tablecraft/adapter-elysia";
 app.use(createElysiaPlugin({ db, schema, configs }));
 ```
+
 {% endtab %}
 {% endtabs %}
 
@@ -130,12 +145,13 @@ pnpm add @tablecraft/plugin-cache
 ```
 
 **Supported Backends:**
-*   In-memory cache (default)
-*   Redis
-*   Upstash Redis
+
+- In-memory cache (default)
+- Redis
+- Upstash Redis
 
 ```typescript
-import { cachePlugin, memoryCache } from '@tablecraft/plugin-cache';
+import { cachePlugin, memoryCache } from "@tablecraft/plugin-cache";
 
 const engine = createTableEngine({
   db,
@@ -152,7 +168,7 @@ const engine = createTableEngine({
 ## Version Compatibility
 
 | Package | Node | React | Drizzle |
-|---------|------|-------|---------|
-| engine | >=18 | - | ^0.30 |
-| table | - | >=18 | - |
-| codegen | >=18 | - | - |
+| ------- | ---- | ----- | ------- |
+| engine  | >=18 | -     | ^0.30   |
+| table   | -    | >=18  | -       |
+| codegen | >=18 | -     | -       |
