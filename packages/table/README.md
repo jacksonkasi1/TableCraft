@@ -37,16 +37,46 @@ bun add exceljs
 
 ## Tailwind CSS v4 Setup
 
-If you're using **Tailwind CSS v4**, you need to add the `@source` directive so Tailwind can detect the utility classes used inside `@tablecraft/table`:
+`@tablecraft/table` uses Tailwind utility classes and ships a standalone CSS file for cursor, column-resizing, and interaction styles.
+
+### 1. Import the styles
+
+Add the following import to your main CSS file (e.g. `index.css`):
 
 ```css
 @import "tailwindcss";
-@source "../node_modules/@tablecraft/table/src";
+@import "@tablecraft/table/styles.css";
 ```
 
-This tells Tailwind to scan the package's source files for class names. Without it, the table component styles may not be generated correctly.
+This gives you cursor pointers on interactive elements, column-resize handles, and other table-specific styles out of the box.
 
-> **Note:** The path is relative to your CSS file. Adjust if your CSS file is in a different location.
+### 2. Add the `@source` directive
+
+Tailwind CSS v4 needs to scan the package source to detect utility classes used by the table components. Add the `@source` directive pointing to the package's `src/` directory:
+
+```css
+@source "<path-to-root>/node_modules/@tablecraft/table/src";
+```
+
+The path is **relative to your CSS file**, not the project root. For example:
+
+| CSS file location        | `@source` path                                           |
+| ------------------------ | -------------------------------------------------------- |
+| `src/index.css`          | `@source "../node_modules/@tablecraft/table/src";`       |
+| `src/styles/global.css`  | `@source "../../node_modules/@tablecraft/table/src";`    |
+| `apps/web/src/index.css` | `@source "../../../node_modules/@tablecraft/table/src";` |
+
+> **Tip:** Count the directories between your CSS file and the project root's `node_modules/`. Each level up is one `../`.
+
+### Full example
+
+```css
+@import "tailwindcss";
+@import "@tablecraft/table/styles.css";
+@import "tw-animate-css";
+
+@source "../../../node_modules/@tablecraft/table/src";
+```
 
 ## Features
 
@@ -61,23 +91,23 @@ This tells Tailwind to scan the package's source files for class names. Without 
 ## Quick Example
 
 ```tsx
-import { DataTable, useTablecraftAdapter } from '@tablecraft/table';
-import { client } from './client';
+import { DataTable, useTablecraftAdapter } from "@tablecraft/table";
+import { client } from "./client";
 
 function UsersPage() {
   const adapter = useTablecraftAdapter({
     client,
-    table: 'users',
+    table: "users",
   });
 
   return (
     <DataTable
       adapter={adapter}
       columns={[
-        { id: 'name', header: 'Name', sortable: true, searchable: true },
-        { id: 'email', header: 'Email', sortable: true },
-        { id: 'status', header: 'Status', filterable: true },
-        { id: 'createdAt', header: 'Created', sortable: true },
+        { id: "name", header: "Name", sortable: true, searchable: true },
+        { id: "email", header: "Email", sortable: true },
+        { id: "status", header: "Status", filterable: true },
+        { id: "createdAt", header: "Created", sortable: true },
       ]}
       features={{
         search: true,
@@ -95,7 +125,7 @@ function UsersPage() {
 ## Static Data Example
 
 ```tsx
-import { DataTable, useStaticAdapter } from '@tablecraft/table';
+import { DataTable, useStaticAdapter } from "@tablecraft/table";
 
 function UsersTable({ users }: { users: User[] }) {
   const adapter = useStaticAdapter({
@@ -107,9 +137,9 @@ function UsersTable({ users }: { users: User[] }) {
     <DataTable
       adapter={adapter}
       columns={[
-        { id: 'name', header: 'Name' },
-        { id: 'email', header: 'Email' },
-        { id: 'status', header: 'Status', filterable: true },
+        { id: "name", header: "Name" },
+        { id: "email", header: "Email" },
+        { id: "status", header: "Status", filterable: true },
       ]}
       features={{
         search: true,
@@ -126,16 +156,16 @@ function UsersTable({ users }: { users: User[] }) {
 Built-in renderers for common data types:
 
 ```tsx
-import { renderers } from '@tablecraft/table';
+import { renderers } from "@tablecraft/table";
 
 const columns = [
-  { id: 'name', header: 'Name', cell: renderers.text() },
-  { id: 'avatar', header: 'Avatar', cell: renderers.image() },
-  { id: 'email', header: 'Email', cell: renderers.link({ href: (row) => `mailto:${row.email}` }) },
-  { id: 'status', header: 'Status', cell: renderers.badge({ variants: { active: 'success' } }) },
-  { id: 'progress', header: 'Progress', cell: renderers.progress() },
-  { id: 'createdAt', header: 'Created', cell: renderers.date({ format: 'MMM d, yyyy' }) },
-  { id: 'isActive', header: 'Active', cell: renderers.boolean() },
+  { id: "name", header: "Name", cell: renderers.text() },
+  { id: "avatar", header: "Avatar", cell: renderers.image() },
+  { id: "email", header: "Email", cell: renderers.link({ href: (row) => `mailto:${row.email}` }) },
+  { id: "status", header: "Status", cell: renderers.badge({ variants: { active: "success" } }) },
+  { id: "progress", header: "Progress", cell: renderers.progress() },
+  { id: "createdAt", header: "Created", cell: renderers.date({ format: "MMM d, yyyy" }) },
+  { id: "isActive", header: "Active", cell: renderers.boolean() },
 ];
 ```
 
@@ -144,13 +174,13 @@ const columns = [
 Automatic URL synchronization for filters, sorting, and pagination:
 
 ```tsx
-import { DataTable, useTablecraftAdapter, useUrlState } from '@tablecraft/table';
+import { DataTable, useTablecraftAdapter, useUrlState } from "@tablecraft/table";
 
 function UsersPage() {
   const urlState = useUrlState();
   const adapter = useTablecraftAdapter({
     client,
-    table: 'users',
+    table: "users",
     initialState: urlState,
   });
 
@@ -205,4 +235,3 @@ This forces your bundler to use a single copy of React across all dependencies.
 ## License
 
 MIT
-

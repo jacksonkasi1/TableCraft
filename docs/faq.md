@@ -5,12 +5,30 @@ Here are some common developer friction points and how to resolve them when work
 ## Common Errors
 
 ### "Request failed: 404" (Initialization Error)
+
 This usually means your client is pointing to an endpoint that does not exist or your backend server is not running.
-* **Solution:** Ensure your `baseUrl` is correct in the `createTableCraftAdapter` or `createClient` setup, and check that your backend server is actually up and listening.
+
+- **Solution:** Ensure your `baseUrl` is correct in the `createTableCraftAdapter` or `createClient` setup, and check that your backend server is actually up and listening.
 
 ### Missing Schema Errors
+
 If the server crashes complaining about missing tables or columns during startup:
-* **Solution:** Ensure you are passing the actual Drizzle schema objects (like `schema.users`) to `defineTable()`, and that your database migrations have been applied.
+
+- **Solution:** Ensure you are passing the actual Drizzle schema objects (like `schema.users`) to `defineTable()`, and that your database migrations have been applied.
+
+### Table styles missing (Tailwind CSS v4)
+
+If the table renders without proper styling (missing borders, spacing, cursor pointers, or column resize handles):
+
+- **Solution 1:** Import the package styles in your main CSS file:
+  ```css
+  @import "@tablecraft/table/styles.css";
+  ```
+- **Solution 2:** Add the `@source` directive so Tailwind scans the package for utility classes:
+  ```css
+  @source "<path-to-root>/node_modules/@tablecraft/table/src";
+  ```
+  The path must be **relative to your CSS file**, not the project root. For a CSS file at `apps/web/src/index.css`, use `../../../node_modules/@tablecraft/table/src`. For `src/index.css`, use `../node_modules/@tablecraft/table/src`.
 
 ## How do I handle Codegen if my server has authentication?
 
@@ -19,17 +37,20 @@ If your TableCraft API requires authentication (e.g., JWT, session cookies, API 
 You can securely pass any required authentication headers using the `--header` or `-H` flag:
 
 **Using a Bearer Token:**
+
 ```bash
 npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H "Authorization: Bearer <your-token>"
 ```
 
 **Using Session Cookies:**
 If your backend uses standard cookie-based sessions, you can pass the session cookie directly via the `Cookie` header:
+
 ```bash
 npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H "Cookie: session_id=<your-session-cookie>"
 ```
 
 **Using Custom API Keys or Multiple Headers:**
+
 ```bash
 npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H "x-api-key: <your-key>" -H "x-tenant-id: <tenant>"
 ```
@@ -37,6 +58,7 @@ npx @tablecraft/codegen --url http://localhost:3000/api --out ./src/generated -H
 ## Why is my filter not working?
 
 There are a few reasons why a global search or column filter might not be taking effect:
+
 1. **Column Not Included:** Ensure the column is explicitly defined in your `.search('email', 'firstName')` or `.filter()` configuration block on the backend.
 2. **Type Mismatch:** Trying to apply a string operation (like `contains`) on an `integer` column will fail. Use the appropriate operators for your data types.
 3. **Date Formatting:** Date strings must be in ISO 8601 format when sent from the client or custom adapter.
@@ -45,9 +67,11 @@ There are a few reasons why a global search or column filter might not be taking
 ## Why is my query slow?
 
 Performance issues usually stem from one of two database constraints:
+
 1. **Missing Indexes:** Ensure you have database indexes on columns you frequently filter or sort by (e.g., `createdAt`, `tenantId`, `status`).
 2. **The `COUNT(*)` Problem:** If you are using standard offset pagination (`page`, `pageSize`) and dealing with hundreds of thousands of rows, computing the total row count becomes extremely expensive for SQL databases.
-* **Solution:** Switch to **Cursor Pagination**, which bypasses the `OFFSET` scanning penalty entirely and operates in O(1) time. Alternatively, disable the `.count()` request on massive datasets.
+
+- **Solution:** Switch to **Cursor Pagination**, which bypasses the `OFFSET` scanning penalty entirely and operates in O(1) time. Alternatively, disable the `.count()` request on massive datasets.
 
 ## Client Error Handling
 
@@ -62,7 +86,7 @@ try {
   // TypeScript catches are 'unknown' by default
   const err = error as any;
   console.error("Status:", err.status); // e.g. 400, 500
-  console.error("Code:", err.code);     // e.g. 'VALIDATION_ERROR'
+  console.error("Code:", err.code); // e.g. 'VALIDATION_ERROR'
   console.error("Details:", err.details); // Additional context
   console.error("Message:", err.message);
 }
@@ -70,8 +94,8 @@ try {
 
 ## Debugging Tips
 
-* **Inspect Network Payload:** Use your browser's Developer Tools (Network tab) to inspect the outgoing request to the engine. Verify that the query parameters (like `filters`, `sort`, `cursor`) match what you expect.
-* **Check React Query Keys:** If you are using `useTableQuery` and data isn't updating when state changes, ensure the query key includes all dependencies (which TableCraft handles automatically under the hood, but it's good to verify using the React Query DevTools).
+- **Inspect Network Payload:** Use your browser's Developer Tools (Network tab) to inspect the outgoing request to the engine. Verify that the query parameters (like `filters`, `sort`, `cursor`) match what you expect.
+- **Check React Query Keys:** If you are using `useTableQuery` and data isn't updating when state changes, ensure the query key includes all dependencies (which TableCraft handles automatically under the hood, but it's good to verify using the React Query DevTools).
 
 ---
 
@@ -165,7 +189,6 @@ The table automatically normalizes any order it loads from `localStorage` — it
 2. When the user drags columns in the View popover, the new order is saved to `localStorage` and takes precedence over `defaultColumnOrder` on subsequent loads.
 3. When the user clicks "Reset Column Order", the table reverts to `defaultColumnOrder` (or the natural definition order if `defaultColumnOrder` is not set) and saves that back to `localStorage`.
 
-
 ### Can I mark a computed column as non-sortable?
 
 Yes. Pass `{ sortable: false }` as the third argument to `.computed()`:
@@ -175,4 +198,3 @@ Yes. Pass `{ sortable: false }` as the third argument to `.computed()`:
 ```
 
 This prevents users from requesting `?sort=jsonMeta` and getting a database error from a non-scalar expression.
-
