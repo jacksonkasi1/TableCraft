@@ -103,6 +103,8 @@ export class SubqueryBuilder {
    * Literal values     → parameterized via sql`${value}` to prevent injection
    */
   private buildStructuredFilter(conditions: SubqueryCondition[], dialect?: Dialect): SQL {
+    if (conditions.length === 0) return sql`true`;
+
     const parts = conditions.map((cond) => {
       const leftSql  = 'column' in cond.left  ? sql.raw(cond.left.column)  : sql`${cond.left.value as any}`;
       const rightSql = 'column' in cond.right ? sql.raw(cond.right.column) : sql`${cond.right.value as any}`;

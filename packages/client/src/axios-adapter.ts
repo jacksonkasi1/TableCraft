@@ -31,10 +31,10 @@ export type MinimalResponse = Pick<
  * without needing to bundle Axios statically.
  *
  * @param axios - The Axios instance to wrap
- * @param withCredentials - Whether to include credentials (cookies) in cross-origin requests. Defaults to true.
+ * @param withCredentials - Whether to include credentials (cookies) in cross-origin requests. Defaults to false.
  * @returns A function compatible with the native fetch signature
  */
-export function createAxiosFetchAdapter(axios: AxiosLike, withCredentials: boolean = true) {
+export function createAxiosFetchAdapter(axios: AxiosLike, withCredentials: boolean = false) {
   return async (url: string, options?: RequestInit): Promise<MinimalResponse> => {
     let headers: Record<string, string> | undefined = undefined;
     if (options?.headers) {

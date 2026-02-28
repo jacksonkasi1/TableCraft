@@ -76,7 +76,7 @@ export interface TableCraftAdapterOptions<TFilters = never> {
   axios?: unknown;
   /**
    * Whether to include credentials (cookies) with every request when using an Axios instance.
-   * Defaults to `true`. Set to `false` if you want to opt out of sending cookies.
+   * Defaults to `false`. Set to `true` if you need to send cookies cross-origin.
    */
   withCredentials?: boolean;
   /**
@@ -132,7 +132,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
   let customFetch: (url: string, options?: RequestInit) => Promise<MinimalResponse | Response>;
 
   if (options.axios && isAxiosInstance(options.axios)) {
-    customFetch = createAxiosFetchAdapter(options.axios, options.withCredentials ?? true);
+    customFetch = createAxiosFetchAdapter(options.axios, options.withCredentials ?? false);
   } else if (options.fetch) {
     customFetch = options.fetch;
   } else {
@@ -234,8 +234,8 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     const merged: Record<string, unknown> = { ...(params.filters ?? {}) };
 
     for (const [key, val] of Object.entries(customFilters)) {
-      // null, undefined → remove the filter. (0, "", and false are valid values)
-      if (val === null || val === undefined) {
+      // null, undefined, false → remove the filter. (0 and "" are valid values)
+      if (val === null || val === undefined || val === false) {
         delete merged[key];
       } else if (typeof val === "object") {
         // { operator, value } form — pass through as-is

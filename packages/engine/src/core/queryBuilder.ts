@@ -59,7 +59,7 @@ export class QueryBuilder {
         const colName = (col as Column).name;
         const expressionStr = colConfig.dbTransform.reduce((acc, func) => {
           if (func.includes('?')) {
-            return func.replace('?', acc);
+            return func.replaceAll('?', acc);
           }
           return `${func}(${acc})`;
         }, colName);
