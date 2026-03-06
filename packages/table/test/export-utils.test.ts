@@ -11,14 +11,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { exportData, exportToCSV } from "../src/utils/export-utils";
 
-// Mock exceljs deterministically for fallback testing
-vi.mock("exceljs", async (importOriginal) => {
-	if (process.env.MOCK_NO_EXCELJS) {
-		throw new Error("exceljs not found");
-	}
-	return importOriginal();
-});
-
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 /** Capture the CSV blob that would have been downloaded. */
@@ -258,13 +250,24 @@ describe("exportData — csv wrapper", () => {
 });
 
 describe("exportData — excel fallback", () => {
+	afterEach(() => {
+		vi.resetModules();
+		vi.doUnmock("exceljs");
+	});
+
 	it("returns false when exceljs is not available", async () => {
-		process.env.MOCK_NO_EXCELJS = "1";
-		try {
-			const result = await exportData("excel", async () => [{ id: 1 }]);
-			expect(result).toBe(false);
-		} finally {
-			delete process.env.MOCK_NO_EXCELJS;
-		}
+		vi.resetModules();
+		vi.doMock("exceljs", () => {
+			throw new Error("exceljs not found");
+		});
+
+		// Re-import the module under test so it picks up the mocked exceljs
+		const { exportData: exportDataMocked } = await import(
+			"../src/utils/export-utils"
+		);
+
+		await expect(
+			exportDataMocked("excel", async () => [{ id: 1 }]),
+		).resolves.toBe(false);
 	});
 });
