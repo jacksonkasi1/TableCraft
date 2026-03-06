@@ -13,8 +13,10 @@ export function DateRenderer({ value, column }: CellRendererProps) {
   const format = column.format;
 
   let formatted: string;
+  const locale = (column.meta?.locale as string) || "en-US";
+
   if (format === "datetime") {
-    formatted = new Intl.DateTimeFormat("en-US", {
+    formatted = new Intl.DateTimeFormat(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -23,7 +25,7 @@ export function DateRenderer({ value, column }: CellRendererProps) {
       hour12: true,
     }).format(date);
   } else if (format === "time") {
-    formatted = new Intl.DateTimeFormat("en-US", {
+    formatted = new Intl.DateTimeFormat(locale, {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,

@@ -53,13 +53,13 @@ const EMPLOYEES: Employee[] = [
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
-const STATUS_BADGE: Record<string, string> = {
+const STATUS_BADGE: Record<Employee['status'], string> = {
   'active':   'bg-green-100 text-green-700  dark:bg-green-900/30  dark:text-green-400',
   'inactive': 'bg-gray-100  text-gray-600   dark:bg-gray-800      dark:text-gray-400',
   'on-leave': 'bg-amber-100 text-amber-700  dark:bg-amber-900/30  dark:text-amber-400',
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<Employee['status'], string> = {
   'active':   'Active',
   'inactive': 'Inactive',
   'on-leave': 'On Leave',
@@ -130,7 +130,7 @@ const columns: ColumnDef<Employee, unknown>[] = [
     accessorKey: 'status',
     header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
     cell: ({ getValue }) => {
-      const val = String(getValue());
+      const val = String(getValue()) as Employee['status'];
       const cls = STATUS_BADGE[val] ?? 'bg-gray-100 text-gray-700';
       return (
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>

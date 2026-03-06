@@ -63,10 +63,10 @@ describe('createStaticAdapter — pagination', () => {
 
   it('clamps page to last valid page when page > totalPages', async () => {
     const adapter = createStaticAdapter(ITEMS);
-    const result = await adapter.query({ ...BASE_PARAMS, page: 99, pageSize: 5 });
+    const result = await adapter.query({ ...BASE_PARAMS, page: 99, pageSize: 2 });
 
-    expect(result.data).toHaveLength(5);
-    expect(result.meta.page).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.meta.page).toBe(3);
   });
 
   it('respects defaultPageSize option', async () => {
