@@ -39,7 +39,7 @@ export function DateRenderer({ value, column }: CellRendererProps) {
     const days = Math.floor(hours / 24);
 
     if (days > 30) {
-      formatted = new Intl.DateTimeFormat(undefined, {
+      formatted = new Intl.DateTimeFormat(locale, {
         dateStyle: "medium",
       }).format(date);
     } else if (days > 0) {
@@ -53,7 +53,7 @@ export function DateRenderer({ value, column }: CellRendererProps) {
     }
   } else {
     // Default: date only
-    formatted = new Intl.DateTimeFormat(undefined, {
+    formatted = new Intl.DateTimeFormat(locale, {
       dateStyle: "medium",
     }).format(date);
   }
