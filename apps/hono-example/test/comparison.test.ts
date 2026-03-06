@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import appConfig from '../src/index';
 
-const BASE_URL = 'http://localhost:5000';
+let BASE_URL = '';
 let server: any;
 
 describe('API Comparison', () => {
   beforeAll(() => {
-    server = Bun.serve(appConfig);
+    server = Bun.serve({ ...appConfig, port: 0 });
+    BASE_URL = `http://localhost:${server.port}/api`;
   });
 
   afterAll(() => {

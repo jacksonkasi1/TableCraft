@@ -1,13 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import appConfig from "../src/index";
 
-const BASE_URL = "http://localhost:5001"; // different port to avoid collision with comparison.test.ts
+let BASE_URL = "";
 let server: ReturnType<typeof Bun.serve>;
 
 // ─── Setup / Teardown ─────────────────────────────────────────────────────────
 
 beforeAll(() => {
-	server = Bun.serve({ ...appConfig, port: 5001 });
+	server = Bun.serve({ ...appConfig, port: 0 });
+	BASE_URL = `http://localhost:${server.port}/api`;
 });
 
 afterAll(() => {
@@ -30,11 +31,11 @@ describe("Dev Experience — /_meta endpoint", () => {
 		expect(status).toBe(200);
 		expect(json.name).toBe("products");
 		expect(Array.isArray(json.columns)).toBe(true);
-		// All column entries must have at minimum a 'key' property
-		const columns = json.columns as Array<{ key: string }>;
+		// All column entries must have at minimum a 'name' property
+		const columns = json.columns as Array<{ name: string }>;
 		expect(columns.length).toBeGreaterThan(0);
 		for (const col of columns) {
-			expect(col.key).toBeDefined();
+			expect(col.name).toBeDefined();
 		}
 	});
 
@@ -48,8 +49,8 @@ describe("Dev Experience — /_meta endpoint", () => {
 	it("orders /_meta includes computed + subquery columns", async () => {
 		const { status, json } = await get("/engine/orders/_meta");
 		expect(status).toBe(200);
-		const columns = json.columns as Array<{ key: string }>;
-		const keys = columns.map((c) => c.key);
+		const columns = json.columns as Array<{ name: string }>;
+		const keys = columns.map((c) => c.name);
 		// statusLabel and vatAmount are computed columns
 		expect(keys).toContain("statusLabel");
 		expect(keys).toContain("vatAmount");
@@ -171,11 +172,11 @@ describe("Dev Experience — filters", () => {
 		});
 	});
 
-	it("filter on undeclared field is ignored (no 400)", async () => {
+	it("filter on undeclared field returns 400", async () => {
 		// Products only declares filter('category', 'price', 'isArchived')
-		// Filtering on 'name' is not declared — engine silently skips it
+		// Filtering on 'name' is not declared — engine returns 400
 		const { status } = await get("/engine/products?filter[name]=test");
-		expect(status).toBe(200);
+		expect(status).toBe(400);
 	});
 
 	it("is_active custom filter on users returns 200", async () => {
@@ -243,10 +244,10 @@ describe("Dev Experience — export endpoint", () => {
 		expect(Array.isArray(json)).toBe(true);
 	});
 
-	it("products export is disabled (not configured)", async () => {
-		// products does not call .exportable() — engine should return 400
+	it("products export works", async () => {
+		// products has export enabled
 		const res = await fetch(`${BASE_URL}/engine/products?export=csv`);
-		expect(res.status).toBe(400);
+		expect(res.status).toBe(200);
 	});
 });
 
