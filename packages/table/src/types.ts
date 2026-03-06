@@ -150,6 +150,7 @@ export interface ColumnMetadata {
   options?: { value: string | number | boolean; label: string; color?: string }[];
   datePresets?: string[];
   operators: string[];
+  meta?: Record<string, unknown>;
 }
 
 export interface FilterMetadata {

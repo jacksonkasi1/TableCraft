@@ -23,6 +23,7 @@ export function generateColumns<T extends Record<string, unknown>>(
         format: col.format,
         align: col.align,
         options: col.options,
+        meta: col.meta,
       };
 
       return {

@@ -990,14 +990,15 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
   // ──── Name Override ────
 
+  /** Set a custom display name for this table definition. */
   as(name: string): this {
     this._config.name = name;
     return this;
   }
 
+  /** Alias for `.as()` — sets the table's display name. */
   name(name: string): this {
-    this._config.name = name;
-    return this;
+    return this.as(name);
   }
 
   // ──── Count Mode ────
