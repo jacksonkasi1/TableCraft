@@ -45,24 +45,24 @@ export function DateRenderer({ value, column }: CellRendererProps) {
 	} else if (format === "relative") {
 		const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
 		const now = Date.now();
-		const diff = now - date.getTime();
-		const seconds = Math.floor(diff / 1000);
-		const minutes = Math.floor(seconds / 60);
-		const hours = Math.floor(minutes / 60);
-		const days = Math.floor(hours / 24);
+		const diff = date.getTime() - now;
+		const seconds = Math.round(diff / 1000);
+		const minutes = Math.round(diff / 60_000);
+		const hours = Math.round(diff / 3_600_000);
+		const days = Math.round(diff / 86_400_000);
 
-		if (days > 30) {
+		if (Math.abs(days) > 30) {
 			formatted = new Intl.DateTimeFormat(locale, {
 				dateStyle: "medium",
 			}).format(date);
-		} else if (days > 0) {
-			formatted = relative.format(-days, "day");
-		} else if (hours > 0) {
-			formatted = relative.format(-hours, "hour");
-		} else if (minutes > 0) {
-			formatted = relative.format(-minutes, "minute");
+		} else if (Math.abs(days) >= 1) {
+			formatted = relative.format(days, "day");
+		} else if (Math.abs(hours) >= 1) {
+			formatted = relative.format(hours, "hour");
+		} else if (Math.abs(minutes) >= 1) {
+			formatted = relative.format(minutes, "minute");
 		} else {
-			formatted = relative.format(0, "second");
+			formatted = relative.format(seconds, "second");
 		}
 	} else {
 		// Default: date only
