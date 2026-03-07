@@ -401,11 +401,16 @@ const columns: ColumnDef<Employee, unknown>[] = [
 		header: ({ column }) => (
 			<DataTableColumnHeader column={column} title="Joined" />
 		),
-		cell: ({ getValue }) => (
-			<span className="text-sm text-muted-foreground">
-				{new Date(getValue() as string).toLocaleDateString("en-US")}
-			</span>
-		),
+		cell: ({ getValue }) => {
+			const val = getValue() as string;
+			const [year, month, day] = val.split("-").map(Number);
+			const date = new Date(year, month - 1, day);
+			return (
+				<span className="text-sm text-muted-foreground">
+					{date.toLocaleDateString("en-US")}
+				</span>
+			);
+		},
 		size: 110,
 	},
 ];
