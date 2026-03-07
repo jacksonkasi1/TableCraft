@@ -7,10 +7,17 @@ export function DateRenderer({ value, column }: CellRendererProps) {
 
 	const rawValue = String(value);
 	const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(rawValue);
-	const date =
-		value instanceof Date
-			? value
-			: new Date(isDateOnly ? `${rawValue}T00:00:00` : rawValue);
+
+	let date: Date;
+	if (value instanceof Date) {
+		date = value;
+	} else if (isDateOnly) {
+		const [year, month, day] = rawValue.split("-").map(Number);
+		date = new Date(year, month - 1, day);
+	} else {
+		date = new Date(rawValue);
+	}
+
 	if (Number.isNaN(date.getTime())) {
 		return <span>{String(value)}</span>;
 	}

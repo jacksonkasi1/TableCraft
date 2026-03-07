@@ -96,7 +96,7 @@ describe("exportToCSV — basic", () => {
 		expect(ok).toBe(false);
 	});
 
-	it("uses default headers from first row keys", () => {
+	it("uses default headers from first row keys", async () => {
 		const cap = captureDownload();
 		const data = [{ id: 1, name: "Alice" }];
 		exportToCSV(data, "auto-headers");
@@ -104,6 +104,8 @@ describe("exportToCSV — basic", () => {
 		// Read the blob text to verify CSV content
 		const blob = cap.blobs[0];
 		expect(blob).toBeDefined();
+		const text = await blob.text();
+		expect(text.split("\n")[0].trim()).toBe("id,name");
 
 		cap.restore();
 	});

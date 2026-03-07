@@ -137,6 +137,10 @@ async function fetchOrders(
 	if (params.sort) url.searchParams.set("sortBy", params.sort);
 	if (params.sortOrder) url.searchParams.set("sortOrder", params.sortOrder);
 	if (params.search) url.searchParams.set("search", params.search);
+	if (params.filters)
+		url.searchParams.set("filters", JSON.stringify(params.filters));
+	if (params.dateRange)
+		url.searchParams.set("dateRange", JSON.stringify(params.dateRange));
 
 	let res: Response;
 	try {
