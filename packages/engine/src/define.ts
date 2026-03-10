@@ -67,7 +67,7 @@ import {
 	introspectTable,
 } from "./utils/introspect";
 
-export const TABLECRAFT_EXTENSIONS_KEY: unique symbol = Symbol("__tablecraft_ext") as any;
+export const TABLECRAFT_EXTENSIONS_KEY: unique symbol = Symbol("__tablecraft_ext");
 
 export type TableConfigWithExtensions<T extends Table = Table> = TableConfig & {
 	[TABLECRAFT_EXTENSIONS_KEY]?: RuntimeExtensions<T>;
@@ -119,7 +119,7 @@ export interface RuntimeExtensions<T extends Table = Table> {
 	};
 }
 
-function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
+export function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
 	return {
 		computedExpressions: new Map(),
 		transforms: new Map(),
@@ -130,6 +130,7 @@ function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
 		rawOrderBys: [],
 		ctes: new Map(),
 		sqlJoinConditions: new Map(),
+		countMode: undefined,
 	};
 }
 
@@ -1058,9 +1059,25 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 	toConfig(): TableConfigWithExtensions<T> {
 		const config = { ...this._config } as TableConfigWithExtensions<T>;
 
+		// Create a shallow clone of the extensions to isolate this config instance
+		// from future mutations on the builder.
+		const clonedExt: RuntimeExtensions<T> = {
+			...this._ext,
+			computedExpressions: new Map(this._ext.computedExpressions),
+			transforms: new Map(this._ext.transforms),
+			rawSelects: new Map(this._ext.rawSelects),
+			rawWheres: [...this._ext.rawWheres],
+			dynamicWheres: [...this._ext.dynamicWheres],
+			rawJoins: [...this._ext.rawJoins],
+			rawOrderBys: [...this._ext.rawOrderBys],
+			ctes: new Map(this._ext.ctes),
+			sqlJoinConditions: new Map(this._ext.sqlJoinConditions),
+			hooks: this._ext.hooks ? { ...this._ext.hooks } : undefined,
+		};
+
 		Object.defineProperty(config, TABLECRAFT_EXTENSIONS_KEY, {
-			value: this._ext,
-			enumerable: false,
+			value: clonedExt,
+			enumerable: true,
 			configurable: true,
 			writable: true
 		});

@@ -36,6 +36,7 @@ import {
   RuntimeExtensions,
   TABLECRAFT_EXTENSIONS_KEY,
   drizzleOperators,
+  emptyExtensions,
 } from './define';
 import { TableCraftError, QueryError, DialectError } from './errors';
 import { applyRoleBasedVisibility } from './core/roleFilter';
@@ -66,20 +67,7 @@ function resolveInput(input: ConfigInput): {
 
   return {
     config: plainConfig,
-    ext:
-      embeddedExt ??
-      {
-        computedExpressions: new Map(),
-        transforms: new Map(),
-        rawSelects: new Map(),
-        rawWheres: [],
-        dynamicWheres: [],
-        rawJoins: [],
-        rawOrderBys: [],
-        ctes: new Map(),
-        sqlJoinConditions: new Map(),
-        countMode: undefined,
-      },
+    ext: embeddedExt ?? emptyExtensions(),
   };
 }
 
