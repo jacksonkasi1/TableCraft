@@ -67,9 +67,11 @@ import {
 	introspectTable,
 } from "./utils/introspect";
 
-export const TABLECRAFT_EXTENSIONS_KEY: unique symbol = Symbol.for(
-	"__tablecraft_ext",
-) as any;
+export const TABLECRAFT_EXTENSIONS_KEY: unique symbol = Symbol("__tablecraft_ext") as any;
+
+export type TableConfigWithExtensions<T extends Table = Table> = TableConfig & {
+	[TABLECRAFT_EXTENSIONS_KEY]?: RuntimeExtensions<T>;
+};
 
 type InferColumns<T> = T extends { _: { columns: infer C } }
 	? keyof C & string
@@ -1053,12 +1055,15 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
 	// ──── Output ────
 
-	toConfig(): TableConfig {
-		const config = { ...this._config } as TableConfig & {
-			[TABLECRAFT_EXTENSIONS_KEY]?: RuntimeExtensions<T>;
-		};
+	toConfig(): TableConfigWithExtensions<T> {
+		const config = { ...this._config } as TableConfigWithExtensions<T>;
 
-		config[TABLECRAFT_EXTENSIONS_KEY] = this._ext;
+		Object.defineProperty(config, TABLECRAFT_EXTENSIONS_KEY, {
+			value: this._ext,
+			enumerable: false,
+			configurable: true,
+			writable: true
+		});
 
 		return config;
 	}

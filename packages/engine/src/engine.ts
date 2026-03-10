@@ -49,7 +49,11 @@ function resolveInput(input: ConfigInput): {
   config: TableConfig;
   ext: RuntimeExtensions<any>;
 } {
-  if (input && typeof input === 'object' && '_config' in input && '_ext' in input) {
+  if (!input) {
+    throw new TableCraftError('Invalid input: Table configuration is required', 'VALIDATION_ERROR');
+  }
+
+  if (typeof input === 'object' && '_config' in input && '_ext' in input) {
     const b = input as TableDefinitionBuilder<any>;
     return { config: b.toConfig(), ext: b._ext as RuntimeExtensions<any> };
   }
