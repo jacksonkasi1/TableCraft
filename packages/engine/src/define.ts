@@ -119,14 +119,6 @@ export interface RuntimeExtensions<T extends Table = Table> {
 	};
 }
 
-export const TABLECRAFT_EXTENSIONS_KEY = Symbol(
-	"tablecraft.runtimeExtensions",
-);
-
-export type TableConfigWithExtensions<T extends Table = Table> = TableConfig & {
-	[TABLECRAFT_EXTENSIONS_KEY]?: RuntimeExtensions<T>;
-};
-
 export function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
 	return {
 		computedExpressions: new Map(),
