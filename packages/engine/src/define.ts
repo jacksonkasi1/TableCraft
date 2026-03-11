@@ -67,6 +67,12 @@ import {
 	introspectTable,
 } from "./utils/introspect";
 
+export const TABLECRAFT_EXTENSIONS_KEY: unique symbol = Symbol.for("__tablecraft_ext") as any;
+
+export type TableConfigWithExtensions<T extends Table = Table> = TableConfig & {
+	[TABLECRAFT_EXTENSIONS_KEY]?: RuntimeExtensions<T>;
+};
+
 type InferColumns<T> = T extends { _: { columns: infer C } }
 	? keyof C & string
 	: string;
@@ -113,7 +119,7 @@ export interface RuntimeExtensions<T extends Table = Table> {
 	};
 }
 
-function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
+export function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
 	return {
 		computedExpressions: new Map(),
 		transforms: new Map(),
@@ -124,6 +130,25 @@ function emptyExtensions<T extends Table = Table>(): RuntimeExtensions<T> {
 		rawOrderBys: [],
 		ctes: new Map(),
 		sqlJoinConditions: new Map(),
+		countMode: undefined,
+	};
+}
+
+function cloneExtensions<T extends Table = Table>(
+	ext: RuntimeExtensions<T> = emptyExtensions<T>(),
+): RuntimeExtensions<T> {
+	return {
+		...ext,
+		computedExpressions: new Map(ext.computedExpressions),
+		transforms: new Map(ext.transforms),
+		rawSelects: new Map(ext.rawSelects),
+		rawWheres: [...ext.rawWheres],
+		dynamicWheres: [...ext.dynamicWheres],
+		rawJoins: [...ext.rawJoins],
+		rawOrderBys: [...ext.rawOrderBys],
+		ctes: new Map(ext.ctes),
+		sqlJoinConditions: new Map(ext.sqlJoinConditions),
+		hooks: ext.hooks ? { ...ext.hooks } : undefined,
 	};
 }
 
@@ -134,10 +159,12 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 	_table: T;
 	_ext: RuntimeExtensions<T>;
 
-	constructor(table: T, config: TableConfig) {
+	constructor(table: T, config: TableConfigWithExtensions<T>) {
 		this._table = table;
 		this._config = config;
-		this._ext = emptyExtensions();
+		this._ext = cloneExtensions(
+			config[TABLECRAFT_EXTENSIONS_KEY] ?? emptyExtensions<T>(),
+		);
 	}
 
 	// ──── Column Format / Metadata ────
@@ -1049,8 +1076,15 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
 	// ──── Output ────
 
-	toConfig(): TableConfig {
-		return { ...this._config };
+	toConfig(): TableConfigWithExtensions<T> {
+		const config = { ...this._config } as TableConfigWithExtensions<T>;
+		Object.defineProperty(config, TABLECRAFT_EXTENSIONS_KEY, {
+			value: cloneExtensions(this._ext),
+			enumerable: true,
+			configurable: true,
+			writable: true,
+		});
+		return config;
 	}
 }
 
@@ -1058,10 +1092,13 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
 export function defineTable<T extends Table>(
 	table: T,
-	options?: QuickOptions<T> | TableConfig,
+	options?: QuickOptions<T> | TableConfigWithExtensions<T>,
 ): TableDefinitionBuilder<T> {
 	if (options && "columns" in options && Array.isArray(options.columns)) {
-		return new TableDefinitionBuilder(table, options as TableConfig);
+		return new TableDefinitionBuilder(
+			table,
+			options as TableConfigWithExtensions<T>,
+		);
 	}
 
 	const config = introspectTable(table);

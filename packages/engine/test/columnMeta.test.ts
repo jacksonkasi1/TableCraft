@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { defineTable } from '../src/define';
+import { defineTable, TABLECRAFT_EXTENSIONS_KEY } from '../src/define';
 import { sql } from 'drizzle-orm';
 import { pgTable, uuid, varchar, integer, timestamp } from 'drizzle-orm/pg-core';
 
@@ -101,5 +101,26 @@ describe('columnMeta', () => {
     expect((col as any).format).toBe('currency'); // preserved from .format()
     expect((col as any).width).toBe(150); // added by .columnMeta()
     expect((col as any).minWidth).toBe(100);
+  });
+
+  it('should rehydrate runtime extensions from toConfig output', () => {
+    const beforeQuery = (params: any) => params;
+
+    const builder = defineTable(orders)
+      .computed('profit', sql`${orders.total} - ${orders.cost}`)
+      .transform('status', (value) => String(value).toUpperCase())
+      .beforeQuery(beforeQuery);
+
+    const config = builder.toConfig();
+    const runtimeExt = config[TABLECRAFT_EXTENSIONS_KEY]!;
+
+    const rebuilt = defineTable(orders, { ...config });
+
+    expect(rebuilt._ext.computedExpressions.has('profit')).toBe(true);
+    expect(rebuilt._ext.transforms.has('status')).toBe(true);
+    expect(rebuilt._ext.hooks?.beforeQuery).toBe(beforeQuery);
+
+    rebuilt.rawWhere(sql`1 = 1`);
+    expect(runtimeExt.rawWheres).toHaveLength(0);
   });
 });
