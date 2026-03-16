@@ -46,6 +46,18 @@ pnpm add -D @tablecraft/codegen
 
 {% endtab %}
 
+{% tab title="SvelteKit" %}
+
+```bash
+# Install core, table, and SvelteKit adapter
+pnpm add @tablecraft/engine @tablecraft/table @tablecraft/adapter-sveltekit
+
+# Install codegen as dev dependency
+pnpm add -D @tablecraft/codegen
+```
+
+{% endtab %}
+
 {% tab title="Elysia" %}
 
 ```bash
@@ -163,6 +175,37 @@ const handler = createNextHandler({
 });
 
 export const GET = handler;
+```
+
+{% endtab %}
+
+{% tab title="SvelteKit" %}
+
+```typescript
+// src/hooks.server.ts
+import type { Handle } from "@sveltejs/kit";
+import { sequence } from "@sveltejs/kit/hooks";
+import { createSvelteKitHandle } from "@tablecraft/adapter-sveltekit";
+import { db } from "./db";
+import * as schema from "./db/schema";
+import { productsConfig } from "./tables/products";
+
+const authHandle: Handle = async ({ event, resolve }) => {
+  event.locals.user = { id: "1", roles: ["admin"] };
+  return resolve(event);
+};
+
+const tablecraftHandle = createSvelteKitHandle({
+  db,
+  schema,
+  configs: { products: productsConfig },
+  prefix: "/api/engine",
+  getContext: async (event) => ({
+    user: event.locals.user,
+  }),
+});
+
+export const handle: Handle = sequence(authHandle, tablecraftHandle);
 ```
 
 {% endtab %}

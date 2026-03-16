@@ -88,5 +88,6 @@ npx @tablecraft/codegen --url http://localhost:3000/api/engine --out ./src/gener
 | `@tablecraft/adapter-hono`    | Hono.js adapter                 |
 | `@tablecraft/adapter-express` | Express adapter                 |
 | `@tablecraft/adapter-next`    | Next.js adapter                 |
+| `@tablecraft/adapter-sveltekit` | SvelteKit adapter             |
 | `@tablecraft/adapter-elysia`  | Elysia (Bun) adapter            |
 | `@tablecraft/plugin-cache`    | Caching plugin                  |

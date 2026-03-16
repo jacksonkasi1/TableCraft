@@ -1,0 +1,51 @@
+{
+  "name": "@tablecraft/adapter-sveltekit",
+  "version": "0.1.0",
+  "description": "SvelteKit adapter for TableCraft",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun run --bun tsc",
+    "dev": "bun run --bun tsc --watch",
+    "test": "vitest",
+    "typecheck": "bun run --bun tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@tablecraft/engine": ">=0.1.0",
+    "@sveltejs/kit": ">=2.25.0"
+  },
+  "devDependencies": {
+    "@tablecraft/engine": "workspace:*",
+    "@types/node": "^25.2.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.1"
+  },
+  "keywords": [
+    "tablecraft",
+    "sveltekit",
+    "adapter",
+    "svelte"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jacksonkasi1/TableCraft.git",
+    "directory": "packages/adapter-sveltekit"
+  },
+  "homepage": "https://github.com/jacksonkasi1/TableCraft#readme",
+  "bugs": {
+    "url": "https://github.com/jacksonkasi1/TableCraft/issues"
+  },
+  "license": "MIT"
+}

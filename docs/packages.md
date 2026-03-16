@@ -119,6 +119,28 @@ export { GET, POST } = createNextHandler({ db, schema, configs });
 
 {% endtab %}
 
+{% tab title="SvelteKit" %}
+Adapter for SvelteKit server hooks or `+server.ts` routes.
+
+```bash
+pnpm add @tablecraft/adapter-sveltekit
+```
+
+```typescript
+// src/hooks.server.ts
+import type { Handle } from '@sveltejs/kit';
+import { createSvelteKitHandle } from '@tablecraft/adapter-sveltekit';
+
+export const handle: Handle = createSvelteKitHandle({
+  db,
+  schema,
+  configs,
+  prefix: '/api',
+});
+```
+
+{% endtab %}
+
 {% tab title="Elysia" %}
 Adapter for Elysia (Bun framework).
 
