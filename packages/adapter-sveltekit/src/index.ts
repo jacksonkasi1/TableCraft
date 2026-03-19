@@ -1,4 +1,7 @@
+// ** import types
 import type { Handle, RequestEvent, RequestHandler } from '@sveltejs/kit';
+
+// ** import apis
 import {
   createEngines,
   createTableEngine,
@@ -66,6 +69,8 @@ export interface SvelteKitRouteHandlers {
   metaGET: RequestHandler;
 }
 
+const DEFAULT_PREFIX = '/api/data';
+
 function json(data: unknown, init?: ResponseInit): Response {
   return Response.json(data, init);
 }
@@ -98,12 +103,28 @@ function getTableParam(event: RequestEvent): string | null {
 
 function normalizePathPrefix(prefix: string): string {
   const trimmed = prefix.trim();
-  if (trimmed === '' || trimmed === '/') {
-    return '/';
+
+  if (trimmed === '') {
+    throw new Error('SvelteKit adapter prefix cannot be empty');
+  }
+
+  if (trimmed === '/') {
+    throw new Error('SvelteKit adapter prefix cannot be root /');
   }
 
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return withLeadingSlash.replace(/\/+$/g, '');
+}
+
+async function hasTableAccess(
+  config: TableConfig,
+  context: EngineContext,
+  event: RequestEvent,
+  checkAccess: SvelteKitHandlerOptions['checkAccess'] | SvelteKitRouteOptions['checkAccess']
+): Promise<boolean> {
+  return checkAccess
+    ? await checkAccess(config, context, event)
+    : defaultCheckAccess(config, context);
 }
 
 function stripPrefix(pathname: string, prefix: string): string | null {
@@ -149,9 +170,15 @@ function resolveRouteTarget(rawTableParam: string): RouteTarget {
 async function handleMetadataRequest(
   engine: ReturnType<typeof createTableEngine>,
   event: RequestEvent,
-  getContext: SvelteKitHandlerOptions['getContext'] | SvelteKitRouteOptions['getContext']
+  getContext: SvelteKitHandlerOptions['getContext'] | SvelteKitRouteOptions['getContext'],
+  checkAccess: SvelteKitHandlerOptions['checkAccess'] | SvelteKitRouteOptions['checkAccess']
 ): Promise<Response> {
   const context = await resolveContext(getContext, event);
+
+  if (!(await hasTableAccess(engine.getConfig(), context, event, checkAccess))) {
+    return json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   return json(engine.getMetadata(context));
 }
 
@@ -167,18 +194,31 @@ async function handleDiscoveryRequest(
   const context = await resolveContext(options.getContext, event);
 
   if (options.checkAccess) {
-    const hasAccess = await options.checkAccess(
+    const hasDiscoveryAccess = await options.checkAccess(
       { name: '_tables' } as TableConfig,
       context,
       event
     );
 
-    if (!hasAccess) {
+    if (!hasDiscoveryAccess) {
       return json({ error: 'Forbidden' }, { status: 403 });
     }
   }
 
-  return json(Object.keys(engines));
+  const tableNames = await Promise.all(
+    Object.entries(engines).map(async ([tableName, engine]) => {
+      const hasAccess = await hasTableAccess(
+        engine.getConfig(),
+        context,
+        event,
+        options.checkAccess
+      );
+
+      return hasAccess ? tableName : null;
+    })
+  );
+
+  return json(tableNames.filter((tableName): tableName is string => tableName !== null));
 }
 
 async function handleQueryRequest(
@@ -191,11 +231,7 @@ async function handleQueryRequest(
   const context = await resolveContext(getContext, event);
   const config = engine.getConfig();
 
-  const hasAccess = checkAccess
-    ? await checkAccess(config, context, event)
-    : defaultCheckAccess(config, context);
-
-  if (!hasAccess) {
+  if (!(await hasTableAccess(config, context, event, checkAccess))) {
     return json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -260,7 +296,7 @@ async function dispatchRequest(
   }
 
   if (target.kind === 'meta') {
-    return handleMetadataRequest(engine, event, options.getContext);
+    return handleMetadataRequest(engine, event, options.getContext, options.checkAccess);
   }
 
   return handleQueryRequest(
@@ -307,7 +343,7 @@ export function createSvelteKitHandlers(
         return json({ error: `Unknown resource '${tableName}'` }, { status: 404 });
       }
 
-      return await handleMetadataRequest(engine, event, options.getContext);
+      return await handleMetadataRequest(engine, event, options.getContext, options.checkAccess);
     } catch (error: unknown) {
       return errorResponse(error);
     }
@@ -350,7 +386,7 @@ export function createSvelteKitHandle(
     schema: options.schema,
     configs: options.configs,
   });
-  const prefix = normalizePathPrefix(options.prefix ?? '/api/data');
+  const prefix = normalizePathPrefix(options.prefix ?? DEFAULT_PREFIX);
 
   return async ({ event, resolve }) => {
     const pathname = new URL(event.request.url).pathname;
@@ -409,7 +445,7 @@ export function createSvelteKitRouteHandlers(
 
   const metaGET: RequestHandler = async (event) => {
     try {
-      return await handleMetadataRequest(engine, event, options.getContext);
+      return await handleMetadataRequest(engine, event, options.getContext, options.checkAccess);
     } catch (error: unknown) {
       return errorResponse(error);
     }

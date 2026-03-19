@@ -1,3 +1,4 @@
+// ** import core packages
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createEngines = vi.fn();
@@ -108,6 +109,32 @@ describe('@tablecraft/adapter-sveltekit', () => {
       columns: [{ name: 'id' }],
     });
     expect(engine.getMetadata).toHaveBeenCalledWith({ tenantId: 'tenant_1' });
+  });
+
+  it('blocks metadata for unauthorized users', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({ name: 'users', access: { roles: ['admin'] } })),
+      query: vi.fn(),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(() => ({ columns: [{ name: 'secret' }] })),
+    };
+
+    createEngines.mockReturnValue({ users: engine });
+    defaultCheckAccess.mockReturnValue(false);
+
+    const handlers = createSvelteKitHandlers({
+      db: {},
+      schema: {},
+      configs: [],
+    });
+
+    const response = await handlers.metaGET(
+      createEvent('https://example.test/api/data/users/_meta', { table: 'users' })
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'Forbidden' });
+    expect(engine.getMetadata).not.toHaveBeenCalled();
   });
 
   it('dispatches metadata and discovery from a single catch-all handler', async () => {
@@ -269,5 +296,49 @@ describe('@tablecraft/adapter-sveltekit', () => {
 
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: 'Not found' });
+  });
+
+  it('filters discovery results to accessible tables', async () => {
+    const usersEngine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+    };
+    const adminEngine = {
+      getConfig: vi.fn(() => ({ name: 'adminUsers', access: { roles: ['admin'] } })),
+    };
+
+    createEngines.mockReturnValue({ users: usersEngine, adminUsers: adminEngine });
+    defaultCheckAccess.mockImplementation((config) => config.name === 'users');
+
+    const handlers = createSvelteKitHandlers({
+      db: {},
+      schema: {},
+      configs: [],
+      enableDiscovery: true,
+    });
+
+    const response = await handlers.tablesGET(createEvent('https://example.test/api/data/_tables'));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(['users']);
+  });
+
+  it('rejects root prefixes for hook mode', () => {
+    expect(() =>
+      createSvelteKitHandle({
+        db: {},
+        schema: {},
+        configs: [],
+        prefix: '/',
+      })
+    ).toThrow('SvelteKit adapter prefix cannot be root /');
+
+    expect(() =>
+      createSvelteKitHandle({
+        db: {},
+        schema: {},
+        configs: [],
+        prefix: '   ',
+      })
+    ).toThrow('SvelteKit adapter prefix cannot be empty');
   });
 });
