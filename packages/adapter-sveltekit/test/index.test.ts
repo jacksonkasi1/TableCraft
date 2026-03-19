@@ -1,20 +1,33 @@
 // ** import core packages
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const createEngines = vi.fn();
-const createTableEngine = vi.fn();
-const parseRequest = vi.fn();
-const defaultCheckAccess = vi.fn();
-const getExportMeta = vi.fn();
-
-class MockTableCraftError extends Error {
-  statusCode: number;
-
-  constructor(message: string, statusCode = 500) {
-    super(message);
-    this.statusCode = statusCode;
+const {
+  createEngines,
+  createTableEngine,
+  parseRequest,
+  defaultCheckAccess,
+  getExportMeta,
+  MockTableCraftError,
+  mockState
+} = vi.hoisted(() => {
+  class MockTableCraftError extends Error {
+    statusCode: number;
+    constructor(message: string, statusCode = 500) {
+      super(message);
+      this.statusCode = statusCode;
+    }
   }
-}
+
+  return {
+    createEngines: vi.fn(),
+    createTableEngine: vi.fn(),
+    parseRequest: vi.fn(),
+    defaultCheckAccess: vi.fn(),
+    getExportMeta: vi.fn(),
+    MockTableCraftError,
+    mockState: { base: '' }
+  };
+});
 
 vi.mock('@tablecraft/engine', () => ({
   createEngines,
@@ -23,6 +36,10 @@ vi.mock('@tablecraft/engine', () => ({
   checkAccess: defaultCheckAccess,
   getExportMeta,
   TableCraftError: MockTableCraftError,
+}));
+
+vi.mock('$app/paths', () => ({
+  get base() { return mockState.base; }
 }));
 
 import {
@@ -44,6 +61,7 @@ function createEvent(urlStr: string, params: Record<string, string> = {}) {
 describe('@tablecraft/adapter-sveltekit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.base = '';
     parseRequest.mockReturnValue({ page: 1 });
     defaultCheckAccess.mockReturnValue(true);
     getExportMeta.mockReturnValue({
@@ -212,6 +230,79 @@ describe('@tablecraft/adapter-sveltekit', () => {
 
     expect(pageResponse.status).toBe(200);
     await expect(pageResponse.text()).resolves.toBe('resolved');
+    expect(resolve).toHaveBeenCalledOnce();
+  });
+
+  it('strips base path if present', async () => {
+    mockState.base = '/myapp';
+
+    const usersEngine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+      query: vi.fn(async () => ({
+        data: [{ id: 8 }],
+        meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+      })),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(),
+    };
+
+    createEngines.mockReturnValue({ users: usersEngine });
+
+    const handle = createSvelteKitHandle({
+      db: {},
+      schema: {},
+      configs: [],
+      prefix: '/api',
+    });
+
+    const resolve = vi.fn(async () => new Response('resolved', { status: 200 }));
+
+    const apiResponse = await handle({
+      event: createEvent('https://example.test/myapp/api/users'),
+      resolve,
+    } as any);
+
+    expect(apiResponse.status).toBe(200);
+    await expect(apiResponse.json()).resolves.toEqual({
+      data: [{ id: 8 }],
+      meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+    });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('does not strip base path if it is a prefix of another folder', async () => {
+    mockState.base = '/app';
+
+    const usersEngine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+      query: vi.fn(async () => ({
+        data: [{ id: 8 }],
+        meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+      })),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(),
+    };
+
+    createEngines.mockReturnValue({ users: usersEngine });
+
+    const handle = createSvelteKitHandle({
+      db: {},
+      schema: {},
+      configs: [],
+      prefix: '/api',
+    });
+
+    const resolve = vi.fn(async () => new Response('resolved', { status: 200 }));
+
+    // /apple is NOT under /app
+    const apiResponse = await handle({
+      event: createEvent('https://example.test/apple/api/users'),
+      resolve,
+    } as any);
+
+    // Should passthrough
+    expect(apiResponse.status).toBe(200);
+    await expect(apiResponse.text()).resolves.toBe('resolved');
     expect(resolve).toHaveBeenCalledOnce();
   });
 

@@ -1,6 +1,9 @@
 // ** import types
 import type { Handle, RequestEvent, RequestHandler } from '@sveltejs/kit';
 
+// ** import core packages
+import { base } from '$app/paths';
+
 // ** import apis
 import {
   createEngines,
@@ -202,12 +205,15 @@ async function hasTableAccess(
  * @returns The remaining path segment (e.g., 'table/_meta') or null if it doesn't match the prefix
  */
 function stripPrefix(pathname: string, prefix: string): string | null {
-  // Note: Since this is an adapter library, we cannot easily import $app/paths directly
-  // without complicating the build. SvelteKit passes the full URL including base to hooks,
-  // so developers using base paths may need to manually configure the prefix 
-  // (e.g. prefix: '/base/api/data').
+  let cleanPathname = pathname;
+  if (base && cleanPathname.startsWith(base)) {
+    const nextChar = cleanPathname[base.length];
+    if (nextChar === undefined || nextChar === '/') {
+      cleanPathname = cleanPathname.slice(base.length);
+    }
+  }
 
-  const normalizedPath = pathname.replace(/\/+$/g, '') || '/';
+  const normalizedPath = cleanPathname.replace(/\/+$/g, '') || '/';
 
   if (normalizedPath === prefix) {
     return null;
