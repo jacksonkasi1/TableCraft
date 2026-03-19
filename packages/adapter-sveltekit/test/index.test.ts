@@ -403,6 +403,18 @@ describe('@tablecraft/adapter-sveltekit', () => {
       resolve: vi.fn(),
     } as any);
     expect(apiPrefixResponse.status).toBe(200);
+
+    // Non-matching path should pass through for these prefixes
+    const passThroughEvent = createEvent('https://example.test/other/path', {
+      table: 'users',
+    });
+
+    const passThroughResponse = await apiPrefixHandle({
+      event: passThroughEvent,
+      resolve: vi.fn(async () => new Response('next', { status: 200 })),
+    } as any);
+    expect(passThroughResponse.status).toBe(200);
+    await expect(passThroughResponse.text()).resolves.toBe('next');
   });
 
   it('applies discovery access control via createSvelteKitHandle', async () => {
@@ -445,5 +457,166 @@ describe('@tablecraft/adapter-sveltekit', () => {
     } as any);
 
     expect(response.status).toBe(200);
+  });
+
+  it('returns 403 when a custom checkAccess denies access in multi-table handle()', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+      query: vi.fn(async () => ({
+        data: [{ id: 1 }],
+        meta: { total: 1, page: 1, pageSize: 25, totalPages: 1 },
+      })),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(),
+    };
+
+    createEngines.mockReturnValue({ users: engine });
+    const checkAccess = vi.fn().mockResolvedValue(false);
+
+    const handle = createSvelteKitHandle({
+      db: {}, schema: {}, configs: [],
+      checkAccess,
+    });
+
+    const response = await handle({
+      event: createEvent('https://example.test/api/data/users'),
+      resolve: vi.fn(),
+    } as any);
+
+    expect(checkAccess).toHaveBeenCalled();
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'Forbidden' });
+  });
+
+  it('returns 403 when a custom checkAccess denies access in single-table route handlers', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+      query: vi.fn(async () => ({
+        data: [{ id: 1 }],
+        meta: { total: 1, page: 1, pageSize: 25, totalPages: 1 },
+      })),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(),
+    };
+
+    createTableEngine.mockReturnValue(engine);
+    const checkAccess = vi.fn().mockResolvedValue(false);
+
+    const handlers = createSvelteKitRouteHandlers({
+      db: {}, schema: {}, config: { name: 'users' } as any,
+      checkAccess,
+    });
+
+    const response = await handlers.GET(createEvent('https://example.test/api/users'));
+
+    expect(checkAccess).toHaveBeenCalled();
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: 'Forbidden' });
+  });
+
+  it('applies discovery access control via createSvelteKitHandle when discovery is disabled', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+    };
+    createEngines.mockReturnValue({ users: engine });
+    const checkAccess = vi.fn().mockResolvedValue(true);
+
+    const handle = createSvelteKitHandle({
+      db: {}, schema: {}, configs: [], prefix: '/api/data',
+      enableDiscovery: false,
+      checkAccess,
+    });
+
+    const resolve = vi.fn().mockResolvedValue(new Response('next', { status: 200 }));
+    const response = await handle({
+      event: createEvent('https://example.test/api/data/_tables'),
+      resolve,
+    } as any);
+
+    expect(checkAccess).not.toHaveBeenCalled();
+    // In our implementation, handleDiscoveryRequest returns 404 when disabled
+    expect(response.status).toBe(404);
+  });
+
+  it('returns 400 when export is requested but disabled for the table', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({
+        name: 'users',
+        export: { enabled: false, formats: ['csv'] },
+      })),
+    };
+    createTableEngine.mockReturnValue(engine);
+    parseRequest.mockReturnValue({ export: 'csv' });
+
+    const handlers = createSvelteKitRouteHandlers({
+      db: {}, schema: {}, config: { name: 'users' } as any,
+    });
+
+    const response = await handlers.GET(createEvent('https://example.test/api/users?export=csv'));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toHaveProperty('error');
+  });
+
+  it('returns 400 when export is requested with unsupported format', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({
+        name: 'users',
+        export: { enabled: true, formats: ['csv'] },
+      })),
+    };
+    createTableEngine.mockReturnValue(engine);
+    parseRequest.mockReturnValue({ export: 'json' });
+
+    const handlers = createSvelteKitRouteHandlers({
+      db: {}, schema: {}, config: { name: 'users' } as any,
+    });
+
+    const response = await handlers.GET(createEvent('https://example.test/api/users?export=json'));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toHaveProperty('error');
+  });
+
+  it('supports exports via multi-table SvelteKit handle', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({
+        name: 'users',
+        export: { enabled: true, formats: ['csv'] },
+      })),
+      exportData: vi.fn(async () => 'id\n1'),
+    };
+    createEngines.mockReturnValue({ users: engine });
+    parseRequest.mockReturnValue({ export: 'csv' });
+
+    const handle = createSvelteKitHandle({ db: {}, schema: {}, configs: [] });
+    const response = await handle({
+      event: createEvent('https://example.test/api/data/users?export=csv'),
+      resolve: vi.fn(),
+    } as any);
+
+    expect(engine.exportData).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/csv');
+  });
+
+  it('uses errorResponse and appropriate status when getExportMeta fails', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({
+        name: 'users',
+        export: { enabled: true, formats: ['csv'] },
+      })),
+      exportData: vi.fn(async () => 'id\n1'),
+    };
+    createTableEngine.mockReturnValue(engine);
+    parseRequest.mockReturnValue({ export: 'csv' });
+    getExportMeta.mockImplementation(() => {
+      throw new Error('boom');
+    });
+
+    const handlers = createSvelteKitRouteHandlers({
+      db: {}, schema: {}, config: { name: 'users' } as any,
+    });
+
+    const response = await handlers.GET(createEvent('https://example.test/api/users?export=csv'));
+    expect(response.status).toBeGreaterThanOrEqual(400);
   });
 });
