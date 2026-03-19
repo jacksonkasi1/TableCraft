@@ -1,0 +1,35 @@
+{
+  "name": "sveltekit-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-check --tsconfig ./tsconfig.json --watch",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "seed": "bun run src/lib/server/db/seed.ts",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.16.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.1.4",
+    "typescript": "^5.0.0",
+    "vite": "^6.0.0",
+    "drizzle-kit": "^0.30.4",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@tablecraft/engine": "workspace:*",
+    "@tablecraft/adapter-sveltekit": "workspace:*",
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.5",
+    "dotenv": "^16.4.7"
+  }
+}

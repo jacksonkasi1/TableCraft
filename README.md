@@ -84,7 +84,7 @@ That's it! 🎉 No column definitions needed.
 | 🔐 **Role-based Visibility** | Control column visibility by user role                        |
 | 🗑️ **Soft Delete Support**   | Built-in soft delete filtering                                |
 
-**Plus:** Caching plugin, multiple backend adapters (Hono, Express, Next.js, Elysia), computed columns, relationships & joins, type generation, OpenAPI spec, and more...
+**Plus:** Caching plugin, multiple backend adapters (Hono, Express, Next.js, SvelteKit, Elysia), computed columns, relationships & joins, type generation, OpenAPI spec, and more...
 
 📚 **[Explore all features in the docs →](https://jacksonkasi.gitbook.io/tablecraft)**
 
@@ -100,6 +100,7 @@ That's it! 🎉 No column definitions needed.
 | `@tablecraft/client`          | Client utilities for API communication               |
 | `@tablecraft/adapter-hono`    | Hono server adapter                                  |
 | `@tablecraft/adapter-next`    | Next.js server adapter                               |
+| `@tablecraft/adapter-sveltekit` | SvelteKit server adapter                           |
 | `@tablecraft/adapter-express` | Express server adapter                               |
 | `@tablecraft/adapter-elysia`  | Elysia server adapter                                |
 | `@tablecraft/plugin-cache`    | Caching plugin                                       |

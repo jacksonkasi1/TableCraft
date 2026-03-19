@@ -245,6 +245,7 @@ Support for major frameworks:
 | `@tablecraft/adapter-hono`    | Hono.js      |
 | `@tablecraft/adapter-express` | Express      |
 | `@tablecraft/adapter-next`    | Next.js      |
+| `@tablecraft/adapter-sveltekit` | SvelteKit  |
 | `@tablecraft/adapter-elysia`  | Elysia (Bun) |
 {% endcolumn %}
 {% endcolumns %}
