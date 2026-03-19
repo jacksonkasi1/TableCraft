@@ -14,9 +14,15 @@ import {
   TableCraftError,
 } from '@tablecraft/engine';
 
+/**
+ * Options for configuring SvelteKit route-based handlers.
+ */
 export interface SvelteKitHandlerOptions {
+  /** Database connection object */
   db: unknown;
+  /** Database schema */
   schema: Record<string, unknown>;
+  /** Table configurations to expose */
   configs: ConfigInput[] | Record<string, ConfigInput>;
   /**
    * Enable the optional `/_tables` discovery endpoint.
@@ -38,11 +44,23 @@ export interface SvelteKitHandlerOptions {
   ) => boolean | Promise<boolean>;
 }
 
+/**
+ * Options for configuring single-table SvelteKit route handlers.
+ */
 export interface SvelteKitRouteOptions {
+  /** Database connection object */
   db: unknown;
+  /** Database schema */
   schema: Record<string, unknown>;
+  /** Single table configuration to expose */
   config: ConfigInput;
+  /**
+   * Extract context from SvelteKit's RequestEvent.
+   */
   getContext?: (event: RequestEvent) => EngineContext | Promise<EngineContext>;
+  /**
+   * Override built-in access control logic.
+   */
   checkAccess?: (
     config: TableConfig,
     context: EngineContext,
@@ -50,6 +68,9 @@ export interface SvelteKitRouteOptions {
   ) => boolean | Promise<boolean>;
 }
 
+/**
+ * Options for configuring the SvelteKit hook-based handle.
+ */
 export interface SvelteKitHandleOptions extends SvelteKitHandlerOptions {
   /**
    * Mount prefix intercepted by `hooks.server.ts`.
@@ -58,14 +79,25 @@ export interface SvelteKitHandleOptions extends SvelteKitHandlerOptions {
   prefix?: string;
 }
 
+/**
+ * Collection of SvelteKit handlers for multiple tables.
+ */
 export interface SvelteKitHandlers {
+  /** Main query handler for table endpoints */
   GET: RequestHandler;
+  /** Metadata handler for _meta endpoints */
   metaGET: RequestHandler;
+  /** Discovery handler for _tables endpoint */
   tablesGET: RequestHandler;
 }
 
+/**
+ * Collection of SvelteKit handlers for a single table.
+ */
 export interface SvelteKitRouteHandlers {
+  /** Main query handler */
   GET: RequestHandler;
+  /** Metadata handler */
   metaGET: RequestHandler;
 }
 
@@ -360,24 +392,41 @@ export function createSvelteKitHandlers(
   return { GET, metaGET, tablesGET };
 }
 
+/**
+ * Extracts a single query handler for table operations.
+ * Returns the `GET` handler from `createSvelteKitHandlers`.
+ */
 export function createSvelteKitHandler(
   options: SvelteKitHandlerOptions
 ): RequestHandler {
   return createSvelteKitHandlers(options).GET;
 }
 
+/**
+ * Extracts a single metadata handler.
+ * Returns the `metaGET` handler from `createSvelteKitHandlers`.
+ */
 export function createSvelteKitMetaHandler(
   options: SvelteKitHandlerOptions
 ): RequestHandler {
   return createSvelteKitHandlers(options).metaGET;
 }
 
+/**
+ * Extracts a single discovery handler.
+ * Returns the `tablesGET` handler from `createSvelteKitHandlers`.
+ */
 export function createSvelteKitDiscoveryHandler(
   options: SvelteKitHandlerOptions
 ): RequestHandler {
   return createSvelteKitHandlers(options).tablesGET;
 }
 
+/**
+ * Creates a SvelteKit Handle for use in `hooks.server.ts`.
+ * Automatically intercepts requests matching the configured prefix
+ * and passes through non-matching requests to `resolve`.
+ */
 export function createSvelteKitHandle(
   options: SvelteKitHandleOptions
 ): Handle {
@@ -390,10 +439,16 @@ export function createSvelteKitHandle(
 
   return async ({ event, resolve }) => {
     const pathname = new URL(event.request.url).pathname;
-    const rawTableParam = stripPrefix(pathname, prefix);
+    let rawTableParam = stripPrefix(pathname, prefix);
 
     if (rawTableParam === null) {
       return resolve(event);
+    }
+
+    try {
+      rawTableParam = decodeURIComponent(rawTableParam);
+    } catch {
+      // Ignore malformed URIs, let it fall through or 404
     }
 
     if (event.request.method !== 'GET') {
@@ -454,12 +509,20 @@ export function createSvelteKitRouteHandlers(
   return { GET, metaGET };
 }
 
+/**
+ * Extracts the single-table query handler.
+ * Returns the `GET` handler from `createSvelteKitRouteHandlers`.
+ */
 export function createSvelteKitRouteHandler(
   options: SvelteKitRouteOptions
 ): RequestHandler {
   return createSvelteKitRouteHandlers(options).GET;
 }
 
+/**
+ * Extracts the single-table metadata handler.
+ * Returns the `metaGET` handler from `createSvelteKitRouteHandlers`.
+ */
 export function createSvelteKitRouteMetaHandler(
   options: SvelteKitRouteOptions
 ): RequestHandler {

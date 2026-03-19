@@ -341,4 +341,107 @@ describe('@tablecraft/adapter-sveltekit', () => {
       })
     ).toThrow('SvelteKit adapter prefix cannot be empty');
   });
+
+  it('returns 400 when the table param is missing for GET', async () => {
+    const handlers = createSvelteKitHandlers({ db: {}, schema: {}, configs: [] });
+    const response = await handlers.GET(createEvent('https://example.test/api/data'));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Missing route param: table' });
+  });
+
+  it('returns 404 for unknown table in GET', async () => {
+    const handlers = createSvelteKitHandlers({ db: {}, schema: {}, configs: [] });
+    const response = await handlers.GET(createEvent('https://example.test/api/data/unknown', { table: 'unknown' }));
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toHaveProperty('error');
+  });
+
+  it('returns 404 for unknown table in metaGET', async () => {
+    const handlers = createSvelteKitHandlers({ db: {}, schema: {}, configs: [] });
+    const response = await handlers.metaGET(createEvent('https://example.test/api/data/unknown/_meta', { table: 'unknown' }));
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toHaveProperty('error');
+  });
+
+  it('returns 404 for unknown table in createSvelteKitHandle', async () => {
+    createEngines.mockReturnValue({});
+    const handle = createSvelteKitHandle({ db: {}, schema: {}, configs: [], prefix: '/api/data' });
+    const response = await handle({
+      event: createEvent('https://example.test/api/data/unknown'),
+      resolve: vi.fn(),
+    } as any);
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toHaveProperty('error');
+  });
+
+  it('normalizes prefix values in createSvelteKitHandle (default, trailing slashes)', async () => {
+    const usersEngine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+      query: vi.fn(async () => ({
+        data: [{ id: 1 }],
+        meta: { total: 1, page: 1, pageSize: 25, totalPages: 1 },
+      })),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(),
+    };
+    createEngines.mockReturnValue({ users: usersEngine });
+
+    // default prefix
+    const defaultHandle = createSvelteKitHandle({ db: {}, schema: {}, configs: [] });
+    const defaultResponse = await defaultHandle({
+      event: createEvent('https://example.test/api/data/users'),
+      resolve: vi.fn(),
+    } as any);
+    expect(defaultResponse.status).toBe(200);
+
+    // trailing slashes and whitespace
+    const apiPrefixHandle = createSvelteKitHandle({ db: {}, schema: {}, configs: [], prefix: '  /api/  ' });
+    const apiPrefixResponse = await apiPrefixHandle({
+      event: createEvent('https://example.test/api/users'),
+      resolve: vi.fn(),
+    } as any);
+    expect(apiPrefixResponse.status).toBe(200);
+  });
+
+  it('applies discovery access control via createSvelteKitHandle', async () => {
+    const usersEngine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+    };
+    createEngines.mockReturnValue({ users: usersEngine });
+    
+    const checkAccess = vi.fn().mockResolvedValue(false);
+    const handle = createSvelteKitHandle({
+      db: {}, schema: {}, configs: [],
+      prefix: '/api/data',
+      enableDiscovery: true,
+      checkAccess,
+    });
+
+    const response = await handle({
+      event: createEvent('https://example.test/api/data/_tables'),
+      resolve: vi.fn(),
+    } as any);
+
+    expect(checkAccess).toHaveBeenCalled();
+    expect(response.status).toBe(403);
+  });
+
+  it('decodes URL-encoded table names in hook mode', async () => {
+    const engine = {
+      getConfig: vi.fn(() => ({ name: 'my table' })),
+      query: vi.fn(async () => ({ data: [], meta: { total: 0, page: 1, pageSize: 25, totalPages: 0 } })),
+    };
+    createEngines.mockReturnValue({ 'my table': engine });
+
+    const handle = createSvelteKitHandle({
+      db: {}, schema: {}, configs: [], prefix: '/api',
+    });
+
+    const response = await handle({
+      event: createEvent('https://example.test/api/my%20table'),
+      resolve: vi.fn(),
+    } as any);
+
+    expect(response.status).toBe(200);
+  });
 });
