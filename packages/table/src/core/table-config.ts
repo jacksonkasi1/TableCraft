@@ -4,6 +4,7 @@ import type { TableConfig } from "../types";
  * Default table configuration.
  */
 const defaultConfig: TableConfig = {
+  defaultExpanded: false,
   enableRowSelection: true,
   enableKeyboardNavigation: false,
   enableClickRowSelect: false,

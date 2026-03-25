@@ -46,6 +46,8 @@ export function defaultColumnOrder<C extends string>(columns: C[]): C[] {
 // ─────────────────────────────────────────────
 
 export interface TableConfig {
+  /** Default expanded state for rows */
+  defaultExpanded?: boolean | Record<string, boolean>;
   /** Enable/disable row selection checkboxes */
   enableRowSelection: boolean;
   /** Enable/disable keyboard navigation (arrow keys) */
@@ -407,6 +409,10 @@ export function defineExportConfig<T>() {
 // ─────────────────────────────────────────────
 
 export interface DataTableProps<T extends Record<string, unknown>> {
+  /** Function to render the expanded sub-row content */
+  renderSubRow?: (props: { row: T; table: TableContext<T> }) => React.ReactNode;
+  /** Allow developers to control exactly WHICH rows can expand (Optional, defaults to all if renderSubRow is provided) */
+  getRowCanExpand?: (row: T) => boolean;
   /** Data adapter — the bridge to your backend */
   adapter: DataAdapter<T>;
   /** Manual column definitions (skip auto-generation from metadata) */
