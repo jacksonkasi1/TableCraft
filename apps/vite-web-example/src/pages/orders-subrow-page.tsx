@@ -1,5 +1,5 @@
 import { DataTable } from "@tablecraft/table";
-import { createTableCraftAdapter } from "@tablecraft/table/auto/tablecraft-adapter";
+import { createTableCraftAdapter } from "@tablecraft/table";
 import { createOrdersAdapter, type OrdersRow } from "../generated";
 import { API_BASE_URL } from "../api";
 import { useMemo } from "react";
