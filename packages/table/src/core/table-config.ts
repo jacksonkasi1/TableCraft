@@ -16,6 +16,7 @@ const defaultConfig: TableConfig = {
   enableUrlState: true,
   enableColumnResizing: true,
   enableToolbar: true,
+  removeOuterBorder: false,
   size: "default",
   columnResizingTableId: undefined,
   searchPlaceholder: undefined,

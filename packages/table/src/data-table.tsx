@@ -276,7 +276,7 @@ export function DataTable<T extends Record<string, unknown>>({
   }, [tableId]); // eslint-disable-line react-hooks/exhaustive-deps
   // Note: defaultColumnOrder and normalizeColumnOrder are intentionally excluded — read once on mount.
   // Assumes enableRowSelection and actions are stable for the component's lifetime.
-  // If they change after mount, you must include them (and normalizeColumnOrder) in the 
+  // If they change after mount, you must include them (and normalizeColumnOrder) in the
   // dependencies and re-run setColumnOrder accordingly.
 
   // ─── Sorting state for TanStack ───
@@ -422,7 +422,7 @@ export function DataTable<T extends Record<string, unknown>>({
     [tableId, normalizeColumnOrder]
   );
 
-  // Note: Consumers must pass a stable reference for defaultColumnOrder 
+  // Note: Consumers must pass a stable reference for defaultColumnOrder
   // (hoist to module scope, use useMemo, or use the provided defaultColumnOrder<C>() helper)
   // so resetColumnOrder and downstream children are not recreated every render.
   const resetColumnOrder = useCallback(() => {
@@ -696,7 +696,10 @@ export function DataTable<T extends Record<string, unknown>>({
 
       <div
         ref={tableContainerRef}
-        className="overflow-y-auto rounded-md border"
+        className={cn(
+          "overflow-y-auto",
+          !tableConfig.removeOuterBorder && "rounded-md border"
+        )}
         aria-label="Data table"
         onKeyDown={
           tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined
@@ -715,7 +718,10 @@ export function DataTable<T extends Record<string, unknown>>({
                 <tr
                   key={headerGroup.id}
                   data-slot="table-row"
-                  className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                  className={cn(
+                    "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+                    tableConfig.removeOuterBorder && "bg-muted/50"
+                  )}
                 >
                   {headerGroup.headers.map((header) => (
                     <th
@@ -748,7 +754,7 @@ export function DataTable<T extends Record<string, unknown>>({
               ))}
             </thead>
 
-            <tbody data-slot="table-body" className="[&_tr:last-child]:border-0">
+            <tbody data-slot="table-body" className="[&>tr:last-child]:border-0">
               {isLoading ? (
                 Array.from({ length: pageSize }).map((_, i) => (
                   <tr

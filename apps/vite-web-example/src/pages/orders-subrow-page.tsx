@@ -19,26 +19,22 @@ function OrderItemsTable({ orderId }: { orderId: number }) {
   }, [orderId]);
 
   return (
-    <div className="p-4 bg-muted/20 border-b border-border/50 shadow-inner">
-      <h3 className="font-semibold text-sm text-muted-foreground mb-3 uppercase tracking-wider">
-        Items for Order #{orderId}
-      </h3>
-      <div className="border border-border/50 rounded-md bg-background overflow-hidden">
-        <DataTable
-          adapter={childAdapter}
-          hiddenColumns={["orderId", "id", "tenantId", "deletedAt", "createdAt", "updatedAt"]} // Hide redundant/system columns
-          config={{
-            enableUrlState: false, // CRITICAL: Prevent sub-table from breaking parent URL pagination
-            enablePagination: false, // Show all items in a simple list
-            enableSearch: false, // Clean UI
-            enableDateFilter: false,
-            enableToolbar: false, // Hide the entire top toolbar
-            enableRowSelection: false, // No checkboxes
-            columnResizingTableId: "order-items-table", // Separate save state for column widths
-          }}
-        />
-      </div>
-    </div>
+
+      <DataTable
+        adapter={childAdapter}
+        hiddenColumns={["orderId", "id", "tenantId", "deletedAt", "createdAt", "updatedAt"]}
+        config={{
+          enableUrlState: false,
+          enablePagination: false,
+          enableSearch: false,
+          enableDateFilter: false,
+          enableToolbar: false,
+          enableRowSelection: false,
+          columnResizingTableId: "order-items-table",
+          removeOuterBorder: true, // Strips the card wrapper for a seamless nested look!
+        }}
+      />
+
   );
 }
 

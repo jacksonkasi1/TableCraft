@@ -70,6 +70,8 @@ export interface TableConfig {
   enableColumnResizing: boolean;
   /** Enable/disable toolbar */
   enableToolbar: boolean;
+  /** Removes the outer border and rounded corners from the table wrapper (useful for nested sub-tables) */
+  removeOuterBorder?: boolean;
   /** Size variant for buttons/inputs: 'sm' | 'default' | 'lg' */
   size: "sm" | "default" | "lg";
   /** Unique ID for storing column sizing in localStorage */
