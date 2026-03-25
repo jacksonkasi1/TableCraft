@@ -230,8 +230,8 @@ export function DataTable<T extends Record<string, unknown>>({
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   // ─── Expanded state ───
-  const [expanded, setExpanded] = useState<ExpandedState>(
-    tableConfig.defaultExpanded || {}
+  const [expanded, setExpanded] = useState<ExpandedState>(() =>
+    tableConfig.defaultExpanded ?? {}
   );
 
   // ─── Column order ───
@@ -569,6 +569,8 @@ export function DataTable<T extends Record<string, unknown>>({
       handlePaginationChange,
       idField,
       isLoadingMeta,
+      getRowCanExpand,
+      renderSubRow,
     ]
   );
 

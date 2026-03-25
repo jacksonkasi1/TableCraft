@@ -7,7 +7,7 @@ import { useMemo } from "react";
 // --- Child Table Component ---
 function OrderItemsTable({ orderId }: { orderId: number }) {
   // Create an adapter for the orderItems table, passing the orderId as a custom filter.
-  // We use useMemo so the adapter isn"t recreated on every render.
+  // We use useMemo so the adapter isn't recreated on every render.
   const childAdapter = useMemo(() => {
     return createTableCraftAdapter({
       baseUrl: API_BASE_URL,
