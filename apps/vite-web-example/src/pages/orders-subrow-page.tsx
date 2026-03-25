@@ -40,9 +40,11 @@ function OrderItemsTable({ orderId }: { orderId: number }) {
 
 // --- Parent Table Component ---
 export function OrdersSubRowPage() {
-  const parentAdapter = createOrdersAdapter({
-    baseUrl: API_BASE_URL,
-  });
+  const parentAdapter = useMemo(() => {
+    return createOrdersAdapter({
+      baseUrl: API_BASE_URL,
+    });
+  }, []);
 
   return (
     <div className="p-8 space-y-4 max-w-7xl mx-auto">
