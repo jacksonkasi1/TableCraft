@@ -1,10 +1,12 @@
 import type {
+  Row,
   ColumnDef,
   ColumnResizeMode,
   ColumnSizingState,
   SortingState,
   ColumnFiltersState,
   VisibilityState,
+  ExpandedState,
 } from "@tanstack/react-table";
 import {
   flexRender,
@@ -14,11 +16,13 @@ import {
   getSortedRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
+  getExpandedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import React, { Fragment, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
+import { ExpandIcon } from "./expand-icon";
 import { cn } from "./utils/cn";
 
 import type { DataTableProps, ExportableData, TableContext, ExportConfig } from "./types";
@@ -53,6 +57,8 @@ export function DataTable<T extends Record<string, unknown>>({
   pageSizeOptions: pageSizeOptionsProp,
   columnOverrides,
   actions,
+  renderSubRow,
+  getRowCanExpand,
 }: DataTableProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
@@ -119,6 +125,26 @@ export function DataTable<T extends Record<string, unknown>>({
   const resolvedColumns = useMemo(() => {
     // Start with auto-generated or manual columns
     let cols = [...autoColumns];
+
+    // Prepend expand column if renderSubRow is provided
+    if (renderSubRow) {
+      const expandColumn: ColumnDef<T, unknown> = {
+        id: "__expand",
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
+        enableResizing: false,
+        enableSorting: false,
+        enableHiding: false,
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="px-2">
+            <ExpandIcon row={row} />
+          </div>
+        ),
+      };
+      cols = [expandColumn, ...cols];
+    }
 
     // Apply columnOverrides: replace cell renderer for matching columns
     if (columnOverrides) {
@@ -203,6 +229,11 @@ export function DataTable<T extends Record<string, unknown>>({
   // ─── Row selection ───
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
+  // ─── Expanded state ───
+  const [expanded, setExpanded] = useState<ExpandedState>(
+    tableConfig.defaultExpanded || {}
+  );
+
   // ─── Column order ───
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const columnOrderRef = useRef<string[]>(columnOrder);
@@ -215,13 +246,14 @@ export function DataTable<T extends Record<string, unknown>>({
    * Developer-defined defaultColumnOrder should only list data columns.
    */
   const normalizeColumnOrder = useCallback((order: string[]): string[] => {
-    const without = order.filter((id) => id !== "select" && id !== "__actions");
+    const without = order.filter((id) => id !== "select" && id !== "__actions" && id !== "__expand");
     const result: string[] = [];
+    if (renderSubRow) result.push("__expand");
     if (tableConfig.enableRowSelection) result.push("select");
     result.push(...without);
     if (actions) result.push("__actions");
     return result;
-  }, [tableConfig.enableRowSelection, actions]);
+  }, [tableConfig.enableRowSelection, actions, renderSubRow]);
 
   // Load column order from localStorage; fall back to defaultColumnOrder if no saved order
   useEffect(() => {
@@ -489,6 +521,7 @@ export function DataTable<T extends Record<string, unknown>>({
         pagination,
         columnSizing,
         columnOrder,
+        expanded,
       },
       meta: {
         isLoadingColumns: isLoadingMeta,
@@ -513,6 +546,9 @@ export function DataTable<T extends Record<string, unknown>>({
       getSortedRowModel: getSortedRowModel<T>(),
       getFacetedRowModel: getFacetedRowModel<T>(),
       getFacetedUniqueValues: getFacetedUniqueValues<T>(),
+      onExpandedChange: setExpanded,
+      getExpandedRowModel: getExpandedRowModel(),
+      getRowCanExpand: (row: Row<T>) => getRowCanExpand ? getRowCanExpand(row.original) : !!renderSubRow,
     }),
     [
       data,
@@ -739,6 +775,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 ))
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row, rowIndex) => (
+                  <Fragment key={row.id}>
                   <tr
                     key={row.id}
                     id={`row-${rowIndex}`}
@@ -781,6 +818,14 @@ export function DataTable<T extends Record<string, unknown>>({
                       </td>
                     ))}
                   </tr>
+                  {row.getIsExpanded() && renderSubRow && (
+                    <tr className="bg-muted/30 hover:bg-muted/30 border-b">
+                      <td colSpan={row.getVisibleCells().length} className="p-0">
+                        {renderSubRow({ row: row.original, table: tableContextRef.current })}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
                 ))
               ) : (
                 <tr data-slot="table-row">
