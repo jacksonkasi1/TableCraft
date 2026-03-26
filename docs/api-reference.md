@@ -271,6 +271,8 @@ The `<DataTable>` component accepts the following props:
 | `columns`       | `ColumnDef<T>[]`       | Manual column definitions (optional)          |
 | `config`        | `Partial<TableConfig>` | Table configuration overrides                 |
 | `hiddenColumns` | `string[]`             | Columns to hide from UI (data still received) |
+| `renderSubRow`  | `(props) => ReactNode` | Render a nested component when a row expands  |
+| `getRowCanExpand`| `(row: T) => boolean` | Control which rows are allowed to be expanded |
 
 ### Configuration Options
 
@@ -286,6 +288,8 @@ The `<DataTable>` component accepts the following props:
     enableColumnVisibility: true,
     defaultPageSize: 20,
     pageSizeOptions: [10, 20, 50, 100],
+    removeOuterBorder: true,
+    defaultExpanded: false,
   }}
 />
 ```
@@ -366,7 +370,36 @@ import type { OrdersRow, OrdersColumn } from './generated';
 > - If a user has previously reordered columns, their saved order takes precedence.
 > - "Reset Column Order" (in the View popover or Settings gear) resets back to `defaultColumnOrder`, not the natural definition order.
 
-### System Column Pinning (`select` & `__actions`)
+### Sub-Rows (Master-Detail)
+
+TableCraft supports rendering nested sub-tables or any React component inside an expandable row. When you provide the `renderSubRow` prop, TableCraft automatically injects an `__expand` column with an arrow toggle button.
+
+```tsx
+<DataTable
+  adapter={parentAdapter}
+  renderSubRow={({ row, table }) => (
+    <OrderItemsTable orderId={row.id} />
+  )}
+  config={{
+    // Optional: expands all rows by default
+    defaultExpanded: true,
+  }}
+/>
+```
+
+If you want a child table to appear seamlessly without drawing a second "card" border inside the parent, configure the child's `<DataTable>` with `removeOuterBorder: true`.
+
+```tsx
+// Inside your OrderItemsTable component
+<DataTable
+  adapter={childAdapter}
+  config={{
+    removeOuterBorder: true, // Strips the card wrapper!
+  }}
+/>
+```
+
+### System Column Pinning (`select`, `__actions`, & `__expand`)
 
 `select` (row selection checkbox) and `__actions` (actions column) are **system columns** managed entirely by the table. They are pinned automatically on every order change:
 
