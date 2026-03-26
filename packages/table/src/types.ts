@@ -451,8 +451,8 @@ export interface DataTableProps<T extends Record<string, unknown>> {
     * // Type-safe with generated column union — full autocomplete:
     * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['status', 'email', 'total', 'createdAt'])}
     *
-    * // Including system columns (select checkbox, actions):
-    * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['select', 'status', 'email', '__actions'])}
+    * // Including system columns (expand, select checkbox, actions):
+    * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['__expand', 'select', 'status', 'email', '__actions'])}
     */
   defaultColumnOrder?: string[];
   /**

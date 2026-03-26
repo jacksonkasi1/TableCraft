@@ -239,7 +239,8 @@ export function DataTable<T extends Record<string, unknown>>({
 
   /**
    * Pins system columns to fixed positions regardless of what order is stored or passed:
-   * - 'select' always first (if row selection is enabled)
+   * - '__expand' always first (if renderSubRow is provided)
+   * - 'select' always second (if row selection is enabled)
    * - '__actions' always last (if actions column is present)
    * Developer-defined defaultColumnOrder should only list data columns.
    */

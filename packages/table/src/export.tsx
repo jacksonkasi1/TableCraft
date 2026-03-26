@@ -39,7 +39,7 @@ export function DataTableExport<TData extends ExportableData>({
     const visibleColumns = table
       .getAllColumns()
       .filter((col) => col.getIsVisible())
-      .filter((col) => col.id !== "__actions" && col.id !== "select");
+      .filter((col) => col.id !== "__actions" && col.id !== "select" && col.id !== "__expand");
 
     const columnOrder = table.getState().columnOrder;
     const orderedColumns =
