@@ -137,11 +137,7 @@ export function DataTable<T extends Record<string, unknown>>({
         enableSorting: false,
         enableHiding: false,
         header: () => null,
-        cell: ({ row }) => (
-          <div className="px-2">
-            <ExpandIcon row={row} />
-          </div>
-        ),
+        cell: ({ row }) => <ExpandIcon row={row} />,
       };
       cols = [expandColumn, ...cols];
     }
@@ -171,6 +167,9 @@ export function DataTable<T extends Record<string, unknown>>({
     if (tableConfig.enableRowSelection) {
       const selectColumn: ColumnDef<T, unknown> = {
         id: "select",
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
         header: ({ table }) => (
           <Checkbox
             checked={
@@ -193,9 +192,6 @@ export function DataTable<T extends Record<string, unknown>>({
         enableSorting: false,
         enableHiding: false,
         enableResizing: false,
-        size: 48,
-        minSize: 48,
-        maxSize: 48,
       };
       cols = [selectColumn, ...cols];
     }
@@ -735,8 +731,8 @@ export function DataTable<T extends Record<string, unknown>>({
                       scope="col"
                       className={cn(
                         "text-foreground h-10 text-left align-middle font-medium whitespace-nowrap relative group/th",
-                        header.column.id === "select"
-                          ? "w-12 px-3"
+                        header.column.id === "select" || header.column.id === "__expand"
+                          ? "px-2"
                           : "px-4"
                       )}
                       style={{ width: header.getSize() }}
@@ -772,8 +768,8 @@ export function DataTable<T extends Record<string, unknown>>({
                         data-slot="table-cell"
                         className={cn(
                           "align-middle whitespace-nowrap text-left",
-                          header.column.id === "select"
-                            ? "w-12 px-3 py-2"
+                          header.column.id === "select" || header.column.id === "__expand"
+                            ? "px-2 py-2"
                             : "px-4 py-2"
                         )}
                         style={{ width: header.getSize() }}
@@ -813,8 +809,8 @@ export function DataTable<T extends Record<string, unknown>>({
                         data-slot="table-cell"
                         className={cn(
                           "align-middle whitespace-nowrap text-left",
-                          cell.column.id === "select"
-                            ? "w-12 px-3 py-2"
+                          cell.column.id === "select" || cell.column.id === "__expand"
+                            ? "px-2 py-2"
                             : cell.column.id === "__actions"
                               ? "w-12 px-2 py-2"
                               : "px-4 py-2 truncate max-w-0"
