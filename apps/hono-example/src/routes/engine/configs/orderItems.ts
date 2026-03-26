@@ -1,5 +1,4 @@
 import { defineTable } from "@tablecraft/engine";
-import { sql } from "drizzle-orm";
 import * as s from "@/db/schema";
 
 export const orderItems = defineTable(s.orderItems)

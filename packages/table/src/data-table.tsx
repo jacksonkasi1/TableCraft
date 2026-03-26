@@ -126,7 +126,41 @@ export function DataTable<T extends Record<string, unknown>>({
     // Start with auto-generated or manual columns
     let cols = [...autoColumns];
 
+    // Prepend selection column if enabled
+    if (tableConfig.enableRowSelection) {
+      const selectColumn: ColumnDef<T, unknown> = {
+        id: "select",
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+            className="translate-y-[2px]"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            className="translate-y-[2px]"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+      };
+      cols = [selectColumn, ...cols];
+    }
+
     // Prepend expand column if renderSubRow is provided
+    // (Doing this after selectColumn ensures __expand is at index 0 and select is at index 1)
     if (renderSubRow) {
       const expandColumn: ColumnDef<T, unknown> = {
         id: "__expand",
@@ -163,39 +197,6 @@ export function DataTable<T extends Record<string, unknown>>({
       });
     }
 
-    // Prepend selection column if enabled
-    if (tableConfig.enableRowSelection) {
-      const selectColumn: ColumnDef<T, unknown> = {
-        id: "select",
-        size: 40,
-        minSize: 40,
-        maxSize: 40,
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              (table.getIsAllPageRowsSelected() && !!table.getRowModel().rows.length) ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-            className="translate-y-[2px]"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="translate-y-[2px]"
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-        enableResizing: false,
-      };
-      cols = [selectColumn, ...cols];
-    }
-
     // Append action column if actions prop is provided
     if (actions) {
       const actionColumn: ColumnDef<T, unknown> = {
@@ -216,7 +217,7 @@ export function DataTable<T extends Record<string, unknown>>({
     }
 
     return cols;
-  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions]);
+  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions, renderSubRow]);
 
   // ─── Column resize ───
   const { columnSizing, setColumnSizing, resetColumnSizing } =
@@ -552,6 +553,7 @@ export function DataTable<T extends Record<string, unknown>>({
     [
       data,
       resolvedColumns,
+      expanded,
       sorting,
       effectiveColumnVisibility,
       rowSelection,
@@ -784,7 +786,6 @@ export function DataTable<T extends Record<string, unknown>>({
                 table.getRowModel().rows.map((row, rowIndex) => (
                   <Fragment key={row.id}>
                   <tr
-                    key={row.id}
                     id={`row-${rowIndex}`}
                     data-slot="table-row"
                     data-row-index={rowIndex}
