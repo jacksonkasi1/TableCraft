@@ -231,7 +231,9 @@ export function DataTable<T extends Record<string, unknown>>({
 
   // ─── Expanded state ───
   const [expanded, setExpanded] = useState<ExpandedState>(() =>
-    tableConfig.defaultExpanded ?? {}
+    tableConfig.defaultExpanded === false
+      ? {}
+      : (tableConfig.defaultExpanded ?? {})
   );
 
   // ─── Column order ───
