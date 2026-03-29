@@ -4,6 +4,7 @@ import type { TableConfig } from "../types";
  * Default table configuration.
  */
 const defaultConfig: TableConfig = {
+  defaultExpanded: false,
   enableRowSelection: true,
   enableKeyboardNavigation: false,
   enableClickRowSelect: false,
@@ -15,6 +16,7 @@ const defaultConfig: TableConfig = {
   enableUrlState: true,
   enableColumnResizing: true,
   enableToolbar: true,
+  removeOuterBorder: false,
   size: "default",
   columnResizingTableId: undefined,
   searchPlaceholder: undefined,

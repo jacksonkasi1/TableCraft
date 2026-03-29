@@ -46,6 +46,8 @@ export function defaultColumnOrder<C extends string>(columns: C[]): C[] {
 // ─────────────────────────────────────────────
 
 export interface TableConfig {
+  /** Default expanded state for rows */
+  defaultExpanded?: boolean | Record<string, boolean>;
   /** Enable/disable row selection checkboxes */
   enableRowSelection: boolean;
   /** Enable/disable keyboard navigation (arrow keys) */
@@ -68,6 +70,8 @@ export interface TableConfig {
   enableColumnResizing: boolean;
   /** Enable/disable toolbar */
   enableToolbar: boolean;
+  /** Removes the outer border and rounded corners from the table wrapper (useful for nested sub-tables) */
+  removeOuterBorder?: boolean;
   /** Size variant for buttons/inputs: 'sm' | 'default' | 'lg' */
   size: "sm" | "default" | "lg";
   /** Unique ID for storing column sizing in localStorage */
@@ -407,6 +411,10 @@ export function defineExportConfig<T>() {
 // ─────────────────────────────────────────────
 
 export interface DataTableProps<T extends Record<string, unknown>> {
+  /** Function to render the expanded sub-row content */
+  renderSubRow?: (props: { row: T; table: TableContext<T> }) => React.ReactNode;
+  /** Allow developers to control exactly WHICH rows can expand (Optional, defaults to all if renderSubRow is provided) */
+  getRowCanExpand?: (row: T) => boolean;
   /** Data adapter — the bridge to your backend */
   adapter: DataAdapter<T>;
   /** Manual column definitions (skip auto-generation from metadata) */
@@ -443,8 +451,8 @@ export interface DataTableProps<T extends Record<string, unknown>> {
     * // Type-safe with generated column union — full autocomplete:
     * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['status', 'email', 'total', 'createdAt'])}
     *
-    * // Including system columns (select checkbox, actions):
-    * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['select', 'status', 'email', '__actions'])}
+    * // Including system columns (expand, select checkbox, actions):
+    * defaultColumnOrder={defaultColumnOrder<OrdersColumn>(['__expand', 'select', 'status', 'email', '__actions'])}
     */
   defaultColumnOrder?: string[];
   /**

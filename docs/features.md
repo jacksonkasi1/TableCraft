@@ -178,6 +178,21 @@ All table state stored in URL for shareable links:
 * Date range
 {% endtab %}
 
+{% tab title="Sub-Rows" %}
+Build master-detail interfaces with nested expandable rows.
+
+```tsx
+<DataTable
+  adapter={parentAdapter}
+  renderSubRow={({ row }) => <OrderItemsTable orderId={row.id} />}
+  config={{
+    // Removes the outer card wrapper for a seamless nested look
+    removeOuterBorder: true,
+  }}
+/>
+```
+{% endtab %}
+
 {% tab title="Keyboard" %}
 Full keyboard accessibility:
 

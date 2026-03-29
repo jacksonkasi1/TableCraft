@@ -1,10 +1,12 @@
 import type {
+  Row,
   ColumnDef,
   ColumnResizeMode,
   ColumnSizingState,
   SortingState,
   ColumnFiltersState,
   VisibilityState,
+  ExpandedState,
 } from "@tanstack/react-table";
 import {
   flexRender,
@@ -14,11 +16,13 @@ import {
   getSortedRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
+  getExpandedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { useEffect, useCallback, useMemo, useRef, useState } from "react";
+import React, { Fragment, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
+import { ExpandIcon } from "./expand-icon";
 import { cn } from "./utils/cn";
 
 import type { DataTableProps, ExportableData, TableContext, ExportConfig } from "./types";
@@ -53,6 +57,8 @@ export function DataTable<T extends Record<string, unknown>>({
   pageSizeOptions: pageSizeOptionsProp,
   columnOverrides,
   actions,
+  renderSubRow,
+  getRowCanExpand,
 }: DataTableProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
@@ -120,31 +126,13 @@ export function DataTable<T extends Record<string, unknown>>({
     // Start with auto-generated or manual columns
     let cols = [...autoColumns];
 
-    // Apply columnOverrides: replace cell renderer for matching columns
-    if (columnOverrides) {
-      cols = cols.map((col) => {
-        const accessorKey = (col as { accessorKey?: string }).accessorKey;
-        // Skip columns without accessorKey (e.g., selection, actions, group columns)
-        if (!accessorKey || !(accessorKey in columnOverrides)) return col;
-        const overrideFn = columnOverrides[accessorKey as keyof T];
-        if (!overrideFn) return col;
-        return {
-          ...col,
-          cell: ({ getValue, row }: { getValue: () => unknown; row: { original: T } }) => {
-            return overrideFn({
-              value: getValue() as T[keyof T],
-              row: row.original,
-              table: tableContextRef.current,
-            });
-          },
-        };
-      });
-    }
-
     // Prepend selection column if enabled
     if (tableConfig.enableRowSelection) {
       const selectColumn: ColumnDef<T, unknown> = {
         id: "select",
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
         header: ({ table }) => (
           <Checkbox
             checked={
@@ -167,11 +155,46 @@ export function DataTable<T extends Record<string, unknown>>({
         enableSorting: false,
         enableHiding: false,
         enableResizing: false,
-        size: 48,
-        minSize: 48,
-        maxSize: 48,
       };
       cols = [selectColumn, ...cols];
+    }
+
+    // Prepend expand column if renderSubRow is provided
+    // (Doing this after selectColumn ensures __expand is at index 0 and select is at index 1)
+    if (renderSubRow) {
+      const expandColumn: ColumnDef<T, unknown> = {
+        id: "__expand",
+        size: 40,
+        minSize: 40,
+        maxSize: 40,
+        enableResizing: false,
+        enableSorting: false,
+        enableHiding: false,
+        header: () => null,
+        cell: ({ row }) => <ExpandIcon row={row} />,
+      };
+      cols = [expandColumn, ...cols];
+    }
+
+    // Apply columnOverrides: replace cell renderer for matching columns
+    if (columnOverrides) {
+      cols = cols.map((col) => {
+        const accessorKey = (col as { accessorKey?: string }).accessorKey;
+        // Skip columns without accessorKey (e.g., selection, actions, group columns)
+        if (!accessorKey || !(accessorKey in columnOverrides)) return col;
+        const overrideFn = columnOverrides[accessorKey as keyof T];
+        if (!overrideFn) return col;
+        return {
+          ...col,
+          cell: ({ getValue, row }: { getValue: () => unknown; row: { original: T } }) => {
+            return overrideFn({
+              value: getValue() as T[keyof T],
+              row: row.original,
+              table: tableContextRef.current,
+            });
+          },
+        };
+      });
     }
 
     // Append action column if actions prop is provided
@@ -194,7 +217,7 @@ export function DataTable<T extends Record<string, unknown>>({
     }
 
     return cols;
-  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions]);
+  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions, renderSubRow]);
 
   // ─── Column resize ───
   const { columnSizing, setColumnSizing, resetColumnSizing } =
@@ -203,6 +226,13 @@ export function DataTable<T extends Record<string, unknown>>({
   // ─── Row selection ───
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
+  // ─── Expanded state ───
+  const [expanded, setExpanded] = useState<ExpandedState>(() =>
+    tableConfig.defaultExpanded === false
+      ? {}
+      : (tableConfig.defaultExpanded ?? {})
+  );
+
   // ─── Column order ───
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   const columnOrderRef = useRef<string[]>(columnOrder);
@@ -210,18 +240,20 @@ export function DataTable<T extends Record<string, unknown>>({
 
   /**
    * Pins system columns to fixed positions regardless of what order is stored or passed:
-   * - 'select' always first (if row selection is enabled)
+   * - '__expand' always first (if renderSubRow is provided)
+   * - 'select' always second (if row selection is enabled)
    * - '__actions' always last (if actions column is present)
    * Developer-defined defaultColumnOrder should only list data columns.
    */
   const normalizeColumnOrder = useCallback((order: string[]): string[] => {
-    const without = order.filter((id) => id !== "select" && id !== "__actions");
+    const without = order.filter((id) => id !== "select" && id !== "__actions" && id !== "__expand");
     const result: string[] = [];
+    if (renderSubRow) result.push("__expand");
     if (tableConfig.enableRowSelection) result.push("select");
     result.push(...without);
     if (actions) result.push("__actions");
     return result;
-  }, [tableConfig.enableRowSelection, actions]);
+  }, [tableConfig.enableRowSelection, actions, renderSubRow]);
 
   // Load column order from localStorage; fall back to defaultColumnOrder if no saved order
   useEffect(() => {
@@ -244,7 +276,7 @@ export function DataTable<T extends Record<string, unknown>>({
   }, [tableId]); // eslint-disable-line react-hooks/exhaustive-deps
   // Note: defaultColumnOrder and normalizeColumnOrder are intentionally excluded — read once on mount.
   // Assumes enableRowSelection and actions are stable for the component's lifetime.
-  // If they change after mount, you must include them (and normalizeColumnOrder) in the 
+  // If they change after mount, you must include them (and normalizeColumnOrder) in the
   // dependencies and re-run setColumnOrder accordingly.
 
   // ─── Sorting state for TanStack ───
@@ -390,7 +422,7 @@ export function DataTable<T extends Record<string, unknown>>({
     [tableId, normalizeColumnOrder]
   );
 
-  // Note: Consumers must pass a stable reference for defaultColumnOrder 
+  // Note: Consumers must pass a stable reference for defaultColumnOrder
   // (hoist to module scope, use useMemo, or use the provided defaultColumnOrder<C>() helper)
   // so resetColumnOrder and downstream children are not recreated every render.
   const resetColumnOrder = useCallback(() => {
@@ -489,6 +521,7 @@ export function DataTable<T extends Record<string, unknown>>({
         pagination,
         columnSizing,
         columnOrder,
+        expanded,
       },
       meta: {
         isLoadingColumns: isLoadingMeta,
@@ -513,10 +546,14 @@ export function DataTable<T extends Record<string, unknown>>({
       getSortedRowModel: getSortedRowModel<T>(),
       getFacetedRowModel: getFacetedRowModel<T>(),
       getFacetedUniqueValues: getFacetedUniqueValues<T>(),
+      onExpandedChange: setExpanded,
+      getExpandedRowModel: getExpandedRowModel(),
+      getRowCanExpand: (row: Row<T>) => getRowCanExpand ? getRowCanExpand(row.original) : !!renderSubRow,
     }),
     [
       data,
       resolvedColumns,
+      expanded,
       sorting,
       effectiveColumnVisibility,
       rowSelection,
@@ -533,6 +570,8 @@ export function DataTable<T extends Record<string, unknown>>({
       handlePaginationChange,
       idField,
       isLoadingMeta,
+      getRowCanExpand,
+      renderSubRow,
     ]
   );
 
@@ -660,7 +699,10 @@ export function DataTable<T extends Record<string, unknown>>({
 
       <div
         ref={tableContainerRef}
-        className="overflow-y-auto rounded-md border"
+        className={cn(
+          "overflow-y-auto",
+          !tableConfig.removeOuterBorder && "rounded-md border"
+        )}
         aria-label="Data table"
         onKeyDown={
           tableConfig.enableKeyboardNavigation ? handleKeyDown : undefined
@@ -679,7 +721,10 @@ export function DataTable<T extends Record<string, unknown>>({
                 <tr
                   key={headerGroup.id}
                   data-slot="table-row"
-                  className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
+                  className={cn(
+                    "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+                    tableConfig.removeOuterBorder && "bg-muted/50"
+                  )}
                 >
                   {headerGroup.headers.map((header) => (
                     <th
@@ -689,8 +734,8 @@ export function DataTable<T extends Record<string, unknown>>({
                       scope="col"
                       className={cn(
                         "text-foreground h-10 text-left align-middle font-medium whitespace-nowrap relative group/th",
-                        header.column.id === "select"
-                          ? "w-12 px-3"
+                        header.column.id === "select" || header.column.id === "__expand"
+                          ? "px-2"
                           : "px-4"
                       )}
                       style={{ width: header.getSize() }}
@@ -712,7 +757,7 @@ export function DataTable<T extends Record<string, unknown>>({
               ))}
             </thead>
 
-            <tbody data-slot="table-body" className="[&_tr:last-child]:border-0">
+            <tbody data-slot="table-body" className="[&>tr:last-child]:border-0">
               {isLoading ? (
                 Array.from({ length: pageSize }).map((_, i) => (
                   <tr
@@ -726,8 +771,8 @@ export function DataTable<T extends Record<string, unknown>>({
                         data-slot="table-cell"
                         className={cn(
                           "align-middle whitespace-nowrap text-left",
-                          header.column.id === "select"
-                            ? "w-12 px-3 py-2"
+                          header.column.id === "select" || header.column.id === "__expand"
+                            ? "px-2 py-2"
                             : "px-4 py-2"
                         )}
                         style={{ width: header.getSize() }}
@@ -739,8 +784,8 @@ export function DataTable<T extends Record<string, unknown>>({
                 ))
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row, rowIndex) => (
+                  <Fragment key={row.id}>
                   <tr
-                    key={row.id}
                     id={`row-${rowIndex}`}
                     data-slot="table-row"
                     data-row-index={rowIndex}
@@ -766,8 +811,8 @@ export function DataTable<T extends Record<string, unknown>>({
                         data-slot="table-cell"
                         className={cn(
                           "align-middle whitespace-nowrap text-left",
-                          cell.column.id === "select"
-                            ? "w-12 px-3 py-2"
+                          cell.column.id === "select" || cell.column.id === "__expand"
+                            ? "px-2 py-2"
                             : cell.column.id === "__actions"
                               ? "w-12 px-2 py-2"
                               : "px-4 py-2 truncate max-w-0"
@@ -781,6 +826,14 @@ export function DataTable<T extends Record<string, unknown>>({
                       </td>
                     ))}
                   </tr>
+                  {row.getIsExpanded() && renderSubRow && (
+                    <tr key={`expanded-${row.id}`} className="bg-muted/30 hover:bg-muted/30 border-b">
+                      <td colSpan={row.getVisibleCells().length} className="p-0">
+                        {renderSubRow({ row: row.original, table: tableContextRef.current })}
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
                 ))
               ) : (
                 <tr data-slot="table-row">

@@ -7,6 +7,7 @@ import { Orders3Page } from "@/pages/orders3-page";
 import { UsersPage } from "@/pages/users-page";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { OrdersRestPage } from "@/pages/orders-rest-page";
+import { OrdersSubRowPage } from "@/pages/orders-subrow-page";
 import { EmployeesStaticPage } from "@/pages/employees-static-page";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ function App() {
     { to: "/orders-rest", label: "Orders (REST)", icon: Plug },
     { to: "/employees", label: "Employees (Static)", icon: Database },
     { to: "/users", label: "Users", icon: Users },
+    { to: "/orders-subrow", label: "Sub-Rows", icon: Filter },
   ];
 
   return (
@@ -88,6 +90,7 @@ function App() {
             <Route path="/orders-rest" element={<OrdersRestPage />} />
             <Route path="/employees" element={<EmployeesStaticPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/orders-subrow" element={<OrdersSubRowPage />} />
           </Routes>
         </main>
       </div>
