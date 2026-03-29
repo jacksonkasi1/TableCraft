@@ -827,7 +827,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     ))}
                   </tr>
                   {row.getIsExpanded() && renderSubRow && (
-                    <tr className="bg-muted/30 hover:bg-muted/30 border-b">
+                    <tr key={`expanded-${row.id}`} className="bg-muted/30 hover:bg-muted/30 border-b">
                       <td colSpan={row.getVisibleCells().length} className="p-0">
                         {renderSubRow({ row: row.original, table: tableContextRef.current })}
                       </td>
