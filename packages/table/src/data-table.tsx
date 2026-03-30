@@ -753,6 +753,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         )}
                     </th>
                   ))}
+                  {tableConfig.enableColumnResizing && <th aria-hidden="true" />}
                 </tr>
               ))}
             </thead>
@@ -780,6 +781,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         <div className="h-6 w-full animate-pulse rounded bg-muted" />
                       </td>
                     ))}
+                    {tableConfig.enableColumnResizing && <td aria-hidden="true" />}
                   </tr>
                 ))
               ) : table.getRowModel().rows?.length ? (
@@ -825,10 +827,11 @@ export function DataTable<T extends Record<string, unknown>>({
                         )}
                       </td>
                     ))}
+                    {tableConfig.enableColumnResizing && <td aria-hidden="true" />}
                   </tr>
                   {row.getIsExpanded() && renderSubRow && (
                     <tr key={`expanded-${row.id}`} className="bg-muted/30 hover:bg-muted/30 border-b">
-                      <td colSpan={row.getVisibleCells().length} className="p-0">
+                      <td colSpan={row.getVisibleCells().length + (tableConfig.enableColumnResizing ? 1 : 0)} className="p-0">
                         {renderSubRow({ row: row.original, table: tableContextRef.current })}
                       </td>
                     </tr>
@@ -839,7 +842,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <tr data-slot="table-row">
                   <td
                     data-slot="table-cell"
-                    colSpan={resolvedColumns.length}
+                    colSpan={resolvedColumns.length + (tableConfig.enableColumnResizing ? 1 : 0)}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No results.
