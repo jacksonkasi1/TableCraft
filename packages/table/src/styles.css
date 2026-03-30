@@ -113,7 +113,11 @@ input[type="week"] {
    ──────────────────────────────────────────────────────────────────────────── */
 
 @layer components {
-  /* Prevent layout shifts during resize */
+  /*
+   * Prevent layout shifts during resize while keeping the table full width by
+   * default. The overflow-x-auto container intentionally absorbs the extra
+   * horizontal overflow once resized columns exceed the available space.
+   */
   .resizable-table {
     table-layout: fixed;
     width: max-content;

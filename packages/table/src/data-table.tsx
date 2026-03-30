@@ -670,6 +670,26 @@ export function DataTable<T extends Record<string, unknown>>({
     pageSizeOptionsProp ??
     tableConfig.pageSizeOptions ?? [10, 20, 30, 40, 50];
 
+  const resizePlaceholderColumnCount = tableConfig.enableColumnResizing ? 1 : 0;
+
+  const getVisibleColumnCount = (columnCount: number) =>
+    columnCount + resizePlaceholderColumnCount;
+
+  const renderResizePlaceholderCell = (cellTag: "th" | "td") => {
+    if (!resizePlaceholderColumnCount) {
+      return null;
+    }
+
+    return React.createElement(cellTag, {
+      "aria-hidden": true,
+      role: "presentation",
+    });
+  };
+
+  const totalVisibleColumns = getVisibleColumnCount(
+    table.getVisibleLeafColumns().length
+  );
+
   return (
     <div className={cn("space-y-4", className)}>
       {tableConfig.enableToolbar && (
@@ -753,7 +773,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         )}
                     </th>
                   ))}
-                  {tableConfig.enableColumnResizing && <th aria-hidden="true" />}
+                  {renderResizePlaceholderCell("th")}
                 </tr>
               ))}
             </thead>
@@ -781,7 +801,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         <div className="h-6 w-full animate-pulse rounded bg-muted" />
                       </td>
                     ))}
-                    {tableConfig.enableColumnResizing && <td aria-hidden="true" />}
+                    {renderResizePlaceholderCell("td")}
                   </tr>
                 ))
               ) : table.getRowModel().rows?.length ? (
@@ -827,11 +847,14 @@ export function DataTable<T extends Record<string, unknown>>({
                         )}
                       </td>
                     ))}
-                    {tableConfig.enableColumnResizing && <td aria-hidden="true" />}
+                    {renderResizePlaceholderCell("td")}
                   </tr>
                   {row.getIsExpanded() && renderSubRow && (
                     <tr key={`expanded-${row.id}`} className="bg-muted/30 hover:bg-muted/30 border-b">
-                      <td colSpan={row.getVisibleCells().length + (tableConfig.enableColumnResizing ? 1 : 0)} className="p-0">
+                      <td
+                        colSpan={getVisibleColumnCount(row.getVisibleCells().length)}
+                        className="p-0"
+                      >
                         {renderSubRow({ row: row.original, table: tableContextRef.current })}
                       </td>
                     </tr>
@@ -842,7 +865,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 <tr data-slot="table-row">
                   <td
                     data-slot="table-cell"
-                    colSpan={resolvedColumns.length + (tableConfig.enableColumnResizing ? 1 : 0)}
+                    colSpan={totalVisibleColumns}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No results.
