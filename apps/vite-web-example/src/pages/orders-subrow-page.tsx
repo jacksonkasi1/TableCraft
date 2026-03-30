@@ -47,9 +47,9 @@ export function OrdersSubRowPage() {
   }, []);
 
   return (
-    <div className="p-8 space-y-4 w-full mx-auto">
+    <div className="p-8 space-y-4 w-full mx-auto text-sm">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Orders (Master-Detail)</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
         <p className="text-muted-foreground mt-1">
           Click the arrow next to an order to see its items. The sub-table loads dynamically
           and manages its own state without affecting the parent URL!
