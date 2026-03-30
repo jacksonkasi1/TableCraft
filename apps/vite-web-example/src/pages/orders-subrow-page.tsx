@@ -47,7 +47,7 @@ export function OrdersSubRowPage() {
   }, []);
 
   return (
-    <div className="p-8 space-y-4 max-w-7xl mx-auto">
+    <div className="p-8 space-y-4 w-full mx-auto">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Orders (Master-Detail)</h1>
         <p className="text-muted-foreground mt-1">
