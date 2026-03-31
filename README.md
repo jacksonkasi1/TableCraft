@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/demo.gif" alt="TableCraft - Complex table setup in 5 minutes" width="100%" />
+  <img src="./assets/demo.png" alt="TableCraft - Complex table setup in 5 minutes" width="100%" />
 </p>
 
 # TableCraft
