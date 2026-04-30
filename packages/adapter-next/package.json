@@ -23,8 +23,8 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": ">=0.1.0",
-    "next": ">=14.0.0 <16 || >=16.2.3"
+    "@tablecraft/engine": ">=0.1.0 <1",
+    "next": ">=14.0.0 <16 || >=16.1.6"
   },
   "devDependencies": {
     "@tablecraft/engine": "workspace:*",
