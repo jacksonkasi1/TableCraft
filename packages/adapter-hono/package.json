@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/adapter-hono",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "description": "Hono adapter for TableCraft",
   "type": "module",
   "main": "dist/index.js",
@@ -24,13 +24,13 @@
   },
   "peerDependencies": {
     "@tablecraft/engine": ">=0.1.0",
-    "hono": ">=4.0.0"
+    "hono": ">=4.12.14"
   },
   "devDependencies": {
     "@tablecraft/engine": "workspace:*",
-    "hono": "^4.7.0",
-    "typescript": "^5.3.3",
-    "vitest": "^1.6.1"
+    "hono": "^4.12.14",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
   },
   "keywords": [
     "tablecraft",
