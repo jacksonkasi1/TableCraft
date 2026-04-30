@@ -11,16 +11,16 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.7.0",
-    "drizzle-orm": "^0.45.1",
-    "postgres": "^3.4.5",
-    "dotenv": "^16.4.7",
+    "hono": "^4.12.14",
+    "drizzle-orm": "^0.45.2",
+    "postgres": "^3.4.9",
+    "dotenv": "^17.4.2",
     "@tablecraft/engine": "workspace:*",
     "@tablecraft/adapter-hono": "workspace:*",
     "@tablecraft/plugin-cache": "workspace:*"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.31.10",
     "bun-types": "latest"
   }
 }
