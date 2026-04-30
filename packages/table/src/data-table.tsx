@@ -933,6 +933,10 @@ export function DataTable<T extends Record<string, unknown>>({
   };
 
   // ─── Expose grouping API via groupingRef (imperative handle) ───
+  // Re-publish the handle whenever any of the captured helpers change identity
+  // (each helper is a useCallback that updates when its own deps change, so
+  // this effect runs only when the closure's behaviour actually changes —
+  // not on every render, which previously nulled the ref between renders).
   useEffect(() => {
     if (!groupingRef) return;
     const handle: import("./types").TableGroupingAPI = {
@@ -947,12 +951,20 @@ export function DataTable<T extends Record<string, unknown>>({
       getGroupingDepth,
     };
     (groupingRef as React.MutableRefObject<import("./types").TableGroupingAPI | null>).current = handle;
-    return () => {
-      (groupingRef as React.MutableRefObject<import("./types").TableGroupingAPI | null>).current = null;
-    };
-  });
-  // Note: no dependency array — re-runs every render so the handle always closes
-  // over the latest `table`, `expanded`, and grouping helpers.
+    // No cleanup: the parent owns the ref's lifecycle.  Nulling on every
+    // dep change opened a brief null window that broke consumers reading
+    // `ref.current` synchronously across renders.
+  }, [
+    groupingRef,
+    table,
+    expandDepth,
+    collapseDepth,
+    toggleDepth,
+    setExpandedDepths,
+    getExpandedDepths,
+    getGroupingProperty,
+    getGroupingDepth,
+  ]);
 
   const customToolbar = renderToolbar
     ? renderToolbar(toolbarContext)
