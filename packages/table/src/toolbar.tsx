@@ -256,7 +256,7 @@ export function DataTableToolbar<TData extends ExportableData>({
                 "cursor-pointer"
               )}
             >
-              <ChevronsDownUp className="h-4 w-4" />
+              <ChevronsUpDown className="h-4 w-4" />
               <span className="sr-only">Expand all groups</span>
             </button>
             <button
@@ -272,7 +272,7 @@ export function DataTableToolbar<TData extends ExportableData>({
                 "cursor-pointer"
               )}
             >
-              <ChevronsUpDown className="h-4 w-4" />
+              <ChevronsDownUp className="h-4 w-4" />
               <span className="sr-only">Collapse all groups</span>
             </button>
           </>

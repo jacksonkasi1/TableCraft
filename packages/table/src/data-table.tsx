@@ -276,14 +276,21 @@ export function DataTable<T extends Record<string, unknown>>({
   }, [JSON.stringify(rowGrouping)]);
 
   // ─── Dev warning: manualPagination + rowGrouping conflict ───
-  // When manualPagination:true the server already returns one page of rows.
-  // Client-side grouping (getGroupedRowModel) then groups ONLY those rows, so
-  // any group whose members span multiple server pages will appear as separate
-  // partial groups with wrong leaf counts on each page.
+  // The table internally sets manualPagination:true, so the adapter returns
+  // one page of rows at a time.  Client-side grouping (getGroupedRowModel)
+  // then groups ONLY those rows, so any group whose members span multiple
+  // pages will appear as separate partial groups with wrong leaf counts on
+  // each page.
   useEffect(() => {
-    if (rowGrouping?.length && tableConfig.enablePagination) {
+    const NODE_ENV = (globalThis as { process?: { env?: { NODE_ENV?: string } } })
+      .process?.env?.NODE_ENV;
+    if (
+      NODE_ENV !== "production" &&
+      rowGrouping?.length &&
+      tableConfig.enablePagination
+    ) {
       console.warn(
-        "[TableCraft] Row grouping + server-side pagination: groups may be split across pages. " +
+        "[TableCraft] Row grouping + pagination: groups may be split across pages. " +
         "Consider setting config={{ enablePagination: false }} or using a large pageSize when rowGrouping is active."
       );
     }
@@ -787,7 +794,12 @@ export function DataTable<T extends Record<string, unknown>>({
       const targets = collectGroupRowsAtDepth(groupedRows, depth);
       if (!targets.length) return;
       setExpanded((prev) => {
-        const base = typeof prev === "boolean" ? {} : { ...(prev as Record<string, boolean>) };
+        // prev === true means "all rows expanded" already includes our targets.
+        // Returning a fresh object would collapse every other depth — preserve
+        // the boolean state instead.
+        if (prev === true) return prev;
+        const base =
+          typeof prev === "boolean" ? {} : { ...(prev as Record<string, boolean>) };
         for (const row of targets) base[row.id] = true;
         return base;
       });
