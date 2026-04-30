@@ -86,6 +86,9 @@ export type {
   StartToolbarPlacement,
   ColumnOverrides,
   ActionsRender,
+  RowGroupingAggregation,
+  RowGroupingConfig,
+  OnRowGroupExpandInfo,
 } from "./types";
 
 export { defineColumnOverrides, defineExportConfig } from "./types";

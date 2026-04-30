@@ -42,6 +42,73 @@ export function defaultColumnOrder<C extends string>(columns: C[]): C[] {
 }
 
 // ─────────────────────────────────────────────
+// Row Grouping Types
+// ─────────────────────────────────────────────
+
+export type RowGroupingAggregation =
+  | "sum"
+  | "min"
+  | "max"
+  | "mean"
+  | "median"
+  | "unique"
+  | "uniqueCount"
+  | "count"
+  | "extent";
+
+/**
+ * Configuration for row grouping behaviour.
+ *
+ * **Performance note**: this object is used as a `useMemo` dependency inside
+ * `DataTable`.  If you pass it as an inline object literal the reference
+ * changes on every parent render, which busts the `aggregationFns` memo and,
+ * transitively, the `resolvedColumns` memo — causing all columns to
+ * re-resolve on every render.  Stabilise the value with `useMemo` or define
+ * it outside the component:
+ *
+ * ```ts
+ * // Outside component or in useMemo:
+ * const groupingConfig = useMemo(
+ *   () => ({ defaultExpanded: true, aggregations: { salary: 'sum' } }),
+ *   []
+ * );
+ * <DataTable rowGroupingConfig={groupingConfig} ... />
+ * ```
+ */
+export interface RowGroupingConfig<T extends Record<string, unknown>> {
+  /**
+   * Start all groups expanded when the table mounts.
+   * @default false
+   */
+  defaultExpanded?: boolean;
+  /**
+   * Per-column aggregate functions to display in the group-header row.
+   * @example { salary: "sum", headcount: "count" }
+   */
+  aggregations?: Partial<Record<keyof T & string, RowGroupingAggregation>>;
+  /**
+   * Optional custom renderer for the group-header cell content.
+   * Return null or undefined to fall back to the default "ColumnLabel: value (n rows)" format.
+   */
+  renderGroupCell?: (props: {
+    columnId: string;
+    value: unknown;
+    leafRowCount: number;
+  }) => ReactNode;
+}
+
+export interface OnRowGroupExpandInfo {
+  /** The column ID that was grouped */
+  columnId: string;
+  /** The grouped value (e.g. "Engineering") */
+  value: unknown;
+  /** Whether the group was just expanded (true) or collapsed (false) */
+  isExpanded: boolean;
+  /** Zero-based depth level in a multi-level grouping */
+  depth: number;
+}
+
+// ─────────────────────────────────────────────
 // Table Configuration
 // ─────────────────────────────────────────────
 
@@ -88,6 +155,11 @@ export interface TableConfig {
   pageSizeOptions?: number[];
   /** Allow exporting new columns created by transform function */
   allowExportNewColumns: boolean;
+  /**
+   * Show "Expand All / Collapse All" buttons in the toolbar when rowGrouping is active.
+   * @default true
+   */
+  enableRowGroupingControls?: boolean;
 }
 
 export type StartToolbarPlacement = 'before-search' | 'after-search' | 'after-date';
@@ -230,6 +302,12 @@ export interface TableContext<T> {
   dateRange: { from: string; to: string };
   /** All rows on the current page */
   allData: T[];
+  /** Expand all row groups (no-op when rowGrouping is not active) */
+  expandAllGroups?: () => void;
+  /** Collapse all row groups (no-op when rowGrouping is not active) */
+  collapseAllGroups?: () => void;
+  /** True when rowGrouping prop is non-empty */
+  isRowGroupingActive?: boolean;
 }
 
 // ─────────────────────────────────────────────
@@ -463,7 +541,7 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   /**
    * Controls where `startToolbarContent` is rendered in the left toolbar area.
    * - `'before-search'` — before the search input
-   * - `'after-search'`  — after search, before the date filter. 
+   * - `'after-search'`  — after search, before the date filter.
    *                       NOTE: If `enableSearch` is false, this renders in the same visual position as `'before-search'`.
    * - `'after-date'`    — after the date filter (default)
    * @default 'after-date'
@@ -507,6 +585,23 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * )}
    */
   actions?: ActionsRender<T>;
+  /**
+   * Column IDs to group flat data by — creates collapsible group-header rows.
+   * First element = outermost group, last element = innermost group.
+   * @example rowGrouping={["department", "team"]}
+   */
+  rowGrouping?: (keyof T & string)[];
+
+  /**
+   * Fine-grained configuration for row grouping behaviour.
+   * Only relevant when `rowGrouping` is set.
+   */
+  rowGroupingConfig?: RowGroupingConfig<T>;
+
+  /**
+   * Callback fired when a group row is expanded or collapsed.
+   */
+  onRowGroupExpand?: (info: OnRowGroupExpandInfo) => void;
 }
 
 export interface ToolbarContext<T> {
