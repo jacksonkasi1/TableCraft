@@ -1149,7 +1149,7 @@ export function DataTable<T extends Record<string, unknown>>({
                         data-group-row={isGroupRow ? "true" : undefined}
                         data-depth={isGroupRow ? String(row.depth) : undefined}
                         tabIndex={0}
-                        aria-selected={row.getIsSelected()}
+                        aria-selected={isGroupRow ? undefined : row.getIsSelected()}
                         aria-expanded={isGroupRow ? row.getIsExpanded() : undefined}
                         className={cn(
                           "border-b transition-colors",
