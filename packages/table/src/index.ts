@@ -8,7 +8,7 @@ export { DataTableToolbar } from "./toolbar";
 export { DataTableViewOptions } from "./view-options";
 export { DataTableExport } from "./export";
 export { DataTableResizer } from "./resizer";
-export { ExpandIcon } from "./expand-icon";
+export { ExpandIcon, GroupRowChevron, GroupRowBadge } from "./expand-icon";
 
 // ─── Adapters ───
 export { createTableCraftAdapter } from "./auto/tablecraft-adapter";
@@ -89,6 +89,7 @@ export type {
   RowGroupingAggregation,
   RowGroupingConfig,
   OnRowGroupExpandInfo,
+  TableGroupingAPI,
 } from "./types";
 
 export { defineColumnOverrides, defineExportConfig } from "./types";

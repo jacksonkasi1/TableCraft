@@ -109,6 +109,68 @@ export interface OnRowGroupExpandInfo {
 }
 
 // ─────────────────────────────────────────────
+// Grouping Imperative API (exposed via groupingRef prop)
+// ─────────────────────────────────────────────
+
+/**
+ * Imperative handle exposed when you pass a `groupingRef` to `<DataTable>`.
+ * Mirrors the programmatic control API from simple-table v2.1.0.
+ *
+ * @example
+ * const ref = useRef<TableGroupingAPI>(null);
+ * <DataTable groupingRef={ref} rowGrouping={["department", "team"]} ... />
+ *
+ * // In an event handler:
+ * ref.current?.expandAll();
+ * ref.current?.expandDepth(0);   // expand top-level groups only
+ * ref.current?.collapseDepth(1); // collapse second-level groups
+ */
+export interface TableGroupingAPI {
+  /** Expand all groups at all depths */
+  expandAll(): void;
+  /** Collapse all groups at all depths */
+  collapseAll(): void;
+  /**
+   * Expand all group rows at a specific depth (0-indexed).
+   * depth 0 = top-level groups, depth 1 = second-level groups, etc.
+   */
+  expandDepth(depth: number): void;
+  /**
+   * Collapse all group rows at a specific depth (0-indexed).
+   */
+  collapseDepth(depth: number): void;
+  /**
+   * Toggle expansion for all group rows at a specific depth.
+   * If ALL groups at that depth are expanded, collapses them.
+   * Otherwise, expands them all.
+   */
+  toggleDepth(depth: number): void;
+  /**
+   * Explicitly set which depths are expanded.
+   * Replaces the current expansion state for group rows.
+   * @example ref.current?.setExpandedDepths(new Set([0, 2])); // only depths 0 and 2
+   */
+  setExpandedDepths(depths: Set<number>): void;
+  /**
+   * Get the set of depths that currently have at least one expanded group row.
+   */
+  getExpandedDepths(): Set<number>;
+  /**
+   * Get the column accessor key that defines the grouping at a given depth.
+   * @example getGroupingProperty(0) // "department"
+   * @example getGroupingProperty(1) // "team"
+   */
+  getGroupingProperty(depth: number): string | undefined;
+  /**
+   * Get the depth index for a given grouping property name.
+   * Returns -1 if the property is not in the rowGrouping array.
+   * @example getGroupingDepth("department") // 0
+   * @example getGroupingDepth("team")       // 1
+   */
+  getGroupingDepth(property: string): number;
+}
+
+// ─────────────────────────────────────────────
 // Table Configuration
 // ─────────────────────────────────────────────
 
@@ -306,6 +368,16 @@ export interface TableContext<T> {
   expandAllGroups?: () => void;
   /** Collapse all row groups (no-op when rowGrouping is not active) */
   collapseAllGroups?: () => void;
+  /** Expand all group rows at a specific depth index (0 = top-level) */
+  expandDepth?: (depth: number) => void;
+  /** Collapse all group rows at a specific depth index */
+  collapseDepth?: (depth: number) => void;
+  /** Toggle expansion for all group rows at a specific depth */
+  toggleDepth?: (depth: number) => void;
+  /** Get the column key at a given grouping depth index */
+  getGroupingProperty?: (depth: number) => string | undefined;
+  /** Get the depth index of a given column key (-1 if not grouped by it) */
+  getGroupingDepth?: (property: string) => number;
   /** True when rowGrouping prop is non-empty */
   isRowGroupingActive?: boolean;
 }
@@ -602,6 +674,17 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * Callback fired when a group row is expanded or collapsed.
    */
   onRowGroupExpand?: (info: OnRowGroupExpandInfo) => void;
+  /**
+   * Imperative ref that exposes programmatic grouping controls.
+   * Attach this to a `useRef<TableGroupingAPI>()` to call methods like
+   * `expandAll()`, `expandDepth(0)`, `collapseDepth(1)`, `toggleDepth(n)`, etc.
+   *
+   * @example
+   * const groupRef = useRef<TableGroupingAPI>(null);
+   * <DataTable groupingRef={groupRef} rowGrouping={["department"]} ... />
+   * // Then: groupRef.current?.expandDepth(0);
+   */
+  groupingRef?: React.RefObject<TableGroupingAPI | null>;
 }
 
 export interface ToolbarContext<T> {

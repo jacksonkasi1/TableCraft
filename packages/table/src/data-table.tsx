@@ -64,6 +64,7 @@ export function DataTable<T extends Record<string, unknown>>({
   rowGrouping,
   rowGroupingConfig,
   onRowGroupExpand,
+  groupingRef,
 }: DataTableProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
@@ -280,18 +281,13 @@ export function DataTable<T extends Record<string, unknown>>({
   // any group whose members span multiple server pages will appear as separate
   // partial groups with wrong leaf counts on each page.
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production" && rowGrouping?.length) {
+    if (rowGrouping?.length && tableConfig.enablePagination) {
       console.warn(
-        "[TableCraft] rowGrouping is active with manualPagination:true. " +
-        "TanStack groups the already-paginated slice returned by the server, so " +
-        "groups whose members span multiple pages will appear as separate partial " +
-        "groups with incorrect leaf-row counts. " +
-        "Consider disabling pagination while grouping is active, or performing " +
-        "grouping on the server and passing pre-grouped rows."
+        "[TableCraft] Row grouping + server-side pagination: groups may be split across pages. " +
+        "Consider setting config={{ enablePagination: false }} or using a large pageSize when rowGrouping is active."
       );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!rowGrouping?.length]);
+  }, [rowGrouping, tableConfig.enablePagination]);
 
   // ─── Fire onRowGroupExpand callback ───
   const prevExpandedRef = useRef<ExpandedState>({});
@@ -768,6 +764,143 @@ export function DataTable<T extends Record<string, unknown>>({
     setDateRange,
   };
 
+  // ─── Row grouping depth helpers ───
+  const collectGroupRowsAtDepth = useCallback(
+    (rows: Row<T>[], targetDepth: number, acc: Row<T>[] = []): Row<T>[] => {
+      for (const row of rows) {
+        if (!row.getIsGrouped()) continue;
+        if (row.depth === targetDepth) {
+          acc.push(row);
+        } else if (row.depth < targetDepth && row.subRows?.length) {
+          collectGroupRowsAtDepth(row.subRows, targetDepth, acc);
+        }
+      }
+      return acc;
+    },
+    [] // no deps — pure function over its arguments
+  );
+
+  const expandDepth = useCallback(
+    (depth: number) => {
+      if (!rowGrouping?.length) return;
+      const groupedRows = table.getGroupedRowModel().rows;
+      const targets = collectGroupRowsAtDepth(groupedRows, depth);
+      if (!targets.length) return;
+      setExpanded((prev) => {
+        const base = typeof prev === "boolean" ? {} : { ...(prev as Record<string, boolean>) };
+        for (const row of targets) base[row.id] = true;
+        return base;
+      });
+    },
+    [rowGrouping, table, collectGroupRowsAtDepth]
+  );
+
+  const collapseDepth = useCallback(
+    (depth: number) => {
+      if (!rowGrouping?.length) return;
+      const groupedRows = table.getGroupedRowModel().rows;
+      const targets = collectGroupRowsAtDepth(groupedRows, depth);
+      if (!targets.length) return;
+      const targetIds = new Set(targets.map((r) => r.id));
+      setExpanded((prev) => {
+        if (typeof prev === "boolean") {
+          const allGroupIds = new Set<string>();
+          const collectAll = (rows: Row<T>[]) => {
+            for (const r of rows) {
+              if (r.getIsGrouped()) {
+                allGroupIds.add(r.id);
+                if (r.subRows?.length) collectAll(r.subRows);
+              }
+            }
+          };
+          collectAll(table.getGroupedRowModel().rows);
+          const map: Record<string, boolean> = {};
+          for (const id of allGroupIds) map[id] = !targetIds.has(id);
+          return map;
+        }
+        const next = { ...(prev as Record<string, boolean>) };
+        for (const id of targetIds) delete next[id];
+        return next;
+      });
+    },
+    [rowGrouping, table, collectGroupRowsAtDepth]
+  );
+
+  const toggleDepth = useCallback(
+    (depth: number) => {
+      if (!rowGrouping?.length) return;
+      const groupedRows = table.getGroupedRowModel().rows;
+      const targets = collectGroupRowsAtDepth(groupedRows, depth);
+      if (!targets.length) return;
+      const expandedState =
+        typeof expanded === "boolean"
+          ? targets.map(() => expanded)
+          : targets.map((r) => !!(expanded as Record<string, boolean>)[r.id]);
+      const allExpanded = expandedState.every(Boolean);
+      if (allExpanded) {
+        collapseDepth(depth);
+      } else {
+        expandDepth(depth);
+      }
+    },
+    [rowGrouping, table, collectGroupRowsAtDepth, expanded, expandDepth, collapseDepth]
+  );
+
+  const setExpandedDepths = useCallback(
+    (depths: Set<number>) => {
+      if (!rowGrouping?.length) return;
+      const newExpanded: Record<string, boolean> = {};
+      const visit = (rows: Row<T>[]) => {
+        for (const row of rows) {
+          if (!row.getIsGrouped()) continue;
+          newExpanded[row.id] = depths.has(row.depth);
+          if (row.subRows?.length) visit(row.subRows);
+        }
+      };
+      visit(table.getGroupedRowModel().rows);
+      setExpanded(newExpanded);
+    },
+    [rowGrouping, table]
+  );
+
+  const getExpandedDepths = useCallback((): Set<number> => {
+    if (!rowGrouping?.length) return new Set();
+    const depths = new Set<number>();
+    if (typeof expanded === "boolean") {
+      if (expanded) {
+        const visit = (rows: Row<T>[]) => {
+          for (const row of rows) {
+            if (row.getIsGrouped()) {
+              depths.add(row.depth);
+              if (row.subRows?.length) visit(row.subRows);
+            }
+          }
+        };
+        visit(table.getGroupedRowModel().rows);
+      }
+      return depths;
+    }
+    const expandedMap = expanded as Record<string, boolean>;
+    for (const [id, isOpen] of Object.entries(expandedMap)) {
+      if (!isOpen) continue;
+      try {
+        const row = table.getRow(id);
+        if (row?.getIsGrouped()) depths.add(row.depth);
+      } catch { /* row may not exist in current model */ }
+    }
+    return depths;
+  }, [rowGrouping, expanded, table]);
+
+  const getGroupingProperty = useCallback(
+    (depth: number): string | undefined => rowGrouping?.[depth],
+    [rowGrouping]
+  );
+
+  const getGroupingDepth = useCallback(
+    (property: string): number => rowGrouping?.indexOf(property) ?? -1,
+    [rowGrouping]
+  );
+
   // ─── Keep tableContextRef in sync every render ───
   // This runs synchronously before render, so column cells always see fresh values.
   tableContextRef.current = {
@@ -779,8 +912,35 @@ export function DataTable<T extends Record<string, unknown>>({
     allData: data,
     expandAllGroups: () => table.toggleAllRowsExpanded(true),
     collapseAllGroups: () => table.toggleAllRowsExpanded(false),
+    expandDepth,
+    collapseDepth,
+    toggleDepth,
+    getGroupingProperty,
+    getGroupingDepth,
     isRowGroupingActive: !!(grouping.length),
   };
+
+  // ─── Expose grouping API via groupingRef (imperative handle) ───
+  useEffect(() => {
+    if (!groupingRef) return;
+    const handle: import("./types").TableGroupingAPI = {
+      expandAll: () => table.toggleAllRowsExpanded(true),
+      collapseAll: () => table.toggleAllRowsExpanded(false),
+      expandDepth,
+      collapseDepth,
+      toggleDepth,
+      setExpandedDepths,
+      getExpandedDepths,
+      getGroupingProperty,
+      getGroupingDepth,
+    };
+    (groupingRef as React.MutableRefObject<import("./types").TableGroupingAPI | null>).current = handle;
+    return () => {
+      (groupingRef as React.MutableRefObject<import("./types").TableGroupingAPI | null>).current = null;
+    };
+  });
+  // Note: no dependency array — re-runs every render so the handle always closes
+  // over the latest `table`, `expanded`, and grouping helpers.
 
   const customToolbar = renderToolbar
     ? renderToolbar(toolbarContext)

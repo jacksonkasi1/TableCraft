@@ -1,7 +1,69 @@
 import { DataTable, createStaticAdapter } from "@tablecraft/table";
+import { useRef } from "react";
+import type { TableGroupingAPI } from "@tablecraft/table";
 import { EMPLOYEES_DATA, type EmployeeRow } from "@/data/employees-grouping";
 
 const adapter = createStaticAdapter<EmployeeRow>(EMPLOYEES_DATA);
+
+function ProgrammaticDemo() {
+  const groupRef = useRef<TableGroupingAPI | null>(null);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => groupRef.current?.expandAll()}
+          className="px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer"
+        >
+          Expand All
+        </button>
+        <button
+          onClick={() => groupRef.current?.collapseAll()}
+          className="px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer"
+        >
+          Collapse All
+        </button>
+        <button
+          onClick={() => groupRef.current?.expandDepth(0)}
+          className="px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer"
+        >
+          Expand Dept
+        </button>
+        <button
+          onClick={() => groupRef.current?.collapseDepth(0)}
+          className="px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer"
+        >
+          Collapse Dept
+        </button>
+        <button
+          onClick={() => groupRef.current?.toggleDepth(1)}
+          className="px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer"
+        >
+          Toggle Teams
+        </button>
+        <button
+          onClick={() => {
+            const depths = groupRef.current?.getExpandedDepths();
+            const p0 = groupRef.current?.getGroupingProperty(0);
+            const p1 = groupRef.current?.getGroupingProperty(1);
+            const d = [...(depths ?? [])].join(", ") || "none";
+            alert(`Open depths: [${d}]\nDepth 0 → "${p0 ?? "—"}"\nDepth 1 → "${p1 ?? "—"}"`);
+          }}
+          className="px-3 py-1.5 text-sm rounded-md border border-input bg-background hover:bg-accent transition-colors cursor-pointer"
+        >
+          Inspect state
+        </button>
+      </div>
+      <DataTable<EmployeeRow>
+        adapter={adapter}
+        rowGrouping={["department", "team"]}
+        groupingRef={groupRef}
+        rowGroupingConfig={{ defaultExpanded: false }}
+        config={{ enableUrlState: false, enablePagination: false }}
+      />
+    </div>
+  );
+}
 
 export function EmployeesGroupingPage() {
   return (
@@ -70,6 +132,16 @@ export function EmployeesGroupingPage() {
             enablePagination: false,
           }}
         />
+      </section>
+
+      {/* Example 4: Programmatic depth control */}
+      <section className="space-y-2">
+        <h2 className="text-lg font-semibold">Programmatic Control (groupingRef)</h2>
+        <p className="text-sm text-muted-foreground">
+          Attach a <code className="text-xs bg-muted px-1 rounded">groupingRef</code> for imperative access:
+          expandDepth, collapseDepth, toggleDepth, setExpandedDepths and more.
+        </p>
+        <ProgrammaticDemo />
       </section>
     </div>
   );
