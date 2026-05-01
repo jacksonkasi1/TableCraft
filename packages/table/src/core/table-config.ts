@@ -26,6 +26,7 @@ const defaultConfig: TableConfig = {
   pageSizeOptions: [10, 20, 30, 40, 50],
   allowExportNewColumns: true,
   enableRowGroupingControls: true,
+  keepPreviousData: false,
 };
 
 /**

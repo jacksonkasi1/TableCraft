@@ -222,6 +222,14 @@ export interface TableConfig {
    * @default true
    */
   enableRowGroupingControls?: boolean;
+  /**
+   * When true, the table keeps showing previous rows during a refetch instead
+   * of swapping to the loading skeleton. Useful when the host swaps the
+   * adapter to push fresh data (e.g. lazy-tree expansion) and a skeleton flash
+   * would be jarring.
+   * @default false
+   */
+  keepPreviousData?: boolean;
 }
 
 export type StartToolbarPlacement = 'before-search' | 'after-search' | 'after-date';
@@ -590,6 +598,12 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   renderSubRow?: (props: { row: T; table: TableContext<T> }) => React.ReactNode;
   /** Allow developers to control exactly WHICH rows can expand (Optional, defaults to all if renderSubRow is provided) */
   getRowCanExpand?: (row: T) => boolean;
+  /**
+   * Returns child rows for a given row — enables tree/hierarchical data.
+   * The table renders children inline with depth-based indentation.
+   * @example getSubRows={(row) => row.children as T[]}
+   */
+  getSubRows?: (row: T) => T[] | undefined;
   /** Data adapter — the bridge to your backend */
   adapter: DataAdapter<T>;
   /** Manual column definitions (skip auto-generation from metadata) */
@@ -724,6 +738,21 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * Callback fired when a group row is expanded or collapsed.
    */
   onRowGroupExpand?: (info: OnRowGroupExpandInfo) => void;
+  /**
+   * Callback fired when a tree (non-grouped) sub-row is expanded or collapsed.
+   * Use this to lazy-load children when a row is first expanded.
+   *
+   * @example
+   * onRowExpand={({ row, isExpanded }) => {
+   *   if (isExpanded && row.children === undefined) fetchChildren(row.id);
+   * }}
+   */
+  onRowExpand?: (info: {
+    row: T;
+    rowId: string;
+    depth: number;
+    isExpanded: boolean;
+  }) => void;
   /**
    * Imperative ref that exposes programmatic grouping controls.
    * Attach this to a `useRef<TableGroupingAPI>()` to call methods like
