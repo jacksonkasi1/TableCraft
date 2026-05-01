@@ -13,7 +13,7 @@ const SORT = {
   region:  { name: schema.retailRegions.name,  totalSales: schema.retailRegions.totalSales,  revenue: schema.retailRegions.revenue,  stores: schema.retailRegions.stores,  avgRating: schema.retailRegions.avgRating  },
   store:   { name: schema.retailStores.name,   totalSales: schema.retailStores.totalSales,   revenue: schema.retailStores.revenue,                                          avgRating: schema.retailStores.avgRating   },
   product: { name: schema.retailProducts.name, totalSales: schema.retailProducts.totalSales, revenue: schema.retailProducts.revenue,                                        avgRating: schema.retailProducts.avgRating },
-} as const;
+};
 
 type Dir = 'asc' | 'desc';
 
