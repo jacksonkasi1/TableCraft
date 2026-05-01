@@ -53,6 +53,8 @@ export function DataTable<T extends Record<string, unknown>>({
   defaultColumnOrder,
   startToolbarContent,
   startToolbarPlacement,
+  endToolbarContent,
+  endToolbarPlacement,
   toolbarContent,
   renderToolbar,
   className,
@@ -975,6 +977,11 @@ export function DataTable<T extends Record<string, unknown>>({
       ? startToolbarContent(toolbarContext)
       : startToolbarContent;
 
+  const resolvedEndToolbarContent =
+    typeof endToolbarContent === "function"
+      ? endToolbarContent(toolbarContext)
+      : endToolbarContent;
+
   // ─── Error state ───
   if (isError) {
     return (
@@ -1041,6 +1048,8 @@ export function DataTable<T extends Record<string, unknown>>({
           customToolbarContent={customToolbar}
           startToolbarContent={resolvedStartToolbarContent}
           startToolbarPlacement={startToolbarPlacement}
+          endToolbarContent={resolvedEndToolbarContent}
+          endToolbarPlacement={endToolbarPlacement}
           hiddenColumns={hiddenColumns as string[]}
           onExpandAllGroups={tableContextRef.current.expandAllGroups}
           onCollapseAllGroups={tableContextRef.current.collapseAllGroups}

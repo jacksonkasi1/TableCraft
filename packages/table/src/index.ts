@@ -84,6 +84,7 @@ export type {
   ToolbarContext,
   TableContext,
   StartToolbarPlacement,
+  EndToolbarPlacement,
   ColumnOverrides,
   ActionsRender,
   RowGroupingAggregation,

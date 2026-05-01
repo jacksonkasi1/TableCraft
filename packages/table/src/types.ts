@@ -226,6 +226,31 @@ export interface TableConfig {
 
 export type StartToolbarPlacement = 'before-search' | 'after-search' | 'after-date';
 
+/**
+ * Anchor positions for `endToolbarContent` (right-side toolbar cluster).
+ * The anchor is a *position*, not a dependency — it still renders even if the
+ * referenced built-in is disabled.  Order of built-ins on the right (when
+ * enabled): grouping-controls → export → view-options → settings.
+ *
+ * - `'before-grouping'`  — first thing on the right (after `customToolbarContent`)
+ * - `'after-grouping'`   — between grouping controls and export
+ * - `'before-export'`    — same visual slot as `'after-grouping'` when grouping is hidden
+ * - `'after-export'`     — between export and view-options
+ * - `'before-view'`      — same as `'after-export'` when export is hidden
+ * - `'after-view'`       — between view-options and settings  *(default)*
+ * - `'before-settings'`  — alias of `'after-view'`
+ * - `'after-settings'`   — last (rightmost) — after the settings popover
+ */
+export type EndToolbarPlacement =
+  | 'before-grouping'
+  | 'after-grouping'
+  | 'before-export'
+  | 'after-export'
+  | 'before-view'
+  | 'after-view'
+  | 'before-settings'
+  | 'after-settings';
+
 // ─────────────────────────────────────────────
 // Data Fetching
 // ─────────────────────────────────────────────
@@ -619,6 +644,31 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * @default 'after-date'
    */
   startToolbarPlacement?: StartToolbarPlacement;
+  /**
+   * Custom toolbar content — injected into the right toolbar area without
+   * disturbing the position of any built-in control.
+   * Use `endToolbarPlacement` to choose which slot to render into.
+   *
+   * Receives the same `ToolbarContext` as `startToolbarContent` when passed
+   * as a function, so you can read selection / search / date-range state.
+   *
+   * @example
+   * <DataTable
+   *   endToolbarContent={(ctx) => (
+   *     <Button onClick={() => doSomething(ctx.selectedIds)}>
+   *       Bulk action ({ctx.totalSelected})
+   *     </Button>
+   *   )}
+   *   endToolbarPlacement="before-export"
+   * />
+   */
+  endToolbarContent?: React.ReactNode | ((ctx: ToolbarContext<T>) => React.ReactNode);
+  /**
+   * Where to inject `endToolbarContent` on the right side. See
+   * {@link EndToolbarPlacement} for available slots.
+   * @default 'after-view'
+   */
+  endToolbarPlacement?: EndToolbarPlacement;
   /** Custom toolbar content (rendered after built-in controls) */
   toolbarContent?: React.ReactNode;
   /** Render custom toolbar with selection context */

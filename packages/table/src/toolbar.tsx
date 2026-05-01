@@ -1,7 +1,7 @@
 import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
 import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
-import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement } from "./types";
+import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement, EndToolbarPlacement } from "./types";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./export";
 import {
@@ -66,6 +66,10 @@ interface DataTableToolbarProps<TData extends ExportableData> {
    * @default 'after-date'
    */
   startToolbarPlacement?: StartToolbarPlacement;
+  /** Right-side injectable content (resolved ReactNode — function form is resolved by parent) */
+  endToolbarContent?: React.ReactNode;
+  /** Anchor for `endToolbarContent` */
+  endToolbarPlacement?: EndToolbarPlacement;
   hiddenColumns?: string[];
   /** Expand all row groups */
   onExpandAllGroups?: () => void;
@@ -93,6 +97,8 @@ export function DataTableToolbar<TData extends ExportableData>({
   customToolbarContent,
   startToolbarContent,
   startToolbarPlacement = 'after-date',
+  endToolbarContent,
+  endToolbarPlacement = 'after-view',
   hiddenColumns,
   onExpandAllGroups,
   onCollapseAllGroups,
@@ -241,6 +247,8 @@ export function DataTableToolbar<TData extends ExportableData>({
       <div className="flex items-center gap-2">
         {customToolbarContent}
 
+        {endToolbarPlacement === 'before-grouping' && endToolbarContent}
+
         {isRowGroupingActive && (config.enableRowGroupingControls ?? true) && (
           <>
             <button
@@ -278,6 +286,9 @@ export function DataTableToolbar<TData extends ExportableData>({
           </>
         )}
 
+        {(endToolbarPlacement === 'after-grouping' ||
+          endToolbarPlacement === 'before-export') && endToolbarContent}
+
         {config.enableExport && (
           <DataTableExport
             table={table}
@@ -289,6 +300,9 @@ export function DataTableToolbar<TData extends ExportableData>({
           />
         )}
 
+        {(endToolbarPlacement === 'after-export' ||
+          endToolbarPlacement === 'before-view') && endToolbarContent}
+
         {config.enableColumnVisibility && (
           <DataTableViewOptions
             table={table}
@@ -298,6 +312,9 @@ export function DataTableToolbar<TData extends ExportableData>({
             onResetColumnOrder={resetColumnOrder}
           />
         )}
+
+        {(endToolbarPlacement === 'after-view' ||
+          endToolbarPlacement === 'before-settings') && endToolbarContent}
 
         <Popover>
           <PopoverTrigger asChild>
@@ -392,6 +409,8 @@ export function DataTableToolbar<TData extends ExportableData>({
             </div>
           </PopoverContent>
         </Popover>
+
+        {endToolbarPlacement === 'after-settings' && endToolbarContent}
       </div>
     </div>
   );
