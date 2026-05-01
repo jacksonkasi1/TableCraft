@@ -10,9 +10,10 @@ import { OrdersRestPage } from "@/pages/orders-rest-page";
 import { OrdersSubRowPage } from "@/pages/orders-subrow-page";
 import { EmployeesStaticPage } from "@/pages/employees-static-page";
 import { EmployeesGroupingPage } from "@/pages/employees-grouping-page";
+import { ToolbarPlacementPage } from "@/pages/toolbar-placement-page";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, LayoutDashboard, Cable, Filter, Plug, Database } from "lucide-react";
+import { Package, ShoppingCart, Users, LayoutDashboard, Cable, Filter, Plug, Database, SlidersHorizontal } from "lucide-react";
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
@@ -37,6 +38,7 @@ function App() {
     { to: "/users", label: "Users", icon: Users },
     { to: "/orders-subrow", label: "Sub-Rows", icon: Filter },
     { to: "/row-grouping", label: "Row Grouping", icon: Database },
+    { to: "/toolbar-placement", label: "Toolbar Placement", icon: SlidersHorizontal },
   ];
 
   return (
@@ -100,6 +102,7 @@ function App() {
             <Route path="/users" element={<UsersPage />} />
             <Route path="/orders-subrow" element={<OrdersSubRowPage />} />
             <Route path="/row-grouping" element={<EmployeesGroupingPage />} />
+            <Route path="/toolbar-placement" element={<ToolbarPlacementPage />} />
           </Routes>
         </main>
       </div>
