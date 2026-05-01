@@ -1,4 +1,4 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
 import { ProductsPage } from "@/pages/products-page";
 import { ProductsAxiosPage } from "@/pages/products-axios-page";
 import { OrdersPage } from "@/pages/orders-page";
@@ -9,9 +9,11 @@ import { DashboardPage } from "@/pages/dashboard-page";
 import { OrdersRestPage } from "@/pages/orders-rest-page";
 import { OrdersSubRowPage } from "@/pages/orders-subrow-page";
 import { EmployeesStaticPage } from "@/pages/employees-static-page";
-import { EmployeesGroupingPage } from "@/pages/employees-grouping-page";
 import { ToolbarPlacementPage } from "@/pages/toolbar-placement-page";
 import { ToolbarStartPage } from "@/pages/toolbar-start-page";
+import { RowGroupingLayout } from "@/pages/row-grouping/layout";
+import { RowGroupingBasicPage } from "@/pages/row-grouping/basic";
+import { RowGroupingServerPage } from "@/pages/row-grouping/server";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -78,7 +80,7 @@ const navGroups = [
     items: [
       { to: "/employees", label: "Employees (Static)", icon: Database },
       { to: "/users", label: "Users", icon: Users },
-      { to: "/row-grouping", label: "Row Grouping", icon: Database },
+      { to: "/row-grouping/basic", label: "Row Grouping", icon: Database },
     ],
   },
   {
@@ -126,7 +128,10 @@ function App() {
                   }
 
                   const Icon = group.icon;
-                  const isGroupActive = group.items.some((item) => location.pathname === item.to);
+                  const isGroupActive = group.items.some((item) => {
+            const rootSegment = "/" + item.to.split("/").filter(Boolean)[0];
+            return location.pathname === item.to || location.pathname.startsWith(rootSegment + "/");
+          });
                   return (
                     <DropdownMenu key={group.label}>
                       <DropdownMenuTrigger asChild>
@@ -145,7 +150,7 @@ function App() {
                         <DropdownMenuSeparator />
                         {group.items.map((item) => {
                           const ItemIcon = item.icon;
-                          const isActive = location.pathname === item.to;
+                          const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
                           return (
                             <DropdownMenuItem
                               key={item.to}
@@ -195,7 +200,11 @@ function App() {
             <Route path="/employees" element={<EmployeesStaticPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/orders-subrow" element={<OrdersSubRowPage />} />
-            <Route path="/row-grouping" element={<EmployeesGroupingPage />} />
+            <Route path="/row-grouping" element={<RowGroupingLayout />}>
+              <Route index element={<Navigate to="basic" replace />} />
+              <Route path="basic" element={<RowGroupingBasicPage />} />
+              <Route path="server" element={<RowGroupingServerPage />} />
+            </Route>
             <Route path="/toolbar-start" element={<ToolbarStartPage />} />
             <Route path="/toolbar-placement" element={<ToolbarPlacementPage />} />
           </Routes>

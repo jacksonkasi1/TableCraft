@@ -1,7 +1,7 @@
-import { DataTable, createStaticAdapter, DataTableColumnHeader } from "@tablecraft/table";
 import { useRef } from "react";
-import type { TableGroupingAPI } from "@tablecraft/table";
 import type { ColumnDef } from "@tanstack/react-table";
+import { DataTable, DataTableColumnHeader, createStaticAdapter } from "@tablecraft/table";
+import type { TableGroupingAPI } from "@tablecraft/table";
 import { EMPLOYEES_DATA, type EmployeeRow } from "@/data/employees-grouping";
 
 const adapter = createStaticAdapter<EmployeeRow>(EMPLOYEES_DATA);
@@ -112,19 +112,14 @@ function ProgrammaticDemo() {
   );
 }
 
-export function EmployeesGroupingPage() {
+export function RowGroupingBasicPage() {
   return (
-    <div className="container mx-auto p-6 space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold mb-1">Row Grouping</h1>
-        <p className="text-muted-foreground text-sm">
-          Flat employee data grouped into collapsible hierarchies — no changes to the backend needed.
-        </p>
-      </div>
-
-      {/* Example 1: Group by Department */}
+    <div className="space-y-10">
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Group by Department (salary sum)</h2>
+        <p className="text-sm text-muted-foreground">
+          15 employees grouped into departments with aggregated salary totals.
+        </p>
         <DataTable<EmployeeRow>
           adapter={adapter}
           columns={columns}
@@ -133,17 +128,15 @@ export function EmployeesGroupingPage() {
             defaultExpanded: true,
             aggregations: { salary: "sum" },
           }}
-          config={{
-            enableUrlState: false,
-            enablePagination: false,
-            defaultPageSize: 100,
-          }}
+          config={{ enableUrlState: false, enablePagination: false, defaultPageSize: 100 }}
         />
       </section>
 
-      {/* Example 2: Group by Department then Team */}
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Group by Department → Team (salary mean)</h2>
+        <p className="text-sm text-muted-foreground">
+          Two-level hierarchy: departments expand into teams, each showing average salary.
+        </p>
         <DataTable<EmployeeRow>
           adapter={adapter}
           columns={columns}
@@ -152,17 +145,15 @@ export function EmployeesGroupingPage() {
             defaultExpanded: false,
             aggregations: { salary: "mean" },
           }}
-          config={{
-            enableUrlState: false,
-            enablePagination: false,
-            defaultPageSize: 100,
-          }}
+          config={{ enableUrlState: false, enablePagination: false, defaultPageSize: 100 }}
         />
       </section>
 
-      {/* Example 3: Custom group cell renderer */}
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Custom Group Header (group by location)</h2>
+        <p className="text-sm text-muted-foreground">
+          Use <code className="text-xs bg-muted px-1 rounded">renderGroupCell</code> for a fully custom group row renderer.
+        </p>
         <DataTable<EmployeeRow>
           adapter={adapter}
           columns={columns}
@@ -179,15 +170,10 @@ export function EmployeesGroupingPage() {
               </span>
             ),
           }}
-          config={{
-            enableUrlState: false,
-            enablePagination: false,
-            defaultPageSize: 100,
-          }}
+          config={{ enableUrlState: false, enablePagination: false, defaultPageSize: 100 }}
         />
       </section>
 
-      {/* Example 4: Programmatic depth control */}
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Programmatic Control (groupingRef)</h2>
         <p className="text-sm text-muted-foreground">
