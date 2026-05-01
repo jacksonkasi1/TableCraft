@@ -1,41 +1,14 @@
-import { useState, useCallback, useRef, useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   DataTable,
   DataTableColumnHeader,
+  isTreeLoadingRow,
+  useTreeAdapter,
 } from "@tablecraft/table";
-import type { DataAdapter, QueryResult } from "@tablecraft/table";
 import { ChevronRight, Loader2 } from "lucide-react";
 import type { RetailNode } from "@/data/retail-tree";
 
 const RETAIL_API = `${import.meta.env.VITE_API_BASE_URL ?? ""}/api/manual/retail`;
-const LOADING_PREFIX = "__loading__";
-
-const isLoadingRow = (n: RetailNode) => n.id.startsWith(LOADING_PREFIX);
-
-const loadingPlaceholder = (parentId: string): RetailNode => ({
-  id: `${LOADING_PREFIX}${parentId}`,
-  name: "",
-  type: "Product",
-  totalSales: 0,
-  revenue: 0,
-  stores: null,
-  avgRating: null,
-  children: [],
-});
-
-function mergeChildren(
-  node: RetailNode,
-  cache: Record<string, RetailNode[] | null>
-): RetailNode {
-  if (!(node.id in cache)) return node;
-  const cached = cache[node.id];
-  if (cached === null) return { ...node, children: [loadingPlaceholder(node.id)] };
-  return {
-    ...node,
-    children: cached.map((child) => mergeChildren(child, cache)),
-  };
-}
 
 // ─── Columns ────────────────────────────────────────────────────────────────
 
@@ -45,7 +18,7 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
     size: 320,
     header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
     cell: ({ row, getValue }) => {
-      if (isLoadingRow(row.original)) {
+      if (isTreeLoadingRow(row.original)) {
         return (
           <span className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -75,7 +48,7 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
     size: 90,
     header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
     cell: ({ row, getValue }) =>
-      isLoadingRow(row.original) ? null : (
+      isTreeLoadingRow(row.original) ? null : (
         <span className="text-xs text-muted-foreground">{String(getValue())}</span>
       ),
   },
@@ -83,7 +56,7 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
     accessorKey: "totalSales",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Total Sales" />,
     cell: ({ row, getValue }) =>
-      isLoadingRow(row.original) ? null : (
+      isTreeLoadingRow(row.original) ? null : (
         <span className="font-mono">{(getValue() as number).toLocaleString()}</span>
       ),
   },
@@ -91,7 +64,7 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
     accessorKey: "revenue",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Revenue" />,
     cell: ({ row, getValue }) =>
-      isLoadingRow(row.original) ? null : (
+      isTreeLoadingRow(row.original) ? null : (
         <span className="font-mono font-semibold text-emerald-500">
           ${(getValue() as number).toLocaleString()}
         </span>
@@ -101,7 +74,7 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
     accessorKey: "stores",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Stores" />,
     cell: ({ row, getValue }) => {
-      if (isLoadingRow(row.original)) return null;
+      if (isTreeLoadingRow(row.original)) return null;
       const v = getValue() as number | null;
       return v != null ? (
         <span className="font-mono">{v}</span>
@@ -114,7 +87,7 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
     accessorKey: "avgRating",
     header: ({ column }) => <DataTableColumnHeader column={column} title="Avg Rating" />,
     cell: ({ row, getValue }) => {
-      if (isLoadingRow(row.original)) return null;
+      if (isTreeLoadingRow(row.original)) return null;
       const v = getValue() as number | null;
       return v != null ? (
         <span className="flex items-center gap-1">
@@ -131,61 +104,20 @@ const columns: ColumnDef<RetailNode, unknown>[] = [
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export function RowGroupingServerPage() {
-  const childrenRef = useRef<Record<string, RetailNode[] | null>>({});
-  const [version, setVersion] = useState(0);
-
-  const adapter = useMemo<DataAdapter<RetailNode>>(
-    () => ({
-      async query(params) {
-        const qs = new URLSearchParams({
-          page: String(params.page),
-          pageSize: String(params.pageSize),
-        });
-        if (params.search)    qs.set("search",    params.search);
-        if (params.sort)      qs.set("sort",      params.sort);
-        if (params.sortOrder) qs.set("sortOrder", params.sortOrder);
-
-        const res = await fetch(`${RETAIL_API}/tree?${qs}`);
-        if (!res.ok) throw new Error(`API error ${res.status}`);
-        const result: QueryResult<RetailNode> = await res.json();
-
-        return {
-          ...result,
-          data: result.data.map((row) => mergeChildren(row, childrenRef.current)),
-        };
-      },
-      async queryByIds() {
-        return [];
-      },
+  const { adapter, treeProps, isLoadingRow } = useTreeAdapter<RetailNode>({
+    list: { url: `${RETAIL_API}/tree` },
+    children: { url: (id) => `${RETAIL_API}/tree/${id}/children` },
+    loadingRow: (_parentId, loadingId) => ({
+      id: loadingId,
+      name: "",
+      type: "Product",
+      totalSales: 0,
+      revenue: 0,
+      stores: null,
+      avgRating: null,
+      children: [],
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version]
-  );
-
-  const handleRowExpand = useCallback(
-    ({ row, isExpanded }: { row: RetailNode; isExpanded: boolean }) => {
-      if (!isExpanded) return;
-      if (childrenRef.current[row.id] !== undefined) return;
-
-      childrenRef.current[row.id] = null;
-      setVersion((v) => v + 1);
-
-      fetch(`${RETAIL_API}/tree/${row.id}/children`)
-        .then((r) => {
-          if (!r.ok) throw new Error(`API error ${r.status}`);
-          return r.json() as Promise<RetailNode[]>;
-        })
-        .then((children) => {
-          childrenRef.current[row.id] = children;
-          setVersion((v) => v + 1);
-        })
-        .catch(() => {
-          delete childrenRef.current[row.id];
-          setVersion((v) => v + 1);
-        });
-    },
-    []
-  );
+  });
 
   return (
     <div className="space-y-4">
@@ -205,13 +137,12 @@ export function RowGroupingServerPage() {
       <DataTable<RetailNode>
         adapter={adapter}
         columns={columns}
-        getSubRows={(row) => row.children}
+        {...treeProps}
         getRowCanExpand={(row) =>
           !isLoadingRow(row) &&
           row.type !== "Product" &&
           row.children?.length !== 0
         }
-        onRowExpand={handleRowExpand}
         config={{
           enableUrlState: true,
           enablePagination: true,

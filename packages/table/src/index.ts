@@ -17,6 +17,17 @@ export { createRestAdapter } from "./auto/rest-adapter";
 export type { RestAdapterOptions } from "./auto/rest-adapter";
 export { createStaticAdapter } from "./auto/static-adapter";
 export type { StaticAdapterOptions } from "./auto/static-adapter";
+export {
+  useTreeAdapter,
+  isTreeLoadingRow,
+  makeTreeLoadingId,
+} from "./auto/use-tree-adapter";
+export type {
+  UseTreeAdapterOptions,
+  UseTreeAdapterReturn,
+  UseTreeAdapterListSource,
+  UseTreeAdapterChildrenSource,
+} from "./auto/use-tree-adapter";
 
 // ─── Auto-generation ───
 export { generateColumns } from "./auto/auto-columns";
