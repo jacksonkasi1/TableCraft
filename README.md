@@ -124,4 +124,3 @@ For full guides, API reference, and examples:
 ## 📄 License
 
 MIT
-

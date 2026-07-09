@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Maximize, Minimize, Play, Pause } from 'lucide-react';
-import { cn } from './lib/utils';
+import { cn } from './components/LiquidCard';
 
 interface PresentationProps {
   slides: React.ReactNode[];
@@ -73,15 +73,11 @@ export const Presentation: React.FC<PresentationProps> = ({ slides }) => {
   }, []);
 
   useEffect(() => {
-    // Schedule the initial auto-hide of the controls.
-    // `controlsVisible` already defaults to true; no need to setState synchronously.
-    controlsTimeoutRef.current = setTimeout(() => {
-      setControlsVisible(false);
-    }, 3000);
+    handleMouseMove();
     return () => {
       if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
-  }, []);
+  }, [handleMouseMove]);
 
   useEffect(() => {
     if (!isPlaying) return;

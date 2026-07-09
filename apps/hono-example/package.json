@@ -7,7 +7,6 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "seed": "bun run src/db/seed.ts",
-    "seed:retail": "bun run src/db/seed-retail.ts",
     "test": "bun test",
     "typecheck": "bun run --bun tsc --noEmit"
   },

@@ -1,31 +1,6 @@
 import type { ExportableData, DataTransformFunction } from "../types";
 
 /**
- * Neutralize CSV-formula-injection vectors. Spreadsheet apps (Excel, Sheets,
- * LibreOffice) evaluate any cell whose first character is `=`, `+`, `-`, `@`,
- * `\t` or `\r` as a formula — letting an attacker who controls cell values
- * exfiltrate data, fetch URLs, or run DDE commands when a victim opens the
- * exported file. Prefixing such values with a single quote forces the
- * spreadsheet to treat them as plain text. (OWASP CSV Injection guidance.)
- */
-function sanitizeCsvCell(value: string): string {
-  if (value.length === 0) return value;
-  const first = value.charCodeAt(0);
-  // 0x3D '='  0x2B '+'  0x2D '-'  0x40 '@'  0x09 TAB  0x0D CR
-  if (
-    first === 0x3d ||
-    first === 0x2b ||
-    first === 0x2d ||
-    first === 0x40 ||
-    first === 0x09 ||
-    first === 0x0d
-  ) {
-    return `'${value}`;
-  }
-  return value;
-}
-
-/**
  * Convert array of objects to CSV string.
  */
 function convertToCSV<T extends ExportableData>(
@@ -54,8 +29,7 @@ function convertToCSV<T extends ExportableData>(
   for (const item of data) {
     const row = headers.map((header) => {
       const value = item[header];
-      const rawCell = value === null || value === undefined ? "" : String(value);
-      const cellValue = sanitizeCsvCell(rawCell);
+      const cellValue = value === null || value === undefined ? "" : String(value);
       const escapedValue =
         cellValue.includes(",") || cellValue.includes('"')
           ? `"${cellValue.replace(/"/g, '""')}"`
@@ -72,13 +46,8 @@ function convertToCSV<T extends ExportableData>(
  * Download blob as file.
  */
 function downloadFile(blob: Blob, filename: string) {
+  const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
-  // Use createElementNS to avoid conflicts with vi.spyOn(document, "createElement")
-  // in test environments where nested spies on the same property cause infinite recursion.
-  const link = document.createElementNS(
-    "http://www.w3.org/1999/xhtml",
-    "a"
-  ) as HTMLAnchorElement;
 
   link.setAttribute("href", url);
   link.setAttribute("download", filename);

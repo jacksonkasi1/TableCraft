@@ -1,7 +1,7 @@
 import type { Table } from "@tanstack/react-table";
 import { useEffect, useState, useRef } from "react";
-import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
-import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement, EndToolbarPlacement } from "./types";
+import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search } from "lucide-react";
+import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement } from "./types";
 import { DataTableViewOptions } from "./view-options";
 import { DataTableExport } from "./export";
 import {
@@ -60,23 +60,13 @@ interface DataTableToolbarProps<TData extends ExportableData> {
   /**
    * Controls where `startToolbarContent` is rendered in the left toolbar area.
    * - `'before-search'` — before the search input
-   * - `'after-search'`  — after search, before the date filter.
+   * - `'after-search'`  — after search, before the date filter. 
    *                       NOTE: If `enableSearch` is false, this renders in the same visual position as `'before-search'`.
    * - `'after-date'`    — after the date filter (default)
    * @default 'after-date'
    */
   startToolbarPlacement?: StartToolbarPlacement;
-  /** Right-side injectable content (resolved ReactNode — function form is resolved by parent) */
-  endToolbarContent?: React.ReactNode;
-  /** Anchor for `endToolbarContent` */
-  endToolbarPlacement?: EndToolbarPlacement;
   hiddenColumns?: string[];
-  /** Expand all row groups */
-  onExpandAllGroups?: () => void;
-  /** Collapse all row groups */
-  onCollapseAllGroups?: () => void;
-  /** Whether row grouping is currently active */
-  isRowGroupingActive?: boolean;
 }
 
 export function DataTableToolbar<TData extends ExportableData>({
@@ -97,12 +87,7 @@ export function DataTableToolbar<TData extends ExportableData>({
   customToolbarContent,
   startToolbarContent,
   startToolbarPlacement = 'after-date',
-  endToolbarContent,
-  endToolbarPlacement = 'after-view',
   hiddenColumns,
-  onExpandAllGroups,
-  onCollapseAllGroups,
-  isRowGroupingActive,
 }: DataTableToolbarProps<TData>) {
   const entityName = exportConfig?.entityName || "items";
 
@@ -247,48 +232,6 @@ export function DataTableToolbar<TData extends ExportableData>({
       <div className="flex items-center gap-2">
         {customToolbarContent}
 
-        {endToolbarPlacement === 'before-grouping' && endToolbarContent}
-
-        {isRowGroupingActive && (config.enableRowGroupingControls ?? true) && (
-          <>
-            <button
-              type="button"
-              onClick={onExpandAllGroups}
-              title="Expand all groups"
-              aria-label="Expand all groups"
-              className={cn(
-                getButtonSizeClass(config.size, true),
-                "inline-flex items-center justify-center rounded-md border border-input bg-background",
-                "hover:bg-accent hover:text-accent-foreground transition-colors",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                "cursor-pointer"
-              )}
-            >
-              <ChevronsUpDown className="h-4 w-4" />
-              <span className="sr-only">Expand all groups</span>
-            </button>
-            <button
-              type="button"
-              onClick={onCollapseAllGroups}
-              title="Collapse all groups"
-              aria-label="Collapse all groups"
-              className={cn(
-                getButtonSizeClass(config.size, true),
-                "inline-flex items-center justify-center rounded-md border border-input bg-background",
-                "hover:bg-accent hover:text-accent-foreground transition-colors",
-                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                "cursor-pointer"
-              )}
-            >
-              <ChevronsDownUp className="h-4 w-4" />
-              <span className="sr-only">Collapse all groups</span>
-            </button>
-          </>
-        )}
-
-        {(endToolbarPlacement === 'after-grouping' ||
-          endToolbarPlacement === 'before-export') && endToolbarContent}
-
         {config.enableExport && (
           <DataTableExport
             table={table}
@@ -300,9 +243,6 @@ export function DataTableToolbar<TData extends ExportableData>({
           />
         )}
 
-        {(endToolbarPlacement === 'after-export' ||
-          endToolbarPlacement === 'before-view') && endToolbarContent}
-
         {config.enableColumnVisibility && (
           <DataTableViewOptions
             table={table}
@@ -312,9 +252,6 @@ export function DataTableToolbar<TData extends ExportableData>({
             onResetColumnOrder={resetColumnOrder}
           />
         )}
-
-        {(endToolbarPlacement === 'after-view' ||
-          endToolbarPlacement === 'before-settings') && endToolbarContent}
 
         <Popover>
           <PopoverTrigger asChild>
@@ -409,8 +346,6 @@ export function DataTableToolbar<TData extends ExportableData>({
             </div>
           </PopoverContent>
         </Popover>
-
-        {endToolbarPlacement === 'after-settings' && endToolbarContent}
       </div>
     </div>
   );

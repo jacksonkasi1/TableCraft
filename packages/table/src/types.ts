@@ -42,135 +42,6 @@ export function defaultColumnOrder<C extends string>(columns: C[]): C[] {
 }
 
 // ─────────────────────────────────────────────
-// Row Grouping Types
-// ─────────────────────────────────────────────
-
-export type RowGroupingAggregation =
-  | "sum"
-  | "min"
-  | "max"
-  | "mean"
-  | "median"
-  | "unique"
-  | "uniqueCount"
-  | "count"
-  | "extent";
-
-/**
- * Configuration for row grouping behaviour.
- *
- * **Performance note**: this object is used as a `useMemo` dependency inside
- * `DataTable`.  If you pass it as an inline object literal the reference
- * changes on every parent render, which busts the `aggregationFns` memo and,
- * transitively, the `resolvedColumns` memo — causing all columns to
- * re-resolve on every render.  Stabilise the value with `useMemo` or define
- * it outside the component:
- *
- * ```ts
- * // Outside component or in useMemo:
- * const groupingConfig = useMemo(
- *   () => ({ defaultExpanded: true, aggregations: { salary: 'sum' } }),
- *   []
- * );
- * <DataTable rowGroupingConfig={groupingConfig} ... />
- * ```
- */
-export interface RowGroupingConfig<T extends Record<string, unknown>> {
-  /**
-   * Start all groups expanded when the table mounts.
-   * @default false
-   */
-  defaultExpanded?: boolean;
-  /**
-   * Per-column aggregate functions to display in the group-header row.
-   * @example { salary: "sum", headcount: "count" }
-   */
-  aggregations?: Partial<Record<keyof T & string, RowGroupingAggregation>>;
-  /**
-   * Optional custom renderer for the group-header cell content.
-   * Return null or undefined to fall back to the default "ColumnLabel: value (n rows)" format.
-   */
-  renderGroupCell?: (props: {
-    columnId: string;
-    value: unknown;
-    leafRowCount: number;
-  }) => ReactNode;
-}
-
-export interface OnRowGroupExpandInfo {
-  /** The column ID that was grouped */
-  columnId: string;
-  /** The grouped value (e.g. "Engineering") */
-  value: unknown;
-  /** Whether the group was just expanded (true) or collapsed (false) */
-  isExpanded: boolean;
-  /** Zero-based depth level in a multi-level grouping */
-  depth: number;
-}
-
-// ─────────────────────────────────────────────
-// Grouping Imperative API (exposed via groupingRef prop)
-// ─────────────────────────────────────────────
-
-/**
- * Imperative handle exposed when you pass a `groupingRef` to `<DataTable>`.
- * Mirrors the programmatic control API from simple-table v2.1.0.
- *
- * @example
- * const ref = useRef<TableGroupingAPI>(null);
- * <DataTable groupingRef={ref} rowGrouping={["department", "team"]} ... />
- *
- * // In an event handler:
- * ref.current?.expandAll();
- * ref.current?.expandDepth(0);   // expand top-level groups only
- * ref.current?.collapseDepth(1); // collapse second-level groups
- */
-export interface TableGroupingAPI {
-  /** Expand all groups at all depths */
-  expandAll(): void;
-  /** Collapse all groups at all depths */
-  collapseAll(): void;
-  /**
-   * Expand all group rows at a specific depth (0-indexed).
-   * depth 0 = top-level groups, depth 1 = second-level groups, etc.
-   */
-  expandDepth(depth: number): void;
-  /**
-   * Collapse all group rows at a specific depth (0-indexed).
-   */
-  collapseDepth(depth: number): void;
-  /**
-   * Toggle expansion for all group rows at a specific depth.
-   * If ALL groups at that depth are expanded, collapses them.
-   * Otherwise, expands them all.
-   */
-  toggleDepth(depth: number): void;
-  /**
-   * Explicitly set which depths are expanded.
-   * Replaces the current expansion state for group rows.
-   * @example ref.current?.setExpandedDepths(new Set([0, 2])); // only depths 0 and 2
-   */
-  setExpandedDepths(depths: Set<number>): void;
-  /**
-   * Get the set of depths that currently have at least one expanded group row.
-   */
-  getExpandedDepths(): Set<number>;
-  /**
-   * Get the column accessor key that defines the grouping at a given depth.
-   * @example getGroupingProperty(0) // "department"
-   * @example getGroupingProperty(1) // "team"
-   */
-  getGroupingProperty(depth: number): string | undefined;
-  /**
-   * Get the depth index for a given grouping property name.
-   * Returns -1 if the property is not in the rowGrouping array.
-   * @example getGroupingDepth("department") // 0
-   * @example getGroupingDepth("team")       // 1
-   */
-  getGroupingDepth(property: string): number;
-}
-
-// ─────────────────────────────────────────────
 // Table Configuration
 // ─────────────────────────────────────────────
 
@@ -217,47 +88,9 @@ export interface TableConfig {
   pageSizeOptions?: number[];
   /** Allow exporting new columns created by transform function */
   allowExportNewColumns: boolean;
-  /**
-   * Show "Expand All / Collapse All" buttons in the toolbar when rowGrouping is active.
-   * @default true
-   */
-  enableRowGroupingControls?: boolean;
-  /**
-   * When true, the table keeps showing previous rows during a refetch instead
-   * of swapping to the loading skeleton. Useful when the host swaps the
-   * adapter to push fresh data (e.g. lazy-tree expansion) and a skeleton flash
-   * would be jarring.
-   * @default false
-   */
-  keepPreviousData?: boolean;
 }
 
 export type StartToolbarPlacement = 'before-search' | 'after-search' | 'after-date';
-
-/**
- * Anchor positions for `endToolbarContent` (right-side toolbar cluster).
- * The anchor is a *position*, not a dependency — it still renders even if the
- * referenced built-in is disabled.  Order of built-ins on the right (when
- * enabled): grouping-controls → export → view-options → settings.
- *
- * - `'before-grouping'`  — first thing on the right (after `customToolbarContent`)
- * - `'after-grouping'`   — between grouping controls and export
- * - `'before-export'`    — same visual slot as `'after-grouping'` when grouping is hidden
- * - `'after-export'`     — between export and view-options
- * - `'before-view'`      — same as `'after-export'` when export is hidden
- * - `'after-view'`       — between view-options and settings  *(default)*
- * - `'before-settings'`  — alias of `'after-view'`
- * - `'after-settings'`   — last (rightmost) — after the settings popover
- */
-export type EndToolbarPlacement =
-  | 'before-grouping'
-  | 'after-grouping'
-  | 'before-export'
-  | 'after-export'
-  | 'before-view'
-  | 'after-view'
-  | 'before-settings'
-  | 'after-settings';
 
 // ─────────────────────────────────────────────
 // Data Fetching
@@ -397,22 +230,6 @@ export interface TableContext<T> {
   dateRange: { from: string; to: string };
   /** All rows on the current page */
   allData: T[];
-  /** Expand all row groups (no-op when rowGrouping is not active) */
-  expandAllGroups?: () => void;
-  /** Collapse all row groups (no-op when rowGrouping is not active) */
-  collapseAllGroups?: () => void;
-  /** Expand all group rows at a specific depth index (0 = top-level) */
-  expandDepth?: (depth: number) => void;
-  /** Collapse all group rows at a specific depth index */
-  collapseDepth?: (depth: number) => void;
-  /** Toggle expansion for all group rows at a specific depth */
-  toggleDepth?: (depth: number) => void;
-  /** Get the column key at a given grouping depth index */
-  getGroupingProperty?: (depth: number) => string | undefined;
-  /** Get the depth index of a given column key (-1 if not grouped by it) */
-  getGroupingDepth?: (property: string) => number;
-  /** True when rowGrouping prop is non-empty */
-  isRowGroupingActive?: boolean;
 }
 
 // ─────────────────────────────────────────────
@@ -598,12 +415,6 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   renderSubRow?: (props: { row: T; table: TableContext<T> }) => React.ReactNode;
   /** Allow developers to control exactly WHICH rows can expand (Optional, defaults to all if renderSubRow is provided) */
   getRowCanExpand?: (row: T) => boolean;
-  /**
-   * Returns child rows for a given row — enables tree/hierarchical data.
-   * The table renders children inline with depth-based indentation.
-   * @example getSubRows={(row) => row.children as T[]}
-   */
-  getSubRows?: (row: T) => T[] | undefined;
   /** Data adapter — the bridge to your backend */
   adapter: DataAdapter<T>;
   /** Manual column definitions (skip auto-generation from metadata) */
@@ -652,37 +463,12 @@ export interface DataTableProps<T extends Record<string, unknown>> {
   /**
    * Controls where `startToolbarContent` is rendered in the left toolbar area.
    * - `'before-search'` — before the search input
-   * - `'after-search'`  — after search, before the date filter.
+   * - `'after-search'`  — after search, before the date filter. 
    *                       NOTE: If `enableSearch` is false, this renders in the same visual position as `'before-search'`.
    * - `'after-date'`    — after the date filter (default)
    * @default 'after-date'
    */
   startToolbarPlacement?: StartToolbarPlacement;
-  /**
-   * Custom toolbar content — injected into the right toolbar area without
-   * disturbing the position of any built-in control.
-   * Use `endToolbarPlacement` to choose which slot to render into.
-   *
-   * Receives the same `ToolbarContext` as `startToolbarContent` when passed
-   * as a function, so you can read selection / search / date-range state.
-   *
-   * @example
-   * <DataTable
-   *   endToolbarContent={(ctx) => (
-   *     <Button onClick={() => doSomething(ctx.selectedIds)}>
-   *       Bulk action ({ctx.totalSelected})
-   *     </Button>
-   *   )}
-   *   endToolbarPlacement="before-export"
-   * />
-   */
-  endToolbarContent?: React.ReactNode | ((ctx: ToolbarContext<T>) => React.ReactNode);
-  /**
-   * Where to inject `endToolbarContent` on the right side. See
-   * {@link EndToolbarPlacement} for available slots.
-   * @default 'after-view'
-   */
-  endToolbarPlacement?: EndToolbarPlacement;
   /** Custom toolbar content (rendered after built-in controls) */
   toolbarContent?: React.ReactNode;
   /** Render custom toolbar with selection context */
@@ -721,49 +507,6 @@ export interface DataTableProps<T extends Record<string, unknown>> {
    * )}
    */
   actions?: ActionsRender<T>;
-  /**
-   * Column IDs to group flat data by — creates collapsible group-header rows.
-   * First element = outermost group, last element = innermost group.
-   * @example rowGrouping={["department", "team"]}
-   */
-  rowGrouping?: (keyof T & string)[];
-
-  /**
-   * Fine-grained configuration for row grouping behaviour.
-   * Only relevant when `rowGrouping` is set.
-   */
-  rowGroupingConfig?: RowGroupingConfig<T>;
-
-  /**
-   * Callback fired when a group row is expanded or collapsed.
-   */
-  onRowGroupExpand?: (info: OnRowGroupExpandInfo) => void;
-  /**
-   * Callback fired when a tree (non-grouped) sub-row is expanded or collapsed.
-   * Use this to lazy-load children when a row is first expanded.
-   *
-   * @example
-   * onRowExpand={({ row, isExpanded }) => {
-   *   if (isExpanded && row.children === undefined) fetchChildren(row.id);
-   * }}
-   */
-  onRowExpand?: (info: {
-    row: T;
-    rowId: string;
-    depth: number;
-    isExpanded: boolean;
-  }) => void;
-  /**
-   * Imperative ref that exposes programmatic grouping controls.
-   * Attach this to a `useRef<TableGroupingAPI>()` to call methods like
-   * `expandAll()`, `expandDepth(0)`, `collapseDepth(1)`, `toggleDepth(n)`, etc.
-   *
-   * @example
-   * const groupRef = useRef<TableGroupingAPI>(null);
-   * <DataTable groupingRef={groupRef} rowGrouping={["department"]} ... />
-   * // Then: groupRef.current?.expandDepth(0);
-   */
-  groupingRef?: React.RefObject<TableGroupingAPI | null>;
 }
 
 export interface ToolbarContext<T> {

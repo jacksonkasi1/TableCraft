@@ -1,0 +1,138 @@
+@tablecraft/codegen build: CLI Building entry: src/cli.ts, src/index.ts
+@tablecraft/codegen build: CLI Using tsconfig: tsconfig.json
+@tablecraft/codegen build: CLI tsup v8.5.1
+@tablecraft/codegen build: CLI Target: es2022
+@tablecraft/codegen build: ESM Build start
+@tablecraft/codegen build: ESM dist/chunk-6NAIM5XD.js 12.06 KB
+@tablecraft/codegen build: ESM dist/cli.js            1.73 KB
+@tablecraft/codegen build: ESM dist/index.js          347.00 B
+@tablecraft/codegen build: ESM ⚡️ Build success in 633ms
+@tablecraft/codegen build: DTS Build start
+sveltekit-example build: vite v6.4.1 building SSR bundle for production...
+sveltekit-example build: transforming...
+vite-web-example build: @tablecraft/client build: Exited with code 0
+@tablecraft/client build: Exited with code 0
+@tablecraft/adapter-next build: Exited with code 0
+@tablecraft/plugin-cache build: Exited with code 0
+@tablecraft/adapter-express build: Exited with code 0
+@tablecraft/adapter-elysia build: Exited with code 0
+@tablecraft/adapter-sveltekit build: Exited with code 0
+@tablecraft/adapter-hono build: Exited with code 0
+sveltekit-example build: "uuid" is imported from external module "drizzle-orm/pg-core" but never used in "src/lib/server/db/schema.ts".
+sveltekit-example build: ✓ 181 modules transformed.
+sveltekit-example build: rendering chunks...
+web build: vite v7.3.1 building client environment for production...
+web build: transforming...
+sveltekit-example build: vite v6.4.1 building for production...
+sveltekit-example build: transforming...
+@tablecraft/codegen build: DTS ⚡️ Build success in 37018ms
+@tablecraft/codegen build: DTS dist/cli.d.ts   20.00 B
+@tablecraft/codegen build: DTS dist/index.d.ts 2.12 KB
+@tablecraft/codegen build: Exited with code 0
+sveltekit-example build: ✓ 152 modules transformed.
+@tablecraft/engine build: Exited with code 0
+sveltekit-example build: rendering chunks...
+sveltekit-example build: computing gzip size...
+sveltekit-example build: .svelte-kit/output/client/_app/version.json                        0.03 kB │ gzip:  0.05 kB
+sveltekit-example build: .svelte-kit/output/client/.vite/manifest.json                      2.99 kB │ gzip:  0.59 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/assets/2.CSgvuz3b.css     0.20 kB │ gzip:  0.16 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/entry/start.BvsoBo5T.js   0.08 kB │ gzip:  0.09 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/CtNDDFDu.js        0.32 kB │ gzip:  0.25 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/nodes/0.BzxYdpYi.js       0.33 kB │ gzip:  0.24 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/Dw67_Kem.js        0.53 kB │ gzip:  0.34 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/nodes/1.eDWMeucs.js       0.59 kB │ gzip:  0.37 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/Cj_Eri5U.js        1.31 kB │ gzip:  0.72 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/FZozcCav.js        2.23 kB │ gzip:  0.98 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/nodes/2.DcvXaOyQ.js       4.20 kB │ gzip:  1.99 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/entry/app.CH2MKbUD.js     7.82 kB │ gzip:  3.58 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/CvVN0Wrl.js        7.97 kB │ gzip:  3.41 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/C1AQKOho.js       24.87 kB │ gzip:  9.70 kB
+sveltekit-example build: .svelte-kit/output/client/_app/immutable/chunks/CCkj0V-E.js       28.20 kB │ gzip: 10.90 kB
+sveltekit-example build: ✓ built in 6.63s
+sveltekit-example build: .svelte-kit/output/server/.vite/manifest.json                         3.40 kB
+sveltekit-example build: .svelte-kit/output/server/_app/immutable/assets/_page.CSgvuz3b.css    0.20 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/false.js                             0.05 kB
+sveltekit-example build: .svelte-kit/output/server/entries/fallbacks/layout.svelte.js          0.17 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/environment.js                       0.19 kB
+sveltekit-example build: .svelte-kit/output/server/internal.js                                 0.40 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/server.js                            0.45 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/utils.js                             1.15 kB
+sveltekit-example build: .svelte-kit/output/server/entries/pages/_page.svelte.js               1.32 kB
+sveltekit-example build: .svelte-kit/output/server/entries/fallbacks/error.svelte.js           1.42 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/url.js                               3.16 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/internal.js                          3.40 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/exports.js                           3.83 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/attributes.js                        5.98 kB
+sveltekit-example build: .svelte-kit/output/server/remote-entry.js                            19.07 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/shared.js                           27.07 kB
+sveltekit-example build: .svelte-kit/output/server/chunks/root.js                            108.62 kB
+sveltekit-example build: .svelte-kit/output/server/index.js                                  125.78 kB
+sveltekit-example build: .svelte-kit/output/server/entries/hooks.server.js                   134.43 kB
+sveltekit-example build: ✓ built in 40.93s
+sveltekit-example build: 
+sveltekit-example build: Run npm run preview to preview your production build locally.
+sveltekit-example build: 
+sveltekit-example build: > Using @sveltejs/adapter-auto
+sveltekit-example build:   Could not detect a supported production environment. See https://svelte.dev/docs/kit/adapters to learn how to configure your app to run on the platform of your choosing
+sveltekit-example build:   ✔ done
+sveltekit-example build: Exited with code 0
+@tablecraft/table build: Exited with code 0
+vite-web-example build: @tablecraft/table build: Exited with code 0
+web build: ✓ 1738 modules transformed.
+web build: rendering chunks...
+web build: computing gzip size...
+web build: dist/index.html                   1.66 kB │ gzip:   0.57 kB
+web build: dist/assets/index-Duvx9g5X.css   19.44 kB │ gzip:   4.56 kB
+web build: dist/assets/index-bEuEcFw-.js   764.13 kB │ gzip: 237.65 kB
+web build: 
+web build: (!) Some chunks are larger than 500 kB after minification. Consider:
+web build: - Using dynamic import() to code-split the application
+web build: - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+web build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+web build: ✓ built in 28.98s
+web build: Exited with code 0
+vite-web-example build: vite.config.ts(8,13): error TS2769: No overload matches this call.
+vite-web-example build:   The last overload gave the following error.
+vite-web-example build:     Type 'Plugin<any>[]' is not assignable to type 'PluginOption'.
+vite-web-example build:       Type 'Plugin<any>[]' is not assignable to type 'PluginOption[]'.
+vite-web-example build:         Type 'Plugin<any>' is not assignable to type 'PluginOption'.
+vite-web-example build:           Type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").Plugin<any>' is not assignable to type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").Plugin<any>'.
+vite-web-example build:             Types of property 'hotUpdate' are incompatible.
+vite-web-example build:               Type 'ObjectHook<(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>> | undefined' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                 Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                   Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type '(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>'.
+vite-web-example build:                     Types of parameters 'options' and 'options' are incompatible.
+vite-web-example build:                       Property 'environment' is missing in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").HotUpdateOptions' but required in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").HotUpdateOptions'.
+vite-web-example build:                         Type 'Plugin<any>[]' is not assignable to type 'PluginOption'.
+vite-web-example build:                           Type 'Plugin<any>[]' is not assignable to type 'PluginOption[]'.
+vite-web-example build:                             Type 'Plugin<any>' is not assignable to type 'PluginOption'.
+vite-web-example build:                               Type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").Plugin<any>' is not assignable to type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").Plugin<any>'.
+vite-web-example build:                                 Types of property 'hotUpdate' are incompatible.
+vite-web-example build:                                   Type 'ObjectHook<(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>> | undefined' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                                     Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                                       Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type '(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>'.
+vite-web-example build:                                         Types of parameters 'options' and 'options' are incompatible.
+vite-web-example build:                                           Property 'environment' is missing in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").HotUpdateOptions' but required in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").HotUpdateOptions'.
+vite-web-example build: vite.config.ts(8,22): error TS2769: No overload matches this call.
+vite-web-example build:   The last overload gave the following error.
+vite-web-example build:     Type 'Plugin<any>[]' is not assignable to type 'PluginOption'.
+vite-web-example build:       Type 'Plugin<any>[]' is not assignable to type 'PluginOption[]'.
+vite-web-example build:         Type 'Plugin<any>' is not assignable to type 'PluginOption'.
+vite-web-example build:           Type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").Plugin<any>' is not assignable to type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").Plugin<any>'.
+vite-web-example build:             Types of property 'hotUpdate' are incompatible.
+vite-web-example build:               Type 'ObjectHook<(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>> | undefined' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                 Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                   Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type '(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>'.
+vite-web-example build:                     Types of parameters 'options' and 'options' are incompatible.
+vite-web-example build:                       Property 'environment' is missing in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").HotUpdateOptions' but required in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").HotUpdateOptions'.
+vite-web-example build:                         Type 'Plugin<any>[]' is not assignable to type 'PluginOption'.
+vite-web-example build:                           Type 'Plugin<any>[]' is not assignable to type 'PluginOption[]'.
+vite-web-example build:                             Type 'Plugin<any>' is not assignable to type 'PluginOption'.
+vite-web-example build:                               Type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").Plugin<any>' is not assignable to type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").Plugin<any>'.
+vite-web-example build:                                 Types of property 'hotUpdate' are incompatible.
+vite-web-example build:                                   Type 'ObjectHook<(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>> | undefined' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                                     Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type 'ObjectHook<(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>> | undefined'.
+vite-web-example build:                                       Type '(this: HotUpdatePluginContext, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<void | EnvironmentModuleNode[]>' is not assignable to type '(this: MinimalPluginContext & { environment: DevEnvironment; }, options: HotUpdateOptions) => void | EnvironmentModuleNode[] | Promise<...>'.
+vite-web-example build:                                         Types of parameters 'options' and 'options' are incompatible.
+vite-web-example build:                                           Property 'environment' is missing in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/apps/vite-web-example/node_modules/vite/dist/node/index").HotUpdateOptions' but required in type 'import("/Users/mahy/Desktop/u/opensource/TableCraft/node_modules/vite/dist/node/index").HotUpdateOptions'.
+vite-web-example build: Exited with code 2

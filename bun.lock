@@ -175,8 +175,8 @@
         "vitest": "^4.1.5",
       },
       "peerDependencies": {
-        "@tablecraft/engine": ">=0.1.0 <1",
-        "next": ">=14.0.0 <16 || >=16.1.6",
+        "@tablecraft/engine": ">=0.1.0",
+        "next": ">=14.0.0 <16 || >=16.2.3",
       },
     },
     "packages/adapter-sveltekit": {
@@ -250,14 +250,8 @@
         "vitest": "^4.1.5",
       },
       "peerDependencies": {
-        "@tablecraft/engine": ">=0.1.0 <1",
-        "@upstash/redis": "*",
-        "ioredis": "*",
+        "@tablecraft/engine": ">=0.1.0",
       },
-      "optionalPeers": [
-        "@upstash/redis",
-        "ioredis",
-      ],
     },
     "packages/table": {
       "name": "@tablecraft/table",

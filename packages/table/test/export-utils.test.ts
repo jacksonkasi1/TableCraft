@@ -174,32 +174,6 @@ describe("exportToCSV — basic", () => {
 		cap6.restore();
 	});
 
-	it("neutralizes CSV-formula-injection prefixes (=, +, -, @, tab, CR)", async () => {
-		const cap = captureDownload();
-		const data = [
-			{ a: "=cmd|' /C calc'!A1", b: "+SUM(1)", c: "-2+3", d: "@SUM(1)", e: "\thidden", f: "\rsneaky" },
-		];
-		exportToCSV(data, "injection", ["a", "b", "c", "d", "e", "f"]);
-		const text = await cap.blobs[0].text();
-		// Each dangerous value must be prefixed with a single quote so
-		// spreadsheet apps treat it as plain text rather than a formula.
-		expect(text).toContain("'=cmd|' /C calc'!A1");
-		expect(text).toContain("'+SUM(1)");
-		expect(text).toContain("'-2+3");
-		expect(text).toContain("'@SUM(1)");
-		expect(text).toContain("'\thidden");
-		expect(text).toContain("'\rsneaky");
-		// And benign values are *not* prefixed:
-		const benign = [{ a: "hello", b: "world" }];
-		const cap2 = captureDownload();
-		exportToCSV(benign, "benign", ["a", "b"]);
-		const text2 = await cap2.blobs[0].text();
-		expect(text2).toContain("hello,world");
-		expect(text2).not.toContain("'hello");
-		cap.restore();
-		cap2.restore();
-	});
-
 	it("renders null/undefined cells as empty strings", async () => {
 		const cap7 = captureDownload();
 		const data = [{ id: 1, name: null, extra: undefined }] as unknown as Array<

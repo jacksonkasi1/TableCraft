@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
-import { DataTable, hiddenColumns, defineColumnOverrides } from '@tablecraft/table';
-import { createProductsAdapter } from '../generated/products';
+import { useMemo } from 'react';
+import { DataTable, createTableCraftAdapter, hiddenColumns, defineColumnOverrides } from '@tablecraft/table';
 import type { ProductsRow, ProductsColumn } from '../generated';
 import {
   DropdownMenu,
@@ -11,18 +10,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Archive } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 
 // ** import apis
 import { API_BASE_URL } from '../api';
 
 export function ProductsPage() {
-  const [showArchived, setShowArchived] = useState(false);
-
-  const adapter = useMemo(() => createProductsAdapter({
+  const adapter = useMemo(() => createTableCraftAdapter<ProductsRow>({
     baseUrl: API_BASE_URL,
-    customFilters: showArchived ? { isArchived: { operator: 'eq', value: true } } : undefined,
-  }), [showArchived]);
+    table: 'products',
+  }), []);
 
   return (
     <div className="p-8 space-y-4">
@@ -31,18 +28,6 @@ export function ProductsPage() {
       <DataTable<ProductsRow>
         adapter={adapter}
         hiddenColumns={hiddenColumns<ProductsColumn>(['id', 'tenantId', 'metadata'])}
-        startToolbarPlacement="after-search"
-        startToolbarContent={
-          <Button
-            size="sm"
-            variant={showArchived ? 'secondary' : 'outline'}
-            className="h-9 gap-1.5"
-            onClick={() => setShowArchived((v) => !v)}
-          >
-            <Archive className="h-3.5 w-3.5" />
-            Archived
-          </Button>
-        }
         config={{
           enableSearch: true,
           enableExport: true,
