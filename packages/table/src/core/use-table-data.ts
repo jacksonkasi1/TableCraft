@@ -121,7 +121,11 @@ export function useTableData<T extends Record<string, unknown>>(
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
+        // When keepPreviousData is on and we already have rows, skip the
+        // skeleton flash — render the prior data until the new query resolves.
+        if (!(config.keepPreviousData && result)) {
+          setIsLoading(true);
+        }
         const data = await adapter.query(queryParams);
         setResult(data);
         setIsError(false);

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, jsonb, decimal, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb, decimal, uuid, real } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // 1. Tenants (SaaS context)
@@ -52,6 +52,48 @@ export const orderItems = pgTable('order_items', {
   quantity: integer('quantity').default(1),
   unitPrice: decimal('unit_price', { precision: 10, scale: 2 }).notNull(),
 });
+
+// ─── Retail tree (Regions → Stores → Products) ────────────────────────────
+
+export const retailRegions = pgTable('retail_regions', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  totalSales: integer('total_sales').notNull().default(0),
+  revenue: integer('revenue').notNull().default(0),
+  stores: integer('stores').notNull().default(0),
+  avgRating: real('avg_rating'),
+});
+
+export const retailStores = pgTable('retail_stores', {
+  id: text('id').primaryKey(),
+  regionId: text('region_id').notNull().references(() => retailRegions.id),
+  name: text('name').notNull(),
+  totalSales: integer('total_sales').notNull().default(0),
+  revenue: integer('revenue').notNull().default(0),
+  avgRating: real('avg_rating'),
+});
+
+export const retailProducts = pgTable('retail_products', {
+  id: text('id').primaryKey(),
+  storeId: text('store_id').notNull().references(() => retailStores.id),
+  name: text('name').notNull(),
+  totalSales: integer('total_sales').notNull().default(0),
+  revenue: integer('revenue').notNull().default(0),
+  avgRating: real('avg_rating'),
+});
+
+export const retailRegionRelations = relations(retailRegions, ({ many }) => ({
+  stores: many(retailStores),
+}));
+
+export const retailStoreRelations = relations(retailStores, ({ one, many }) => ({
+  region: one(retailRegions, { fields: [retailStores.regionId], references: [retailRegions.id] }),
+  products: many(retailProducts),
+}));
+
+export const retailProductRelations = relations(retailProducts, ({ one }) => ({
+  store: one(retailStores, { fields: [retailProducts.storeId], references: [retailStores.id] }),
+}));
 
 // --- Relations ---
 
