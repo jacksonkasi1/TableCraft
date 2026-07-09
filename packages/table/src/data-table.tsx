@@ -7,6 +7,7 @@ import type {
   ColumnFiltersState,
   VisibilityState,
   ExpandedState,
+  GroupingState,
 } from "@tanstack/react-table";
 import {
   flexRender,
@@ -17,12 +18,13 @@ import {
   getFacetedRowModel,
   getFacetedUniqueValues,
   getExpandedRowModel,
+  getGroupedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import React, { Fragment, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
-import { ExpandIcon } from "./expand-icon";
+import { ExpandIcon, GroupRowChevron, GroupRowBadge } from "./expand-icon";
 import { cn } from "./utils/cn";
 
 import type { DataTableProps, ExportableData, TableContext, ExportConfig } from "./types";
@@ -51,6 +53,8 @@ export function DataTable<T extends Record<string, unknown>>({
   defaultColumnOrder,
   startToolbarContent,
   startToolbarPlacement,
+  endToolbarContent,
+  endToolbarPlacement,
   toolbarContent,
   renderToolbar,
   className,
@@ -59,6 +63,12 @@ export function DataTable<T extends Record<string, unknown>>({
   actions,
   renderSubRow,
   getRowCanExpand,
+  getSubRows,
+  rowGrouping,
+  rowGroupingConfig,
+  onRowGroupExpand,
+  onRowExpand,
+  groupingRef,
 }: DataTableProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
@@ -121,6 +131,12 @@ export function DataTable<T extends Record<string, unknown>>({
     allData: [],
   });
 
+  // ─── Row grouping aggregation map ───
+  const aggregationFns = useMemo(() => {
+    if (!rowGrouping?.length || !rowGroupingConfig?.aggregations) return {} as Record<string, string>;
+    return rowGroupingConfig.aggregations as Record<string, string>;
+  }, [rowGrouping, rowGroupingConfig]);
+
   // ─── Apply column overrides & inject action column ───
   const resolvedColumns = useMemo(() => {
     // Start with auto-generated or manual columns
@@ -176,6 +192,18 @@ export function DataTable<T extends Record<string, unknown>>({
       cols = [expandColumn, ...cols];
     }
 
+    // Inject aggregation functions for row grouping
+    const aggKeys = Object.keys(aggregationFns);
+    if (aggKeys.length > 0) {
+      cols = cols.map((col) => {
+        const accessorKeyForAgg = (col as { accessorKey?: string }).accessorKey;
+        if (accessorKeyForAgg && aggregationFns[accessorKeyForAgg]) {
+          col = { ...col, aggregationFn: aggregationFns[accessorKeyForAgg] } as typeof col;
+        }
+        return col;
+      });
+    }
+
     // Apply columnOverrides: replace cell renderer for matching columns
     if (columnOverrides) {
       cols = cols.map((col) => {
@@ -217,7 +245,7 @@ export function DataTable<T extends Record<string, unknown>>({
     }
 
     return cols;
-  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions, renderSubRow]);
+  }, [autoColumns, tableConfig.enableRowSelection, columnOverrides, actions, renderSubRow, aggregationFns]);
 
   // ─── Column resize ───
   const { columnSizing, setColumnSizing, resetColumnSizing } =
@@ -227,11 +255,110 @@ export function DataTable<T extends Record<string, unknown>>({
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
 
   // ─── Expanded state ───
-  const [expanded, setExpanded] = useState<ExpandedState>(() =>
-    tableConfig.defaultExpanded === false
-      ? {}
-      : (tableConfig.defaultExpanded ?? {})
+  const [expanded, setExpanded] = useState<ExpandedState>(() => {
+    // Only honour config.defaultExpanded when the consumer explicitly provided it.
+    // defaultConfig.defaultExpanded is `false`, so checking the merged
+    // tableConfig value would always shadow the rowGroupingConfig path below.
+    if (configOverrides?.defaultExpanded !== undefined) {
+      if (configOverrides.defaultExpanded === false) return {};
+      return configOverrides.defaultExpanded as ExpandedState;
+    }
+    // Row grouping default
+    if (rowGroupingConfig?.defaultExpanded) return true;
+    return {};
+  });
+
+  // ─── Row grouping state ───
+  const [grouping, setGrouping] = useState<GroupingState>(
+    () => rowGrouping ?? []
   );
+
+  // Sync grouping state if rowGrouping prop changes
+  useEffect(() => {
+    setGrouping(rowGrouping ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(rowGrouping)]);
+
+  // ─── Dev warning: manualPagination + rowGrouping conflict ───
+  // The table internally sets manualPagination:true, so the adapter returns
+  // one page of rows at a time.  Client-side grouping (getGroupedRowModel)
+  // then groups ONLY those rows, so any group whose members span multiple
+  // pages will appear as separate partial groups with wrong leaf counts on
+  // each page.
+  useEffect(() => {
+    const NODE_ENV = (globalThis as { process?: { env?: { NODE_ENV?: string } } })
+      .process?.env?.NODE_ENV;
+    if (
+      NODE_ENV !== "production" &&
+      rowGrouping?.length &&
+      tableConfig.enablePagination
+    ) {
+      console.warn(
+        "[TableCraft] Row grouping + pagination: groups may be split across pages. " +
+        "Consider setting config={{ enablePagination: false }} or using a large pageSize when rowGrouping is active."
+      );
+    }
+  }, [rowGrouping, tableConfig.enablePagination]);
+
+  // ─── Fire onRowGroupExpand / onRowExpand callbacks ───
+  const prevExpandedRef = useRef<ExpandedState>({});
+  useEffect(() => {
+    const wantsGroup = !!onRowGroupExpand && !!rowGrouping?.length;
+    const wantsTree = !!onRowExpand;
+    if ((!wantsGroup && !wantsTree) || !tableRef.current) {
+      prevExpandedRef.current = expanded;
+      return;
+    }
+    const prev = prevExpandedRef.current;
+    const curr = expanded;
+
+    // `expanded` (ExpandedState) can be the boolean `true` when all rows are
+    // expanded via table.toggleAllRowsExpanded(true).  Object.keys(true)
+    // returns [] in modern JS — silently swallowing every expand event and
+    // leaving prevExpandedRef permanently stuck at `true`, which then
+    // corrupts the diff on the next individual-row toggle.  Skip per-row
+    // diffing for bulk toggle operations entirely.
+    if (typeof curr !== "object" || typeof prev !== "object") {
+      prevExpandedRef.current = expanded;
+      return;
+    }
+
+    const prevRecord = prev as Record<string, boolean>;
+    const currRecord = curr as Record<string, boolean>;
+
+    const fire = (rowId: string, isExpanded: boolean) => {
+      try {
+        const row = tableRef.current!.getRow(rowId);
+        if (!row) return;
+        if (row.getIsGrouped()) {
+          if (wantsGroup) {
+            onRowGroupExpand!({
+              columnId: row.groupingColumnId ?? "",
+              value: row.groupingValue,
+              isExpanded,
+              depth: row.depth,
+            });
+          }
+        } else if (wantsTree) {
+          onRowExpand!({
+            row: row.original,
+            rowId: row.id,
+            depth: row.depth,
+            isExpanded,
+          });
+        }
+      } catch { /* row may not exist */ }
+    };
+
+    for (const k of Object.keys(currRecord)) {
+      if (currRecord[k] && !prevRecord[k]) fire(k, true);
+    }
+    for (const k of Object.keys(prevRecord)) {
+      if (prevRecord[k] && !currRecord[k]) fire(k, false);
+    }
+    prevExpandedRef.current = curr;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
 
   // ─── Column order ───
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
@@ -306,36 +433,54 @@ export function DataTable<T extends Record<string, unknown>>({
     setRowSelection({});
   }, []);
 
+  const handleSetSearch = useCallback(
+    (v: string | ((prev: string) => string)) => {
+      setRowSelection({});
+      setSearch(v);
+    },
+    [setSearch]
+  );
+
+  // When getSubRows is provided, flatten the tree so export and selection
+  // can reach every node, not just the top-level rows the adapter returned.
+  const flattenTree = useCallback((rows: T[]): T[] => {
+    if (!getSubRows) return rows;
+    const result: T[] = [];
+    const walk = (nodes: T[]) => {
+      for (const node of nodes) {
+        result.push(node);
+        const children = getSubRows(node);
+        if (children?.length) walk(children as T[]);
+      }
+    };
+    walk(rows);
+    return result;
+  }, [getSubRows]);
+
   const getSelectedItems = useCallback(async () => {
     if (totalSelectedItems === 0) return [];
 
-    const selectedIds = Object.keys(rowSelection);
-    const itemsOnPage = data.filter(
-      (item) => rowSelection[String(item[idField])]
-    );
+    const selectedIds = new Set(Object.keys(rowSelection));
+    const allRows = flattenTree(data);
+    const itemsOnPage = allRows.filter((item) => selectedIds.has(String(item[idField])));
     const idsOnPage = new Set(itemsOnPage.map((item) => String(item[idField])));
-    const idsToFetch = selectedIds.filter((id) => !idsOnPage.has(id));
+    const idsToFetch = [...selectedIds].filter((id) => !idsOnPage.has(id));
 
-    // If everything selected is already exactly on the current page,
-    // their order is perfect (they are sorted exactly as they appear).
-    if (idsToFetch.length === 0 || !adapter.queryByIds) {
+    // Tree mode: all items are already in the flattened data — no server call needed.
+    if (getSubRows || idsToFetch.length === 0 || !adapter.queryByIds) {
       return itemsOnPage;
     }
 
     try {
-      // Cross-page export: To guarantee that rows are exported in the exact same sorted
-      // order as the table, we tell the backend to fetch ALL selected IDs (not just missing ones)
-      // and sort them according to the current table state.
-      // This perfectly avoids the problem of page 2 items appearing before page 1 items.
-      const fetchedAllSorted = await adapter.queryByIds(selectedIds, { sortBy, sortOrder });
+      // Cross-page export: fetch ALL selected IDs sorted via the backend.
+      const fetchedAllSorted = await adapter.queryByIds([...selectedIds], { sortBy, sortOrder });
       return fetchedAllSorted;
     } catch {
-      // Fallback: mostly useless if cross-page, but prevents crashing
       return itemsOnPage;
     }
-  }, [data, rowSelection, totalSelectedItems, adapter, idField, sortBy, sortOrder]);
+  }, [data, rowSelection, totalSelectedItems, adapter, idField, sortBy, sortOrder, flattenTree, getSubRows]);
 
-  const getAllItems = useCallback((): T[] => data, [data]);
+  const getAllItems = useCallback((): T[] => flattenTree(data), [data, flattenTree]);
 
   // ─── Pagination state for TanStack ───
   const pagination = useMemo(
@@ -376,11 +521,13 @@ export function DataTable<T extends Record<string, unknown>>({
       if (newPagination.pageSize !== pageSize) {
         setPageSize(newPagination.pageSize);
         setPage(1);
+        setRowSelection({});
         return;
       }
 
       if (newPagination.pageIndex + 1 !== page) {
         setPage(newPagination.pageIndex + 1);
+        setRowSelection({});
       }
     },
     [page, pageSize, setPage, setPageSize]
@@ -477,15 +624,20 @@ export function DataTable<T extends Record<string, unknown>>({
         e.preventDefault();
 
         const focusedElement = document.activeElement;
-        if (
-          focusedElement &&
-          (focusedElement.getAttribute("role") === "row" ||
-            focusedElement.getAttribute("role") === "gridcell")
-        ) {
-          const rowElement =
+        if (focusedElement) {
+          // <tr> has *implicit* role="row" — getAttribute returns null for it,
+          // so we match by tagName as well as an explicit role attribute.
+          let rowElement: Element | null = null;
+          if (
+            focusedElement.tagName === "TR" ||
             focusedElement.getAttribute("role") === "row"
-              ? focusedElement
-              : focusedElement.closest('[role="row"]');
+          ) {
+            rowElement = focusedElement;
+          } else if (focusedElement.getAttribute("role") === "gridcell") {
+            rowElement =
+              focusedElement.closest("tr") ??
+              focusedElement.closest('[role="row"]');
+          }
 
           if (rowElement) {
             const rowId =
@@ -494,7 +646,10 @@ export function DataTable<T extends Record<string, unknown>>({
               const rowIndex = Number.parseInt(rowId.replace(/^row-/, ""), 10);
               const row = table.getRowModel().rows[rowIndex];
               if (row) {
-                if (e.key === " ") {
+                if (row.getIsGrouped()) {
+                  // Group rows toggle expansion; they are never selectable.
+                  row.toggleExpanded();
+                } else if (e.key === " ") {
                   row.toggleSelected();
                 } else if (e.key === "Enter" && onRowClick) {
                   onRowClick(row.original as T, rowIndex);
@@ -522,6 +677,7 @@ export function DataTable<T extends Record<string, unknown>>({
         columnSizing,
         columnOrder,
         expanded,
+        grouping,
       },
       meta: {
         isLoadingColumns: isLoadingMeta,
@@ -536,19 +692,33 @@ export function DataTable<T extends Record<string, unknown>>({
       manualPagination: true,
       manualSorting: true,
       manualFiltering: true,
+      groupedColumnMode: false as const,
+      getSubRows: getSubRows ? (row: T) => getSubRows(row) : undefined,
       onRowSelectionChange: setRowSelection,
       onSortingChange: handleSortingChange,
       onColumnVisibilityChange: setUrlColumnVisibility as (updater: VisibilityState | ((prev: VisibilityState) => VisibilityState)) => void,
       onPaginationChange: handlePaginationChange,
+      // Row model pipeline — must follow TanStack v8 order:
+      // Core → Filtered → Grouped → Sorted → Expanded → Pagination
       getCoreRowModel: getCoreRowModel<T>(),
       getFilteredRowModel: getFilteredRowModel<T>(),
-      getPaginationRowModel: getPaginationRowModel<T>(),
+      getGroupedRowModel: rowGrouping?.length ? getGroupedRowModel() : undefined,
       getSortedRowModel: getSortedRowModel<T>(),
       getFacetedRowModel: getFacetedRowModel<T>(),
       getFacetedUniqueValues: getFacetedUniqueValues<T>(),
       onExpandedChange: setExpanded,
       getExpandedRowModel: getExpandedRowModel(),
-      getRowCanExpand: (row: Row<T>) => getRowCanExpand ? getRowCanExpand(row.original) : !!renderSubRow,
+      getPaginationRowModel: getPaginationRowModel<T>(),
+      onGroupingChange: setGrouping,
+      getRowCanExpand: (row: Row<T>) => {
+        // Group rows created by getGroupedRowModel MUST always be expandable,
+        // regardless of the host's getRowCanExpand prop or the presence of
+        // renderSubRow.  Without this guard, getCanExpand() returns false for
+        // every group row which breaks getToggleExpandedHandler() and any
+        // other caller that respects canExpand (keyboard nav, expand-all, etc).
+        if (row.getIsGrouped()) return true;
+        return getRowCanExpand ? getRowCanExpand(row.original) : !!renderSubRow;
+      },
     }),
     [
       data,
@@ -572,6 +742,9 @@ export function DataTable<T extends Record<string, unknown>>({
       isLoadingMeta,
       getRowCanExpand,
       renderSubRow,
+      getSubRows,
+      grouping,
+      setGrouping,
     ]
   );
 
@@ -608,8 +781,8 @@ export function DataTable<T extends Record<string, unknown>>({
 
   // ─── Render toolbar content ───
   const selectedRows = useMemo(
-    () => data.filter((item) => rowSelection[String(item[idField])]),
-    [data, rowSelection, idField]
+    () => flattenTree(data).filter((item) => rowSelection[String(item[idField])]),
+    [data, rowSelection, idField, flattenTree]
   );
   const selectedIds = useMemo(
     () => Object.keys(rowSelection),
@@ -622,10 +795,152 @@ export function DataTable<T extends Record<string, unknown>>({
     totalSelected: totalSelectedItems,
     clearSelection,
     search,
-    setSearch,
+    setSearch: handleSetSearch,
     dateRange,
     setDateRange,
   };
+
+  // ─── Row grouping depth helpers ───
+  const collectGroupRowsAtDepth = useCallback(
+    (rows: Row<T>[], targetDepth: number, acc: Row<T>[] = []): Row<T>[] => {
+      for (const row of rows) {
+        if (!row.getIsGrouped()) continue;
+        if (row.depth === targetDepth) {
+          acc.push(row);
+        } else if (row.depth < targetDepth && row.subRows?.length) {
+          collectGroupRowsAtDepth(row.subRows, targetDepth, acc);
+        }
+      }
+      return acc;
+    },
+    [] // no deps — pure function over its arguments
+  );
+
+  const expandDepth = useCallback(
+    (depth: number) => {
+      if (!rowGrouping?.length) return;
+      const groupedRows = table.getGroupedRowModel().rows;
+      const targets = collectGroupRowsAtDepth(groupedRows, depth);
+      if (!targets.length) return;
+      setExpanded((prev) => {
+        // prev === true means "all rows expanded" already includes our targets.
+        // Returning a fresh object would collapse every other depth — preserve
+        // the boolean state instead.
+        if (prev === true) return prev;
+        const base =
+          typeof prev === "boolean" ? {} : { ...(prev as Record<string, boolean>) };
+        for (const row of targets) base[row.id] = true;
+        return base;
+      });
+    },
+    [rowGrouping, table, collectGroupRowsAtDepth]
+  );
+
+  const collapseDepth = useCallback(
+    (depth: number) => {
+      if (!rowGrouping?.length) return;
+      const groupedRows = table.getGroupedRowModel().rows;
+      const targets = collectGroupRowsAtDepth(groupedRows, depth);
+      if (!targets.length) return;
+      const targetIds = new Set(targets.map((r) => r.id));
+      setExpanded((prev) => {
+        if (typeof prev === "boolean") {
+          const allGroupIds = new Set<string>();
+          const collectAll = (rows: Row<T>[]) => {
+            for (const r of rows) {
+              if (r.getIsGrouped()) {
+                allGroupIds.add(r.id);
+                if (r.subRows?.length) collectAll(r.subRows);
+              }
+            }
+          };
+          collectAll(table.getGroupedRowModel().rows);
+          const map: Record<string, boolean> = {};
+          for (const id of allGroupIds) map[id] = !targetIds.has(id);
+          return map;
+        }
+        const next = { ...(prev as Record<string, boolean>) };
+        for (const id of targetIds) delete next[id];
+        return next;
+      });
+    },
+    [rowGrouping, table, collectGroupRowsAtDepth]
+  );
+
+  const toggleDepth = useCallback(
+    (depth: number) => {
+      if (!rowGrouping?.length) return;
+      const groupedRows = table.getGroupedRowModel().rows;
+      const targets = collectGroupRowsAtDepth(groupedRows, depth);
+      if (!targets.length) return;
+      const expandedState =
+        typeof expanded === "boolean"
+          ? targets.map(() => expanded)
+          : targets.map((r) => !!(expanded as Record<string, boolean>)[r.id]);
+      const allExpanded = expandedState.every(Boolean);
+      if (allExpanded) {
+        collapseDepth(depth);
+      } else {
+        expandDepth(depth);
+      }
+    },
+    [rowGrouping, table, collectGroupRowsAtDepth, expanded, expandDepth, collapseDepth]
+  );
+
+  const setExpandedDepths = useCallback(
+    (depths: Set<number>) => {
+      if (!rowGrouping?.length) return;
+      const newExpanded: Record<string, boolean> = {};
+      const visit = (rows: Row<T>[]) => {
+        for (const row of rows) {
+          if (!row.getIsGrouped()) continue;
+          newExpanded[row.id] = depths.has(row.depth);
+          if (row.subRows?.length) visit(row.subRows);
+        }
+      };
+      visit(table.getGroupedRowModel().rows);
+      setExpanded(newExpanded);
+    },
+    [rowGrouping, table]
+  );
+
+  const getExpandedDepths = useCallback((): Set<number> => {
+    if (!rowGrouping?.length) return new Set();
+    const depths = new Set<number>();
+    if (typeof expanded === "boolean") {
+      if (expanded) {
+        const visit = (rows: Row<T>[]) => {
+          for (const row of rows) {
+            if (row.getIsGrouped()) {
+              depths.add(row.depth);
+              if (row.subRows?.length) visit(row.subRows);
+            }
+          }
+        };
+        visit(table.getGroupedRowModel().rows);
+      }
+      return depths;
+    }
+    const expandedMap = expanded as Record<string, boolean>;
+    for (const [id, isOpen] of Object.entries(expandedMap)) {
+      if (!isOpen) continue;
+      try {
+        const row = table.getRow(id);
+        if (row?.getIsGrouped()) depths.add(row.depth);
+      } catch { /* row may not exist in current model */ }
+    }
+    return depths;
+  }, [rowGrouping, expanded, table]);
+
+  const getGroupingProperty = useCallback(
+    (depth: number): string | undefined => rowGrouping?.[depth],
+    [rowGrouping]
+  );
+
+  const getGroupingDepth = useCallback(
+    (property: string): number => rowGrouping?.indexOf(property) ?? -1,
+    [rowGrouping]
+  );
 
   // ─── Keep tableContextRef in sync every render ───
   // This runs synchronously before render, so column cells always see fresh values.
@@ -636,7 +951,49 @@ export function DataTable<T extends Record<string, unknown>>({
     search,
     dateRange,
     allData: data,
+    expandAllGroups: () => table.toggleAllRowsExpanded(true),
+    collapseAllGroups: () => table.toggleAllRowsExpanded(false),
+    expandDepth,
+    collapseDepth,
+    toggleDepth,
+    getGroupingProperty,
+    getGroupingDepth,
+    isRowGroupingActive: !!(grouping.length),
   };
+
+  // ─── Expose grouping API via groupingRef (imperative handle) ───
+  // Re-publish the handle whenever any of the captured helpers change identity
+  // (each helper is a useCallback that updates when its own deps change, so
+  // this effect runs only when the closure's behaviour actually changes —
+  // not on every render, which previously nulled the ref between renders).
+  useEffect(() => {
+    if (!groupingRef) return;
+    const handle: import("./types").TableGroupingAPI = {
+      expandAll: () => table.toggleAllRowsExpanded(true),
+      collapseAll: () => table.toggleAllRowsExpanded(false),
+      expandDepth,
+      collapseDepth,
+      toggleDepth,
+      setExpandedDepths,
+      getExpandedDepths,
+      getGroupingProperty,
+      getGroupingDepth,
+    };
+    (groupingRef as React.MutableRefObject<import("./types").TableGroupingAPI | null>).current = handle;
+    // No cleanup: the parent owns the ref's lifecycle.  Nulling on every
+    // dep change opened a brief null window that broke consumers reading
+    // `ref.current` synchronously across renders.
+  }, [
+    groupingRef,
+    table,
+    expandDepth,
+    collapseDepth,
+    toggleDepth,
+    setExpandedDepths,
+    getExpandedDepths,
+    getGroupingProperty,
+    getGroupingDepth,
+  ]);
 
   const customToolbar = renderToolbar
     ? renderToolbar(toolbarContext)
@@ -646,6 +1003,11 @@ export function DataTable<T extends Record<string, unknown>>({
     typeof startToolbarContent === "function"
       ? startToolbarContent(toolbarContext)
       : startToolbarContent;
+
+  const resolvedEndToolbarContent =
+    typeof endToolbarContent === "function"
+      ? endToolbarContent(toolbarContext)
+      : endToolbarContent;
 
   // ─── Error state ───
   if (isError) {
@@ -697,7 +1059,7 @@ export function DataTable<T extends Record<string, unknown>>({
           table={table as unknown as ReturnType<typeof useReactTable<ExportableData>>}
           search={search}
           dateRange={{ from: dateRange.from, to: dateRange.to }}
-          setSearch={setSearch}
+          setSearch={handleSetSearch}
           setDateRange={setDateRange}
           totalSelectedItems={totalSelectedItems}
           clearSelection={clearSelection}
@@ -713,7 +1075,12 @@ export function DataTable<T extends Record<string, unknown>>({
           customToolbarContent={customToolbar}
           startToolbarContent={resolvedStartToolbarContent}
           startToolbarPlacement={startToolbarPlacement}
+          endToolbarContent={resolvedEndToolbarContent}
+          endToolbarPlacement={endToolbarPlacement}
           hiddenColumns={hiddenColumns as string[]}
+          onExpandAllGroups={tableContextRef.current.expandAllGroups}
+          onCollapseAllGroups={tableContextRef.current.collapseAllGroups}
+          isRowGroupingActive={tableContextRef.current.isRowGroupingActive}
         />
       )}
 
@@ -805,62 +1172,235 @@ export function DataTable<T extends Record<string, unknown>>({
                   </tr>
                 ))
               ) : table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row, rowIndex) => (
-                  <Fragment key={row.id}>
-                  <tr
-                    id={`row-${rowIndex}`}
-                    data-slot="table-row"
-                    data-row-index={rowIndex}
-                    data-state={row.getIsSelected() ? "selected" : undefined}
-                    tabIndex={0}
-                    aria-selected={row.getIsSelected()}
-                    className="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors"
-                    onClick={(event) => {
-                      if (tableConfig.enableClickRowSelect) {
-                        row.toggleSelected();
-                      }
-                      if (onRowClick) {
-                        handleRowClick(event, row.original, rowIndex);
-                      }
-                    }}
-                    style={{
-                      cursor: onRowClick ? "pointer" : undefined,
-                    }}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        data-slot="table-cell"
+                table.getRowModel().rows.map((row, rowIndex) => {
+                  const isGroupRow = row.getIsGrouped();
+                  const visibleCells = row.getVisibleCells();
+
+                  // Group label always renders in the first non-system column so the
+                  // chevron + value appear at column 0 regardless of grouping key.
+                  const firstDataCellId = isGroupRow
+                    ? (visibleCells.find(
+                        c => c.column.id !== "select" && c.column.id !== "__expand" && c.column.id !== "__actions"
+                      )?.id ?? null)
+                    : null;
+
+                  // First data cell of leaf rows — only this cell gets depth indentation.
+                  const firstLeafDataCellId = !isGroupRow
+                    ? (visibleCells.find(
+                        c => c.column.id !== "select" && c.column.id !== "__expand" && c.column.id !== "__actions"
+                      )?.id ?? null)
+                    : null;
+
+                  return (
+                    <Fragment key={isGroupRow ? `group-row-${row.id}` : row.id}>
+                      <tr
+                        id={`row-${rowIndex}`}
+                        data-slot="table-row"
+                        data-row-index={rowIndex}
+                        data-state={row.getIsSelected() ? "selected" : undefined}
+                        data-group-row={isGroupRow ? "true" : undefined}
+                        data-depth={isGroupRow ? String(row.depth) : undefined}
+                        tabIndex={0}
+                        aria-selected={isGroupRow ? undefined : row.getIsSelected()}
+                        aria-expanded={isGroupRow || row.getCanExpand() ? row.getIsExpanded() : undefined}
                         className={cn(
-                          "align-middle whitespace-nowrap text-left",
-                          cell.column.id === "select" || cell.column.id === "__expand"
-                            ? "px-2 py-2"
-                            : cell.column.id === "__actions"
-                              ? "w-12 px-2 py-2"
-                              : "px-4 py-2 truncate max-w-0"
+                          "border-b transition-colors",
+                          isGroupRow || row.getCanExpand()
+                            ? "hover:bg-muted/60 cursor-pointer"
+                            : "hover:bg-muted/50 data-[state=selected]:bg-muted",
+                          onRowClick && !isGroupRow && !row.getCanExpand() ? "cursor-pointer" : undefined
                         )}
-                        style={{ width: cell.column.getSize() }}
+                        onClick={(event) => {
+                          if (isGroupRow || row.getCanExpand()) {
+                            row.toggleExpanded();
+                            return;
+                          }
+                          if (tableConfig.enableClickRowSelect) {
+                            row.toggleSelected();
+                          }
+                          if (onRowClick) {
+                            handleRowClick(event, row.original, rowIndex);
+                          }
+                        }}
+                        style={{
+                          cursor: isGroupRow || row.getCanExpand() ? "pointer" : onRowClick ? "pointer" : undefined,
+                        }}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    ))}
-                    {renderResizePlaceholderCell("td")}
-                  </tr>
-                  {row.getIsExpanded() && renderSubRow && (
-                    <tr key={`expanded-${row.id}`} className="bg-muted/30 hover:bg-muted/30 border-b">
-                      <td
-                        colSpan={getVisibleColumnCount(row.getVisibleCells().length)}
-                        className="p-0"
-                      >
-                        {renderSubRow({ row: row.original, table: tableContextRef.current })}
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-                ))
+                        {visibleCells.map((cell) => {
+                          const isSystemCol =
+                            cell.column.id === "select" ||
+                            cell.column.id === "__expand" ||
+                            cell.column.id === "__actions";
+
+                          const isFirstDataCell =
+                            cell.id === firstDataCellId || cell.id === firstLeafDataCellId;
+
+                          // \u2500\u2500 Group rows \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+                          if (isGroupRow) {
+                            // Placeholder cells that are not the target first-data cell \u2192 empty
+                            if (cell.getIsPlaceholder() && !isFirstDataCell) {
+                              return (
+                                <td
+                                  key={cell.id}
+                                  data-slot="table-cell"
+                                  style={{ width: cell.column.getSize() }}
+                                />
+                              );
+                            }
+
+                            // First data cell \u2192 render the group label here, always
+                            if (isFirstDataCell) {
+                              const leafCount = row.getLeafRows().length;
+                              const groupValue = row.groupingValue;
+                              const defaultGroupContent = (
+                                <>
+                                  <span className="font-medium text-foreground">
+                                    {String(groupValue ?? "\u2014")}
+                                  </span>
+                                  <GroupRowBadge count={leafCount} />
+                                </>
+                              );
+                              const customGroupContent = rowGroupingConfig?.renderGroupCell
+                                ? rowGroupingConfig.renderGroupCell({
+                                    columnId: row.groupingColumnId ?? "",
+                                    value: groupValue,
+                                    leafRowCount: leafCount,
+                                  })
+                                : null;
+
+                              return (
+                                <td
+                                  key={cell.id}
+                                  data-slot="table-cell"
+                                  className="align-middle whitespace-nowrap text-left px-4 py-2 truncate max-w-0"
+                                  style={{
+                                    width: cell.column.getSize(),
+                                    paddingLeft: `${16 + row.depth * 20}px`,
+                                  }}
+                                >
+                                  <span className="flex items-center gap-1.5">
+                                    <GroupRowChevron isExpanded={row.getIsExpanded()} />
+                                    {customGroupContent != null ? customGroupContent : defaultGroupContent}
+                                  </span>
+                                </td>
+                              );
+                            }
+
+                            // Aggregated value cells (e.g. salary sum/mean)
+                            if (cell.getIsAggregated()) {
+                              return (
+                                <td
+                                  key={cell.id}
+                                  data-slot="table-cell"
+                                  className={cn(
+                                    "align-middle whitespace-nowrap text-left",
+                                    isSystemCol ? "px-2 py-2" : "px-4 py-2 truncate max-w-0"
+                                  )}
+                                  style={{ width: cell.column.getSize() }}
+                                >
+                                  {flexRender(
+                                    cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
+                                    cell.getContext()
+                                  )}
+                                </td>
+                              );
+                            }
+
+                            // System columns (select checkbox etc.) and remaining cells \u2192 render normally
+                            return (
+                              <td
+                                key={cell.id}
+                                data-slot="table-cell"
+                                className={cn(
+                                  "align-middle whitespace-nowrap text-left",
+                                  cell.column.id === "select" || cell.column.id === "__expand"
+                                    ? "px-2 py-2"
+                                    : cell.column.id === "__actions"
+                                      ? "w-12 px-2 py-2"
+                                      : "px-4 py-2 truncate max-w-0"
+                                )}
+                                style={{ width: cell.column.getSize() }}
+                                onClick={isSystemCol ? (e) => e.stopPropagation() : undefined}
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </td>
+                            );
+                          }
+
+                          // \u2500\u2500 Leaf rows \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+                          // Placeholder cells (grouped columns become empty in leaf rows)
+                          if (cell.getIsPlaceholder()) {
+                            return (
+                              <td
+                                key={cell.id}
+                                data-slot="table-cell"
+                                style={{ width: cell.column.getSize() }}
+                              />
+                            );
+                          }
+
+                          // Tree-expandable rows: first data cell gets chevron + depth indent
+                          if (isFirstDataCell && row.getCanExpand()) {
+                            return (
+                              <td
+                                key={cell.id}
+                                data-slot="table-cell"
+                                className="align-middle whitespace-nowrap text-left px-4 py-2 truncate max-w-0"
+                                style={{
+                                  width: cell.column.getSize(),
+                                  paddingLeft: `${16 + row.depth * 20}px`,
+                                }}
+                              >
+                                <span className="flex items-center gap-1.5">
+                                  <GroupRowChevron isExpanded={row.getIsExpanded()} />
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          return (
+                            <td
+                              key={cell.id}
+                              data-slot="table-cell"
+                              className={cn(
+                                "align-middle whitespace-nowrap text-left",
+                                cell.column.id === "select" || cell.column.id === "__expand"
+                                  ? "px-2 py-2"
+                                  : cell.column.id === "__actions"
+                                    ? "w-12 px-2 py-2"
+                                    : "px-4 py-2 truncate max-w-0"
+                              )}
+                              style={{
+                                width: cell.column.getSize(),
+                                // Depth indent only on the first data cell of nested leaf rows
+                                paddingLeft: isFirstDataCell && row.depth > 0
+                                  ? `${16 + row.depth * 20}px`
+                                  : undefined,
+                              }}
+                              onClick={isSystemCol ? (e) => e.stopPropagation() : undefined}
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          );
+                        })}
+                        {renderResizePlaceholderCell("td")}
+                      </tr>
+
+                      {/* Master-Detail sub-row (existing feature) — only for non-group leaf rows */}
+                      {!isGroupRow && row.getIsExpanded() && renderSubRow && (
+                        <tr key={`expanded-${row.id}`} className="bg-muted/30 hover:bg-muted/30 border-b">
+                          <td
+                            colSpan={getVisibleColumnCount(row.getVisibleCells().length)}
+                            className="p-0"
+                          >
+                            {renderSubRow({ row: row.original, table: tableContextRef.current })}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })
               ) : (
                 <tr data-slot="table-row">
                   <td

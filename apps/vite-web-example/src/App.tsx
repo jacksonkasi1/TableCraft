@@ -1,4 +1,4 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
 import { ProductsPage } from "@/pages/products-page";
 import { ProductsAxiosPage } from "@/pages/products-axios-page";
 import { OrdersPage } from "@/pages/orders-page";
@@ -9,10 +9,33 @@ import { DashboardPage } from "@/pages/dashboard-page";
 import { OrdersRestPage } from "@/pages/orders-rest-page";
 import { OrdersSubRowPage } from "@/pages/orders-subrow-page";
 import { EmployeesStaticPage } from "@/pages/employees-static-page";
-import { EmployeesGroupingPage } from "@/pages/employees-grouping-page";
+import { ToolbarPlacementPage } from "@/pages/toolbar-placement-page";
+import { ToolbarStartPage } from "@/pages/toolbar-start-page";
+import { RowGroupingLayout } from "@/pages/row-grouping/layout";
+import { RowGroupingBasicPage } from "@/pages/row-grouping/basic";
+import { RowGroupingServerPage } from "@/pages/row-grouping/server";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Package, ShoppingCart, Users, LayoutDashboard, Cable, Filter, Plug, Database } from "lucide-react";
+import {
+  Package,
+  ShoppingCart,
+  Users,
+  LayoutDashboard,
+  Cable,
+  Filter,
+  Plug,
+  Database,
+  SlidersHorizontal,
+  ChevronDown,
+} from "lucide-react";
 
 const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
@@ -22,22 +45,57 @@ const GithubIcon: React.FC<{ className?: string }> = ({ className }) => (
 import { ThemeProvider } from "@/components/theme-provider";
 import { ModeToggle } from "@/components/mode-toggle";
 
+const navGroups = [
+  {
+    type: "link" as const,
+    to: "/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    type: "group" as const,
+    label: "Products",
+    icon: Package,
+    items: [
+      { to: "/products", label: "Products", icon: Package },
+      { to: "/products-axios", label: "Axios", icon: Cable },
+    ],
+  },
+  {
+    type: "group" as const,
+    label: "Orders",
+    icon: ShoppingCart,
+    items: [
+      { to: "/orders", label: "Orders", icon: ShoppingCart },
+      { to: "/orders-advanced", label: "Filters", icon: Filter },
+      { to: "/orders-complex", label: "Complex", icon: Filter },
+      { to: "/orders-rest", label: "REST", icon: Plug },
+      { to: "/orders-subrow", label: "Sub-Rows", icon: Filter },
+    ],
+  },
+  {
+    type: "group" as const,
+    label: "Data",
+    icon: Database,
+    items: [
+      { to: "/employees", label: "Employees (Static)", icon: Database },
+      { to: "/users", label: "Users", icon: Users },
+      { to: "/row-grouping/basic", label: "Row Grouping", icon: Database },
+    ],
+  },
+  {
+    type: "group" as const,
+    label: "Toolbar",
+    icon: SlidersHorizontal,
+    items: [
+      { to: "/toolbar-start", label: "Start Slots", icon: SlidersHorizontal },
+      { to: "/toolbar-placement", label: "End Slots", icon: SlidersHorizontal },
+    ],
+  },
+];
+
 function App() {
   const location = useLocation();
-
-  const navItems = [
-    { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/products", label: "Products", icon: Package },
-    { to: "/products-axios", label: "Axios", icon: Cable },
-    { to: "/orders", label: "Orders", icon: ShoppingCart },
-    { to: "/orders-advanced", label: "Orders (Filters)", icon: Filter },
-    { to: "/orders-complex", label: "Orders (Complex)", icon: Filter },
-    { to: "/orders-rest", label: "Orders (REST)", icon: Plug },
-    { to: "/employees", label: "Employees (Static)", icon: Database },
-    { to: "/users", label: "Users", icon: Users },
-    { to: "/orders-subrow", label: "Sub-Rows", icon: Filter },
-    { to: "/row-grouping", label: "Row Grouping", icon: Database },
-  ];
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
@@ -45,39 +103,82 @@ function App() {
         {/* Header */}
         <header className="border-b">
           <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center space-x-8">
-              <Link to="/" className="flex items-center space-x-2">
+            <div className="flex items-center space-x-6">
+              <Link to="/" className="flex items-center space-x-2 shrink-0">
                 <h1 className="text-xl font-bold">TableCraft</h1>
               </Link>
 
-              <nav className="flex items-center space-x-4">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.to;
+              <nav className="flex items-center space-x-1">
+                {navGroups.map((group) => {
+                  if (group.type === "link") {
+                    const Icon = group.icon;
+                    const isActive = location.pathname === group.to;
+                    return (
+                      <Link key={group.to} to={group.to}>
+                        <Button
+                          variant={isActive ? "secondary" : "ghost"}
+                          size="sm"
+                          className={cn(isActive && "bg-secondary")}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="hidden sm:inline ml-2">{group.label}</span>
+                        </Button>
+                      </Link>
+                    );
+                  }
+
+                  const Icon = group.icon;
+                  const isGroupActive = group.items.some((item) => {
+            const rootSegment = "/" + item.to.split("/").filter(Boolean)[0];
+            return location.pathname === item.to || location.pathname.startsWith(rootSegment + "/");
+          });
                   return (
-                    <Link key={item.to} to={item.to}>
-                      <Button
-                        variant={isActive ? "secondary" : "ghost"}
-                        size="sm"
-                        className={cn(isActive && "bg-secondary")}
-                      >
-                        <Icon className="mr-2 h-4 w-4" />
-                        {item.label}
-                      </Button>
-                    </Link>
+                    <DropdownMenu key={group.label}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant={isGroupActive ? "secondary" : "ghost"}
+                          size="sm"
+                          className={cn(isGroupActive && "bg-secondary")}
+                        >
+                          <Icon className="h-4 w-4" />
+                          <span className="hidden sm:inline ml-2">{group.label}</span>
+                          <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-44">
+                        <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {group.items.map((item) => {
+                          const ItemIcon = item.icon;
+                          const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+                          return (
+                            <DropdownMenuItem
+                              key={item.to}
+                              asChild
+                              className={cn(isActive && "bg-accent text-accent-foreground")}
+                            >
+                              <Link to={item.to} className="flex items-center gap-2 w-full">
+                                <ItemIcon className="h-4 w-4" />
+                                {item.label}
+                              </Link>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   );
                 })}
               </nav>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 shrink-0">
               <a
                 href="https://github.com/jacksonkasi1/TableCraft"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 <Button variant="ghost" size="icon">
-                  <Github className="h-[1.2rem] w-[1.2rem]" />
+                  <GithubIcon className="h-[1.2rem] w-[1.2rem]" />
                   <span className="sr-only">GitHub</span>
                 </Button>
               </a>
@@ -99,7 +200,13 @@ function App() {
             <Route path="/employees" element={<EmployeesStaticPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/orders-subrow" element={<OrdersSubRowPage />} />
-            <Route path="/row-grouping" element={<EmployeesGroupingPage />} />
+            <Route path="/row-grouping" element={<RowGroupingLayout />}>
+              <Route index element={<Navigate to="basic" replace />} />
+              <Route path="basic" element={<RowGroupingBasicPage />} />
+              <Route path="server" element={<RowGroupingServerPage />} />
+            </Route>
+            <Route path="/toolbar-start" element={<ToolbarStartPage />} />
+            <Route path="/toolbar-placement" element={<ToolbarPlacementPage />} />
           </Routes>
         </main>
       </div>

@@ -44,3 +44,41 @@ export function ExpandIcon<TData>({
     </button>
   );
 }
+
+// ─────────────────────────────────────────────
+// Row Grouping Components
+// ─────────────────────────────────────────────
+
+interface GroupRowChevronProps {
+  isExpanded: boolean;
+  className?: string;
+}
+
+/**
+ * Animated chevron for row-grouping group-header rows.
+ * Points right when collapsed, rotates 90° when expanded.
+ * Uses CSS class tc-group-chevron + data-expanded for the animation.
+ */
+export function GroupRowChevron({ isExpanded, className }: GroupRowChevronProps) {
+  return (
+    <span
+      className={cn("tc-group-chevron", className)}
+      data-expanded={isExpanded ? "true" : "false"}
+    >
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </span>
+  );
+}
+
+interface GroupRowBadgeProps {
+  count: number;
+  className?: string;
+}
+
+/**
+ * Pill badge showing the number of rows in a group.
+ * Uses tc-group-badge CSS class.
+ */
+export function GroupRowBadge({ count, className }: GroupRowBadgeProps) {
+  return <span className={cn("tc-group-badge", className)}>{count}</span>;
+}

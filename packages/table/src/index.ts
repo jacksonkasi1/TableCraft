@@ -8,7 +8,7 @@ export { DataTableToolbar } from "./toolbar";
 export { DataTableViewOptions } from "./view-options";
 export { DataTableExport } from "./export";
 export { DataTableResizer } from "./resizer";
-export { ExpandIcon } from "./expand-icon";
+export { ExpandIcon, GroupRowChevron, GroupRowBadge } from "./expand-icon";
 
 // ─── Adapters ───
 export { createTableCraftAdapter } from "./auto/tablecraft-adapter";
@@ -17,6 +17,17 @@ export { createRestAdapter } from "./auto/rest-adapter";
 export type { RestAdapterOptions } from "./auto/rest-adapter";
 export { createStaticAdapter } from "./auto/static-adapter";
 export type { StaticAdapterOptions } from "./auto/static-adapter";
+export {
+  useTreeAdapter,
+  isTreeLoadingRow,
+  makeTreeLoadingId,
+} from "./auto/use-tree-adapter";
+export type {
+  UseTreeAdapterOptions,
+  UseTreeAdapterReturn,
+  UseTreeAdapterListSource,
+  UseTreeAdapterChildrenSource,
+} from "./auto/use-tree-adapter";
 
 // ─── Auto-generation ───
 export { generateColumns } from "./auto/auto-columns";
@@ -84,8 +95,13 @@ export type {
   ToolbarContext,
   TableContext,
   StartToolbarPlacement,
+  EndToolbarPlacement,
   ColumnOverrides,
   ActionsRender,
+  RowGroupingAggregation,
+  RowGroupingConfig,
+  OnRowGroupExpandInfo,
+  TableGroupingAPI,
 } from "./types";
 
 export { defineColumnOverrides, defineExportConfig } from "./types";
