@@ -151,7 +151,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
     return options.headers;
   }
 
-  async function request<R>(url: string): Promise<R> {
+  async function request<R>(url: string, signal?: AbortSignal): Promise<R> {
     const headers = await resolveHeaders();
     const response = await customFetch(url, {
       method: "GET",
@@ -159,6 +159,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
         Accept: "application/json",
         ...headers,
       },
+      signal,
     });
 
     if (!response.ok) {
@@ -270,7 +271,10 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
   }
 
   return {
-    async query(params: QueryParams): Promise<QueryResult<T>> {
+    async query(
+      params: QueryParams,
+      options?: { signal?: AbortSignal },
+    ): Promise<QueryResult<T>> {
       const { dateRangeCol } = await getMetadataWithFallback();
 
       const url = buildQueryUrl(applyCustomFilters(params), dateRangeCol);
@@ -282,7 +286,7 @@ export function createTableCraftAdapter<T = Record<string, unknown>, TFilters = 
           pageSize: number;
           totalPages: number | null;
         };
-      }>(url);
+      }>(url, options?.signal);
 
       return {
         data: result.data,
