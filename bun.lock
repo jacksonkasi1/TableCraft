@@ -251,7 +251,13 @@
       },
       "peerDependencies": {
         "@tablecraft/engine": ">=0.1.0 <1",
+        "@upstash/redis": "*",
+        "ioredis": "*",
       },
+      "optionalPeers": [
+        "@upstash/redis",
+        "ioredis",
+      ],
     },
     "packages/table": {
       "name": "@tablecraft/table",
