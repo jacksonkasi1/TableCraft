@@ -24,7 +24,11 @@ export function createStaticAdapter<T extends Record<string, unknown>>(
   options?: StaticAdapterOptions
 ): DataAdapter<T> {
   return {
-    async query(params: QueryParams): Promise<QueryResult<T>> {
+    async query(
+      params: QueryParams,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _options?: { signal?: AbortSignal },
+    ): Promise<QueryResult<T>> {
       let filtered = [...data];
 
       // Search

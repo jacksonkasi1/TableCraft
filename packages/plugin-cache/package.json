@@ -31,7 +31,9 @@
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": ">=0.1.0 <1"
+    "@tablecraft/engine": ">=0.1.0 <1",
+    "@upstash/redis": "*",
+    "ioredis": "*"
   },
   "peerDependenciesMeta": {
     "ioredis": { "optional": true },

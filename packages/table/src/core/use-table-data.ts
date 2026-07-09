@@ -117,7 +117,8 @@ export function useTableData<T extends Record<string, unknown>>(
   // ─── Fetch data on param change ───
   useEffect(() => {
     abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const fetchData = async () => {
       try {
@@ -126,23 +127,34 @@ export function useTableData<T extends Record<string, unknown>>(
         if (!(config.keepPreviousData && result)) {
           setIsLoading(true);
         }
-        const data = await adapter.query(queryParams);
+        const data = await adapter.query(queryParams, { signal: controller.signal });
+        // Stale-response guard: if this effect was superseded (param changed,
+        // unmount, etc.) while the await was pending, drop the result so it
+        // can't overwrite newer table state. Adapters that honour the signal
+        // will already have thrown AbortError; this catches the rest.
+        if (controller.signal.aborted) return;
         setResult(data);
         setIsError(false);
         setError(null);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        if (controller.signal.aborted) return;
         setIsError(true);
         setError(err instanceof Error ? err : new Error("Unknown error"));
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchData();
 
     return () => {
-      abortRef.current?.abort();
+      controller.abort();
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
     };
   }, [adapter, queryParams]);
 

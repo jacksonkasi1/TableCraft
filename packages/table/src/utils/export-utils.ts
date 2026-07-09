@@ -7,10 +7,19 @@ import type { ExportableData, DataTransformFunction } from "../types";
  * exfiltrate data, fetch URLs, or run DDE commands when a victim opens the
  * exported file. Prefixing such values with a single quote forces the
  * spreadsheet to treat them as plain text. (OWASP CSV Injection guidance.)
+ *
+ * Leading whitespace is trimmed before the prefix check, so a value like
+ * `" =SUM(1)"` (with a leading space) cannot bypass the check — some
+ * spreadsheet apps ignore leading whitespace when evaluating formulas.
+ * The original whitespace is preserved in the returned value.
  */
 function sanitizeCsvCell(value: string): string {
   if (value.length === 0) return value;
-  const first = value.charCodeAt(0);
+  // Trim leading spaces (not tabs/CRs — those are themselves formula triggers
+  // and must remain in the value so the prefix check can detect them).
+  const trimmed = value.replace(/^ +/, "");
+  if (trimmed.length === 0) return value;
+  const first = trimmed.charCodeAt(0);
   // 0x3D '='  0x2B '+'  0x2D '-'  0x40 '@'  0x09 TAB  0x0D CR
   if (
     first === 0x3d ||
@@ -20,7 +29,7 @@ function sanitizeCsvCell(value: string): string {
     first === 0x09 ||
     first === 0x0d
   ) {
-    return `'${value}`;
+    return `'${value}`;  // preserve the original (including leading whitespace)
   }
   return value;
 }
@@ -42,7 +51,10 @@ function convertToCSV<T extends ExportableData>(
   if (columnMapping) {
     const headerRow = headers.map((header) => {
       const mappedHeader = columnMapping[header] || header;
-      return mappedHeader.includes(",") || mappedHeader.includes('"')
+      return mappedHeader.includes(",") ||
+        mappedHeader.includes('"') ||
+        mappedHeader.includes("\n") ||
+        mappedHeader.includes("\r")
         ? `"${mappedHeader.replace(/"/g, '""')}"`
         : mappedHeader;
     });
@@ -57,7 +69,10 @@ function convertToCSV<T extends ExportableData>(
       const rawCell = value === null || value === undefined ? "" : String(value);
       const cellValue = sanitizeCsvCell(rawCell);
       const escapedValue =
-        cellValue.includes(",") || cellValue.includes('"')
+        cellValue.includes(",") ||
+        cellValue.includes('"') ||
+        cellValue.includes("\n") ||
+        cellValue.includes("\r")
           ? `"${cellValue.replace(/"/g, '""')}"`
           : cellValue;
       return escapedValue;

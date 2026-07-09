@@ -170,13 +170,15 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
 
   const adapter = useMemo<DataAdapter<T>>(
     () => ({
-      async query(params) {
+      async query(params, options) {
+        // Prefer the upstream signal from useTableData so a stale list
+        // response can be cancelled by the table's own AbortController
+        // (param change, unmount). Fall back to a never-aborted signal
+        // so adapters that pass it straight through still typecheck.
+        const signal = options?.signal ?? new AbortController().signal;
         let result: QueryResult<T>;
         if (list.fetch) {
-          // Caller-owned abort: we pass a fresh controller so they can
-          // honour it. The outer useTableData also aborts via its own.
-          const ctrl = new AbortController();
-          result = await list.fetch(params, ctrl.signal);
+          result = await list.fetch(params, signal);
         } else {
           if (!list.url) {
             throw new Error(
@@ -190,11 +192,17 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           if (params.search) qs.set("search", params.search);
           if (params.sort) qs.set("sort", params.sort);
           if (params.sortOrder) qs.set("sortOrder", params.sortOrder);
-          const res = await fetch(`${list.url}?${qs.toString()}`);
+          const res = await fetch(`${list.url}?${qs.toString()}`, { signal });
           if (!res.ok) {
             throw new Error(`useTreeAdapter list: HTTP ${res.status}`);
           }
           result = (await res.json()) as QueryResult<T>;
+        }
+        // Stale-response guard: if the table aborted us while we were
+        // awaiting, don't merge + return a fresh result that would race
+        // with a newer query.
+        if (signal.aborted) {
+          throw Object.assign(new Error("Aborted"), { name: "AbortError" });
         }
         return {
           ...result,

@@ -289,8 +289,19 @@ export interface QueryResult<T = Record<string, unknown>> {
 // ─────────────────────────────────────────────
 
 export interface DataAdapter<T = Record<string, unknown>> {
-  /** Fetch data given current table params */
-  query(params: QueryParams): Promise<QueryResult<T>>;
+  /**
+   * Fetch data given current table params.
+   *
+   * The optional `options.signal` is the table's `AbortSignal` and is fired
+   * whenever query params change (or the consumer unmounts). Implementations
+   * SHOULD pass it through to any underlying `fetch` so stale requests are
+   * cancelled. Adapters that resolve synchronously (e.g. in-memory data)
+   * MAY ignore it, but must still accept the argument for type compatibility.
+   */
+  query(
+    params: QueryParams,
+    options?: { signal?: AbortSignal },
+  ): Promise<QueryResult<T>>;
   /** Fetch items by IDs (for cross-page selection/export) */
   queryByIds?(ids: (string | number)[], options?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]>;
   /** Fetch table metadata (enables auto-column generation) */
