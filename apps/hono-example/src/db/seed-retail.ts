@@ -2,6 +2,14 @@ import { db } from './index';
 import * as schema from './schema';
 import { sql } from 'drizzle-orm';
 
+let randomState = 0x5eed1234;
+
+/** Deterministic PRNG so repeated destructive seeds produce identical data. */
+function random(): number {
+  randomState = (1664525 * randomState + 1013904223) >>> 0;
+  return randomState / 0x100000000;
+}
+
 // ── Regions (60) ─────────────────────────────────────────────────────────────
 const regions = [
   { id: 'r01', name: 'Northeast US',       totalSales: 52400, revenue: 1380000, stores: 14, avgRating: 4.5 },
@@ -142,9 +150,9 @@ function makeStores() {
         id: sid,
         regionId: region.id,
         name: names[i],
-        totalSales: Math.round(region.totalSales * share * (0.85 + Math.random() * 0.3)),
-        revenue: Math.round(region.revenue * share * (0.85 + Math.random() * 0.3)),
-        avgRating: Math.round((region.avgRating + (Math.random() * 0.4 - 0.2)) * 10) / 10,
+        totalSales: Math.round(region.totalSales * share * (0.85 + random() * 0.3)),
+        revenue: Math.round(region.revenue * share * (0.85 + random() * 0.3)),
+        avgRating: Math.round((region.avgRating + (random() * 0.4 - 0.2)) * 10) / 10,
       });
       idx++;
     }
@@ -171,17 +179,17 @@ function makeProducts(stores: ReturnType<typeof makeStores>) {
     const usedNames = new Set<string>();
     for (let i = 0; i < 3; i++) {
       let name: string;
-      do { name = PRODUCT_POOL[Math.floor(Math.random() * PRODUCT_POOL.length)]; } while (usedNames.has(name));
+      do { name = PRODUCT_POOL[Math.floor(random() * PRODUCT_POOL.length)]; } while (usedNames.has(name));
       usedNames.add(name);
       const pid = `p${String(idx).padStart(4, '0')}`;
-      const sales = Math.round(store.totalSales * 0.33 * (0.8 + Math.random() * 0.4));
+      const sales = Math.round(store.totalSales * 0.33 * (0.8 + random() * 0.4));
       products.push({
         id: pid,
         storeId: store.id,
         name,
         totalSales: sales,
-        revenue: Math.round(sales * (20 + Math.random() * 30)),
-        avgRating: Math.round((store.avgRating + (Math.random() * 0.4 - 0.2)) * 10) / 10,
+        revenue: Math.round(sales * (20 + random() * 30)),
+        avgRating: Math.round((store.avgRating + (random() * 0.4 - 0.2)) * 10) / 10,
       });
       idx++;
     }
@@ -190,14 +198,24 @@ function makeProducts(stores: ReturnType<typeof makeStores>) {
 }
 
 async function seed() {
-  console.log('Seeding retail tree…');
+  console.warn('DESTRUCTIVE: truncating and reseeding all retail demo tables.');
+
+  randomState = 0x5eed1234;
+  const stores = makeStores();
+  const storeCounts = new Map<string, number>();
+  for (const store of stores) {
+    storeCounts.set(store.regionId, (storeCounts.get(store.regionId) ?? 0) + 1);
+  }
+  const coherentRegions = regions.map((region) => ({
+    ...region,
+    stores: storeCounts.get(region.id) ?? 0,
+  }));
 
   await db.execute(sql`TRUNCATE retail_products, retail_stores, retail_regions RESTART IDENTITY CASCADE`);
 
-  await db.insert(schema.retailRegions).values(regions);
-  console.log(`  ✓ ${regions.length} regions`);
+  await db.insert(schema.retailRegions).values(coherentRegions);
+  console.log(`  ✓ ${coherentRegions.length} regions`);
 
-  const stores = makeStores();
   await db.insert(schema.retailStores).values(stores);
   console.log(`  ✓ ${stores.length} stores`);
 

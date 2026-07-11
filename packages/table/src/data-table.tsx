@@ -161,12 +161,14 @@ export function DataTable<T extends Record<string, unknown>>({
           />
         ),
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-            className="translate-y-[2px]"
-          />
+          row.getIsGrouped() ? null : (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+              className="translate-y-[2px]"
+            />
+          )
         ),
         enableSorting: false,
         enableHiding: false,
@@ -230,7 +232,7 @@ export function DataTable<T extends Record<string, unknown>>({
       const actionColumn: ColumnDef<T, unknown> = {
         id: "__actions",
         header: () => null,
-        cell: ({ row }) =>
+        cell: ({ row }) => row.getIsGrouped() ? null :
           actions({
             row: row.original,
             table: tableContextRef.current,
@@ -272,12 +274,23 @@ export function DataTable<T extends Record<string, unknown>>({
   const [grouping, setGrouping] = useState<GroupingState>(
     () => rowGrouping ?? []
   );
+  const previousGroupingPropRef = useRef<readonly string[]>(rowGrouping ?? []);
 
   // Sync grouping state if rowGrouping prop changes
   useEffect(() => {
-    setGrouping(rowGrouping ?? []);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(rowGrouping)]);
+    const next = rowGrouping ?? [];
+    const previous = previousGroupingPropRef.current;
+    if (
+      previous.length === next.length &&
+      previous.every((column, index) => column === next[index])
+    ) {
+      return;
+    }
+    previousGroupingPropRef.current = [...next];
+    setGrouping(next);
+    setExpanded({});
+    prevExpandedRef.current = {};
+  });
 
   // ─── Dev warning: manualPagination + rowGrouping conflict ───
   // The table internally sets manualPagination:true, so the adapter returns
@@ -521,13 +534,11 @@ export function DataTable<T extends Record<string, unknown>>({
       if (newPagination.pageSize !== pageSize) {
         setPageSize(newPagination.pageSize);
         setPage(1);
-        setRowSelection({});
         return;
       }
 
       if (newPagination.pageIndex + 1 !== page) {
         setPage(newPagination.pageIndex + 1);
-        setRowSelection({});
       }
     },
     [page, pageSize, setPage, setPageSize]
@@ -686,7 +697,8 @@ export function DataTable<T extends Record<string, unknown>>({
       onColumnSizingChange: handleColumnSizingChange,
       onColumnOrderChange: handleColumnOrderChange,
       pageCount: meta.totalPages ?? 0,
-      enableRowSelection: tableConfig.enableRowSelection,
+      enableRowSelection: (row: Row<T>) =>
+        tableConfig.enableRowSelection && !row.getIsGrouped(),
       enableColumnResizing: tableConfig.enableColumnResizing,
       getRowId: (row: T) => String(row[idField]),
       manualPagination: true,
@@ -717,7 +729,8 @@ export function DataTable<T extends Record<string, unknown>>({
         // every group row which breaks getToggleExpandedHandler() and any
         // other caller that respects canExpand (keyboard nav, expand-all, etc).
         if (row.getIsGrouped()) return true;
-        return getRowCanExpand ? getRowCanExpand(row.original) : !!renderSubRow;
+        if (getRowCanExpand) return getRowCanExpand(row.original);
+        return row.subRows.length > 0 || !!renderSubRow;
       },
     }),
     [
@@ -995,6 +1008,16 @@ export function DataTable<T extends Record<string, unknown>>({
     getGroupingDepth,
   ]);
 
+  const groupingRefOwner = useRef(groupingRef);
+  groupingRefOwner.current = groupingRef;
+  useEffect(() => () => {
+    const owner = groupingRefOwner.current;
+    if (owner) {
+      (owner as React.MutableRefObject<import("./types").TableGroupingAPI | null>)
+        .current = null;
+    }
+  }, []);
+
   const customToolbar = renderToolbar
     ? renderToolbar(toolbarContext)
     : toolbarContent;
@@ -1200,19 +1223,18 @@ export function DataTable<T extends Record<string, unknown>>({
                         data-state={row.getIsSelected() ? "selected" : undefined}
                         data-group-row={isGroupRow ? "true" : undefined}
                         data-depth={isGroupRow ? String(row.depth) : undefined}
-                        tabIndex={0}
+                        tabIndex={isGroupRow ? -1 : 0}
                         aria-selected={isGroupRow ? undefined : row.getIsSelected()}
-                        aria-expanded={isGroupRow || row.getCanExpand() ? row.getIsExpanded() : undefined}
+                        aria-expanded={undefined}
                         className={cn(
                           "border-b transition-colors",
-                          isGroupRow || row.getCanExpand()
+                          isGroupRow
                             ? "hover:bg-muted/60 cursor-pointer"
                             : "hover:bg-muted/50 data-[state=selected]:bg-muted",
-                          onRowClick && !isGroupRow && !row.getCanExpand() ? "cursor-pointer" : undefined
+                          onRowClick && !isGroupRow ? "cursor-pointer" : undefined
                         )}
                         onClick={(event) => {
-                          if (isGroupRow || row.getCanExpand()) {
-                            row.toggleExpanded();
+                          if (isGroupRow) {
                             return;
                           }
                           if (tableConfig.enableClickRowSelect) {
@@ -1223,7 +1245,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           }
                         }}
                         style={{
-                          cursor: isGroupRow || row.getCanExpand() ? "pointer" : onRowClick ? "pointer" : undefined,
+                          cursor: isGroupRow || onRowClick ? "pointer" : undefined,
                         }}
                       >
                         {visibleCells.map((cell) => {
@@ -1278,10 +1300,16 @@ export function DataTable<T extends Record<string, unknown>>({
                                     paddingLeft: `${16 + row.depth * 20}px`,
                                   }}
                                 >
-                                  <span className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-1.5 text-left"
+                                    aria-expanded={row.getIsExpanded()}
+                                    aria-label={`${row.getIsExpanded() ? "Collapse" : "Expand"} group ${String(groupValue ?? "")}`}
+                                    onClick={() => row.toggleExpanded()}
+                                  >
                                     <GroupRowChevron isExpanded={row.getIsExpanded()} />
                                     {customGroupContent != null ? customGroupContent : defaultGroupContent}
-                                  </span>
+                                  </button>
                                 </td>
                               );
                             }
@@ -1340,7 +1368,7 @@ export function DataTable<T extends Record<string, unknown>>({
                           }
 
                           // Tree-expandable rows: first data cell gets chevron + depth indent
-                          if (isFirstDataCell && row.getCanExpand()) {
+                          if (isFirstDataCell && row.getCanExpand() && !renderSubRow) {
                             return (
                               <td
                                 key={cell.id}
@@ -1352,7 +1380,7 @@ export function DataTable<T extends Record<string, unknown>>({
                                 }}
                               >
                                 <span className="flex items-center gap-1.5">
-                                  <GroupRowChevron isExpanded={row.getIsExpanded()} />
+                                  <ExpandIcon row={row} />
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </span>
                               </td>

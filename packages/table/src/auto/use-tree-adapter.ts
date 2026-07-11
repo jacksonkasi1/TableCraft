@@ -136,6 +136,9 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
   const cacheRef = useRef<Record<string, T[] | null>>({});
   // Per-parent abort controllers so rapid re-expands cancel in-flight fetches.
   const abortRef = useRef<Record<string, AbortController>>({});
+  // Incremented whenever a cache entry is invalidated so a response that
+  // ignores AbortSignal cannot repopulate stale data.
+  const generationRef = useRef<Record<string, number>>({});
   // Bumped whenever the cache mutates. Forces the memoised adapter to be
   // recreated, which makes useTableData re-run its query effect and re-merge.
   const [version, setVersion] = useState(0);
@@ -148,9 +151,10 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
 
   // Recursive merge of cached children into the row tree, depth-bounded.
   const mergeChildren = useCallback(
-    (node: T, depth: number): T => {
+    (node: T, depth: number, ancestors: ReadonlySet<string> = new Set()): T => {
       if (depth >= maxDepth) return node;
       const id = getRowId(node);
+      if (ancestors.has(id)) return node;
       const cache = cacheRef.current;
       if (!(id in cache)) return node;
       const cached = cache[id];
@@ -160,9 +164,19 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           : [];
         return { ...(node as RowWithChildren<T>), children: placeholder } as T;
       }
+      const nextAncestors = new Set(ancestors);
+      nextAncestors.add(id);
+      const seen = new Set<string>();
       return {
         ...(node as RowWithChildren<T>),
-        children: cached.map((child) => mergeChildren(child, depth + 1)),
+        children: cached
+          .filter((child) => {
+            const childId = getRowId(child);
+            if (seen.has(childId) || nextAncestors.has(childId)) return false;
+            seen.add(childId);
+            return true;
+          })
+          .map((child) => mergeChildren(child, depth + 1, nextAncestors)),
       } as T;
     },
     [getRowId, loadingRow, maxDepth],
@@ -185,14 +199,13 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
               "useTreeAdapter: `list.url` or `list.fetch` is required",
             );
           }
-          const qs = new URLSearchParams({
-            page: String(params.page),
-            pageSize: String(params.pageSize),
-          });
-          if (params.search) qs.set("search", params.search);
-          if (params.sort) qs.set("sort", params.sort);
-          if (params.sortOrder) qs.set("sortOrder", params.sortOrder);
-          const res = await fetch(`${list.url}?${qs.toString()}`, { signal });
+          const url = new URL(list.url, globalThis.location?.href ?? "http://localhost");
+          url.searchParams.set("page", String(params.page));
+          url.searchParams.set("pageSize", String(params.pageSize));
+          if (params.search) url.searchParams.set("search", params.search);
+          if (params.sort) url.searchParams.set("sort", params.sort);
+          if (params.sortOrder) url.searchParams.set("sortOrder", params.sortOrder);
+          const res = await fetch(url.toString(), { signal });
           if (!res.ok) {
             throw new Error(`useTreeAdapter list: HTTP ${res.status}`);
           }
@@ -209,9 +222,6 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           data: result.data.map((row) => mergeChildren(row, 0)),
         };
       },
-      async queryByIds() {
-        return [];
-      },
     }),
     // mergeChildren closes over cacheRef.current at call time, so version
     // is what we actually depend on for re-runs.
@@ -223,13 +233,25 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
     UseTreeAdapterReturn<T>["treeProps"]["onRowExpand"]
   >(
     ({ row, isExpanded }) => {
-      if (!isExpanded) return;
       if (isLoadingRow(row)) return;
       const id = getRowId(row);
+      if (!isExpanded) {
+        const active = abortRef.current[id];
+        if (active) {
+          active.abort();
+          delete abortRef.current[id];
+          delete cacheRef.current[id];
+          generationRef.current[id] = (generationRef.current[id] ?? 0) + 1;
+          bumpVersion();
+        }
+        return;
+      }
       // Already loaded or in flight — let the existing fetch resolve.
       if (cacheRef.current[id] !== undefined) return;
 
       const ctrl = new AbortController();
+      const generation = (generationRef.current[id] ?? 0) + 1;
+      generationRef.current[id] = generation;
       abortRef.current[id]?.abort();
       abortRef.current[id] = ctrl;
 
@@ -253,7 +275,7 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
 
       fetchPromise
         .then((kids) => {
-          if (ctrl.signal.aborted) return;
+          if (ctrl.signal.aborted || generationRef.current[id] !== generation) return;
           cacheRef.current[id] = kids;
           bumpVersion();
         })
@@ -288,11 +310,16 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
       if (parentId === undefined) {
         cacheRef.current = {};
         for (const ctrl of Object.values(abortRef.current)) ctrl.abort();
+        for (const id of Object.keys(generationRef.current)) {
+          generationRef.current[id] += 1;
+        }
         abortRef.current = {};
       } else {
         delete cacheRef.current[parentId];
         abortRef.current[parentId]?.abort();
         delete abortRef.current[parentId];
+        generationRef.current[parentId] =
+          (generationRef.current[parentId] ?? 0) + 1;
       }
       bumpVersion();
     },
@@ -301,9 +328,9 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
 
   // Abort any pending children fetches when the consumer unmounts.
   useEffect(() => {
-    const controllers = abortRef.current;
     return () => {
-      for (const ctrl of Object.values(controllers)) ctrl.abort();
+      for (const ctrl of Object.values(abortRef.current)) ctrl.abort();
+      abortRef.current = {};
     };
   }, []);
 

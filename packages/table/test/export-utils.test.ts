@@ -272,6 +272,24 @@ describe("exportToCSV — basic", () => {
 		cap.restore();
 	});
 
+	it("neutralizes formula injection in raw and mapped headers", async () => {
+		const raw = captureDownload();
+		exportToCSV([{ "=raw": "value" }], "raw-header", ["=raw"]);
+		expect(await raw.blobs[0].text()).toBe("'=raw\nvalue\n");
+
+		const mapped = captureDownload();
+		exportToCSV(
+			[{ safe: "value", other: "value" }],
+			"mapped-header",
+			["safe", "other"],
+			{ safe: "  @mapped", other: "\tformula" },
+		);
+		const text = await mapped.blobs[0].text();
+		expect(text.startsWith("'  @mapped,'\tformula\n")).toBe(true);
+		raw.restore();
+		mapped.restore();
+	});
+
 	it("preserves tab characters within cell values", async () => {
 		const cap = captureDownload();
 		const data = [{ id: 1, note: "hello\tworld" }];

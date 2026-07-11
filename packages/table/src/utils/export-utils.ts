@@ -34,6 +34,14 @@ function sanitizeCsvCell(value: string): string {
   return value;
 }
 
+/** Quote one sanitized CSV field according to RFC 4180. */
+function escapeCsvField(value: string): string {
+  const sanitized = sanitizeCsvCell(value);
+  return /[",\n\r]/.test(sanitized)
+    ? `"${sanitized.replace(/"/g, '""')}"`
+    : sanitized;
+}
+
 /**
  * Convert array of objects to CSV string.
  */
@@ -48,34 +56,16 @@ function convertToCSV<T extends ExportableData>(
 
   let csvContent = "";
 
-  if (columnMapping) {
-    const headerRow = headers.map((header) => {
-      const mappedHeader = columnMapping[header] || header;
-      return mappedHeader.includes(",") ||
-        mappedHeader.includes('"') ||
-        mappedHeader.includes("\n") ||
-        mappedHeader.includes("\r")
-        ? `"${mappedHeader.replace(/"/g, '""')}"`
-        : mappedHeader;
-    });
-    csvContent = `${headerRow.join(",")}\n`;
-  } else {
-    csvContent = `${headers.join(",")}\n`;
-  }
+  const headerRow = headers.map((header) =>
+    escapeCsvField(columnMapping?.[header] ?? header)
+  );
+  csvContent = `${headerRow.join(",")}\n`;
 
   for (const item of data) {
     const row = headers.map((header) => {
       const value = item[header];
       const rawCell = value === null || value === undefined ? "" : String(value);
-      const cellValue = sanitizeCsvCell(rawCell);
-      const escapedValue =
-        cellValue.includes(",") ||
-        cellValue.includes('"') ||
-        cellValue.includes("\n") ||
-        cellValue.includes("\r")
-          ? `"${cellValue.replace(/"/g, '""')}"`
-          : cellValue;
-      return escapedValue;
+      return escapeCsvField(rawCell);
     });
     csvContent += `${row.join(",")}\n`;
   }

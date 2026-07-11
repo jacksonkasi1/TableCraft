@@ -25,7 +25,7 @@ function order<T extends Record<string, unknown>>(map: T, key: string, fallback:
 
 /** Build the standard pagination meta object. */
 function pageMeta(page: number, pageSize: number, total: number) {
-  return { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) };
+  return { page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
 }
 
 /**
@@ -58,10 +58,17 @@ app.get('/tree', async (c) => {
   // ── Deep search mode ────────────────────────────────────────────────────
   if (search) {
     const term = `%${search}%`;
+    const safeSortKey = sortKey in SORT.region ? sortKey : 'name';
+    const windowSize = offset + pageSize;
+    const direction = sortDir === 'asc' ? 1 : -1;
 
-    const [rRows, sRows, pRows] = await Promise.all([
+    const [rRows, sRows, pRows, [rCount], [sCount], [pCount]] = await Promise.all([
       db.select().from(schema.retailRegions)
-        .where(ilike(schema.retailRegions.name, term)),
+        .where(ilike(schema.retailRegions.name, term))
+        .orderBy(
+          order(SORT.region, safeSortKey, schema.retailRegions.name, sortDir),
+          asc(schema.retailRegions.id),
+        ).limit(windowSize),
 
       db.select({
         id: schema.retailStores.id, name: schema.retailStores.name,
@@ -69,7 +76,11 @@ app.get('/tree', async (c) => {
         avgRating: schema.retailStores.avgRating, regionName: schema.retailRegions.name,
       }).from(schema.retailStores)
         .leftJoin(schema.retailRegions, eq(schema.retailStores.regionId, schema.retailRegions.id))
-        .where(ilike(schema.retailStores.name, term)),
+        .where(ilike(schema.retailStores.name, term))
+        .orderBy(
+          order(SORT.store, safeSortKey, schema.retailStores.name, sortDir),
+          asc(schema.retailStores.id),
+        ).limit(windowSize),
 
       db.select({
         id: schema.retailProducts.id, name: schema.retailProducts.name,
@@ -79,6 +90,16 @@ app.get('/tree', async (c) => {
       }).from(schema.retailProducts)
         .leftJoin(schema.retailStores,  eq(schema.retailProducts.storeId,  schema.retailStores.id))
         .leftJoin(schema.retailRegions, eq(schema.retailStores.regionId,   schema.retailRegions.id))
+        .where(ilike(schema.retailProducts.name, term))
+        .orderBy(
+          order(SORT.product, safeSortKey, schema.retailProducts.name, sortDir),
+          asc(schema.retailProducts.id),
+        ).limit(windowSize),
+      db.select({ total: sql<number>`count(*)` }).from(schema.retailRegions)
+        .where(ilike(schema.retailRegions.name, term)),
+      db.select({ total: sql<number>`count(*)` }).from(schema.retailStores)
+        .where(ilike(schema.retailStores.name, term)),
+      db.select({ total: sql<number>`count(*)` }).from(schema.retailProducts)
         .where(ilike(schema.retailProducts.name, term)),
     ]);
 
@@ -88,13 +109,33 @@ app.get('/tree', async (c) => {
       ...pRows.map(p => ({ id: p.id, name: p.name, type: 'Product' as const, totalSales: p.totalSales, revenue: p.revenue, stores: null, avgRating: p.avgRating, breadcrumb: [p.regionName, p.storeName].filter(Boolean).join(' › ') || null, children: [] as never[] })),
     ];
 
-    return c.json({ data: all.slice(offset, offset + pageSize), meta: pageMeta(page, pageSize, all.length) });
+    // Mixed entity results share the requested field ordering. Entity type and
+    // ID are deterministic tie-breakers; invalid fields fall back to name.
+    all.sort((left, right) => {
+      const leftValue = left[safeSortKey as keyof typeof left];
+      const rightValue = right[safeSortKey as keyof typeof right];
+      const primary = typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : String(leftValue ?? '').localeCompare(String(rightValue ?? ''));
+      if (primary !== 0) return primary * direction;
+      const typeOrder = left.type.localeCompare(right.type);
+      return typeOrder || left.id.localeCompare(right.id);
+    });
+    const total = Number(rCount.total) + Number(sCount.total) + Number(pCount.total);
+
+    return c.json({
+      data: all.slice(offset, offset + pageSize),
+      meta: pageMeta(page, pageSize, total),
+    });
   }
 
   // ── Tree mode: paginated top-level regions ──────────────────────────────
   const [rows, [{ total }]] = await Promise.all([
     db.select().from(schema.retailRegions)
-      .orderBy(order(SORT.region, sortKey, schema.retailRegions.name, sortDir))
+      .orderBy(
+        order(SORT.region, sortKey, schema.retailRegions.name, sortDir),
+        asc(schema.retailRegions.id),
+      )
       .limit(pageSize).offset(offset),
     db.select({ total: sql<number>`count(*)` }).from(schema.retailRegions),
   ]);
