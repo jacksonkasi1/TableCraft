@@ -18,6 +18,13 @@ jobs:
         with:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
+      # Workspace packages publish types from dist. Build the foundational
+      # packages first so a clean checkout can typecheck downstream packages.
+      - name: Bootstrap workspace types
+        run: |
+          bun run --filter @tablecraft/engine build
+          bun run --filter @tablecraft/client build
+          bun run --filter @tablecraft/adapter-hono build
       - run: bun run typecheck
       - run: bun run test
       - run: bun run build
