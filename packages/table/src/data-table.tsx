@@ -289,7 +289,7 @@ export function DataTable<T extends Record<string, unknown>>({
     previousGroupingPropRef.current = [...next];
     setGrouping(next);
     setExpanded({});
-    prevExpandedRef.current = {};
+    prevExpandedIdsRef.current = new Set();
   });
 
   // ─── Dev warning: manualPagination + rowGrouping conflict ───
@@ -314,34 +314,34 @@ export function DataTable<T extends Record<string, unknown>>({
   }, [rowGrouping, tableConfig.enablePagination]);
 
   // ─── Fire onRowGroupExpand / onRowExpand callbacks ───
-  const prevExpandedRef = useRef<ExpandedState>({});
+  const prevExpandedIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const wantsGroup = !!onRowGroupExpand && !!rowGrouping?.length;
     const wantsTree = !!onRowExpand;
     if ((!wantsGroup && !wantsTree) || !tableRef.current) {
-      prevExpandedRef.current = expanded;
+      prevExpandedIdsRef.current = new Set();
       return;
     }
-    const prev = prevExpandedRef.current;
-    const curr = expanded;
-
-    // `expanded` (ExpandedState) can be the boolean `true` when all rows are
-    // expanded via table.toggleAllRowsExpanded(true).  Object.keys(true)
-    // returns [] in modern JS — silently swallowing every expand event and
-    // leaving prevExpandedRef permanently stuck at `true`, which then
-    // corrupts the diff on the next individual-row toggle.  Skip per-row
-    // diffing for bulk toggle operations entirely.
-    if (typeof curr !== "object" || typeof prev !== "object") {
-      prevExpandedRef.current = expanded;
-      return;
+    const tableInstance = tableRef.current;
+    const candidateRows = rowGrouping?.length
+      ? tableInstance.getGroupedRowModel().flatRows
+      : tableInstance.getCoreRowModel().flatRows;
+    const candidates = new Map(candidateRows.map((row) => [row.id, row]));
+    const currentIds = new Set<string>();
+    if (expanded === true) {
+      for (const row of candidateRows) {
+        if (row.getCanExpand()) currentIds.add(row.id);
+      }
+    } else {
+      for (const [rowId, isOpen] of Object.entries(expanded)) {
+        if (isOpen && candidates.has(rowId)) currentIds.add(rowId);
+      }
     }
-
-    const prevRecord = prev as Record<string, boolean>;
-    const currRecord = curr as Record<string, boolean>;
+    const previousIds = prevExpandedIdsRef.current;
 
     const fire = (rowId: string, isExpanded: boolean) => {
       try {
-        const row = tableRef.current!.getRow(rowId);
+        const row = candidates.get(rowId) ?? tableInstance.getRow(rowId);
         if (!row) return;
         if (row.getIsGrouped()) {
           if (wantsGroup) {
@@ -363,13 +363,13 @@ export function DataTable<T extends Record<string, unknown>>({
       } catch { /* row may not exist */ }
     };
 
-    for (const k of Object.keys(currRecord)) {
-      if (currRecord[k] && !prevRecord[k]) fire(k, true);
+    for (const rowId of currentIds) {
+      if (!previousIds.has(rowId)) fire(rowId, true);
     }
-    for (const k of Object.keys(prevRecord)) {
-      if (prevRecord[k] && !currRecord[k]) fire(k, false);
+    for (const rowId of previousIds) {
+      if (!currentIds.has(rowId) && candidates.has(rowId)) fire(rowId, false);
     }
-    prevExpandedRef.current = curr;
+    prevExpandedIdsRef.current = currentIds;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded]);
 
@@ -479,18 +479,25 @@ export function DataTable<T extends Record<string, unknown>>({
     const idsOnPage = new Set(itemsOnPage.map((item) => String(item[idField])));
     const idsToFetch = [...selectedIds].filter((id) => !idsOnPage.has(id));
 
-    // Tree mode: all items are already in the flattened data — no server call needed.
-    if (getSubRows || idsToFetch.length === 0 || !adapter.queryByIds) {
+    if (idsToFetch.length === 0) {
       return itemsOnPage;
     }
 
-    try {
-      // Cross-page export: fetch ALL selected IDs sorted via the backend.
-      const fetchedAllSorted = await adapter.queryByIds([...selectedIds], { sortBy, sortOrder });
-      return fetchedAllSorted;
-    } catch {
-      return itemsOnPage;
+    if (!adapter.queryByIds) {
+      throw new Error(
+        `Cannot export ${selectedIds.size} selected rows: ${idsToFetch.length} ` +
+        "rows are not loaded and this adapter does not support queryByIds",
+      );
     }
+
+    // Cross-page export: fetch ALL selected IDs sorted via the backend.
+    const fetchedAllSorted = await adapter.queryByIds([...selectedIds], { sortBy, sortOrder });
+    if (fetchedAllSorted.length !== selectedIds.size) {
+      throw new Error(
+        `Adapter returned ${fetchedAllSorted.length} of ${selectedIds.size} selected rows`,
+      );
+    }
+    return fetchedAllSorted;
   }, [data, rowSelection, totalSelectedItems, adapter, idField, sortBy, sortOrder, flattenTree, getSubRows]);
 
   const getAllItems = useCallback((): T[] => flattenTree(data), [data, flattenTree]);
@@ -979,7 +986,17 @@ export function DataTable<T extends Record<string, unknown>>({
   // (each helper is a useCallback that updates when its own deps change, so
   // this effect runs only when the closure's behaviour actually changes —
   // not on every render, which previously nulled the ref between renders).
+  const publishedGroupingRef = useRef(groupingRef);
   useEffect(() => {
+    if (publishedGroupingRef.current !== groupingRef) {
+      const previous = publishedGroupingRef.current;
+      if (previous) {
+        (previous as React.MutableRefObject<
+          import("./types").TableGroupingAPI | null
+        >).current = null;
+      }
+      publishedGroupingRef.current = groupingRef;
+    }
     if (!groupingRef) return;
     const handle: import("./types").TableGroupingAPI = {
       expandAll: () => table.toggleAllRowsExpanded(true),
@@ -1008,10 +1025,8 @@ export function DataTable<T extends Record<string, unknown>>({
     getGroupingDepth,
   ]);
 
-  const groupingRefOwner = useRef(groupingRef);
-  groupingRefOwner.current = groupingRef;
   useEffect(() => () => {
-    const owner = groupingRefOwner.current;
+    const owner = publishedGroupingRef.current;
     if (owner) {
       (owner as React.MutableRefObject<import("./types").TableGroupingAPI | null>)
         .current = null;

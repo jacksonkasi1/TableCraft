@@ -402,7 +402,10 @@ existing query parameters in list URLs, cancels child requests on collapse,
 invalidation, and unmount, rejects stale responses, and permits retry after an
 error. `invalidateChildren(id)` clears one branch; calling it without an ID
 clears every branch. Lazy adapters intentionally omit `queryByIds` because they
-cannot guarantee cross-page lookup.
+cannot guarantee cross-page lookup. Provide the optional `queryByIds` callback
+when selections can span root pages. Without it, attempting to export unloaded
+selected IDs fails explicitly instead of exporting fewer rows than the selected
+count.
 
 Use `rowGrouping` for client-side grouping, `rowGroupingConfig` for aggregates,
 custom group labels, and initial expansion, and `groupingRef` for imperative

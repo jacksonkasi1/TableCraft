@@ -8,7 +8,8 @@
     "db:push": "drizzle-kit push",
     "seed": "bun run src/db/seed.ts",
     "seed:retail": "bun run src/db/seed-retail.ts",
-    "test": "bun test",
+    "test": "vitest run --passWithNoTests --exclude 'test/**'",
+    "test:integration": "bun test test",
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "vitest": "^4.1.5"
   }
 }

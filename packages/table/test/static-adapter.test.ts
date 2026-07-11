@@ -77,6 +77,25 @@ describe("createStaticAdapter — structure", () => {
 	});
 });
 
+describe("createStaticAdapter — nested ID lookup", () => {
+	it("recursively finds nested rows and ignores duplicate/cyclic references", async () => {
+		interface TreeRow extends Record<string, unknown> {
+			id: number;
+			children?: TreeRow[];
+		}
+		const child: TreeRow = { id: 2 };
+		const root: TreeRow = { id: 1, children: [child, child] };
+		child.children = [root];
+		const adapter = createStaticAdapter([root]);
+
+		const result = await adapter.queryByIds?.([2, 1], {
+			sortBy: "id",
+			sortOrder: "desc",
+		});
+		expect(result?.map((row) => row.id)).toEqual([2, 1]);
+	});
+});
+
 describe("createStaticAdapter — pagination", () => {
 	it("returns first page with correct meta", async () => {
 		const adapter = createStaticAdapter(ITEMS);

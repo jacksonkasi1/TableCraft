@@ -126,12 +126,42 @@ export function createStaticAdapter<T extends Record<string, unknown>>(
       };
     },
 
-    async queryByIds(ids: (string | number)[]): Promise<T[]> {
+    async queryByIds(ids, lookupOptions): Promise<T[]> {
       const idStrings = new Set(ids.map(String));
-      return data.filter((row) => {
-        const id = row.id ?? row.ID ?? row._id;
-        return id !== undefined && idStrings.has(String(id));
-      });
+      const matches: T[] = [];
+      const visited = new Set<T>();
+      const matchedIds = new Set<string>();
+      const visit = (rows: T[]) => {
+        for (const row of rows) {
+          if (visited.has(row)) continue;
+          visited.add(row);
+          const id = row.id ?? row.ID ?? row._id;
+          const normalizedId = id === undefined || id === null ? undefined : String(id);
+          if (normalizedId && idStrings.has(normalizedId) && !matchedIds.has(normalizedId)) {
+            matches.push(row);
+            matchedIds.add(normalizedId);
+          }
+          const children = row.children;
+          if (Array.isArray(children)) visit(children as T[]);
+        }
+      };
+      visit(data);
+      if (lookupOptions?.sortBy) {
+        const sortBy = lookupOptions.sortBy;
+        const direction = lookupOptions.sortOrder === "desc" ? -1 : 1;
+        matches.sort((left, right) => {
+          const leftValue = left[sortBy];
+          const rightValue = right[sortBy];
+          if (leftValue === rightValue) return 0;
+          if (leftValue === null || leftValue === undefined) return 1;
+          if (rightValue === null || rightValue === undefined) return -1;
+          const comparison = typeof leftValue === "string" && typeof rightValue === "string"
+            ? leftValue.localeCompare(rightValue)
+            : leftValue > rightValue ? 1 : -1;
+          return comparison * direction;
+        });
+      }
+      return matches;
     },
   };
 }

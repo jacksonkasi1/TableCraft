@@ -12,7 +12,8 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "seed": "bun run src/lib/server/db/seed.ts",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests --exclude test-api.test.ts",
+    "test:integration": "vitest run test-api.test.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.1",

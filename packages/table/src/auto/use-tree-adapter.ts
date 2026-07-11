@@ -56,6 +56,8 @@ export interface UseTreeAdapterOptions<T> {
   children: UseTreeAdapterChildrenSource<T>;
   /** Returns the row's id. Defaults to `row.id`. */
   getRowId?: (row: T) => string;
+  /** Optional lookup used for cross-page selection and export. */
+  queryByIds?: DataAdapter<T>["queryByIds"];
   /**
    * Factory for the placeholder row shown while children are loading.
    * If omitted, the parent simply renders an empty children array — no
@@ -127,8 +129,15 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
   } = options;
 
   const getRowId = useMemo(
-    () =>
-      options.getRowId ?? ((row: T) => (row as unknown as { id: string }).id),
+    () => options.getRowId ?? ((row: T) => {
+      const value = (row as { id?: unknown }).id;
+      if (value === null || value === undefined) {
+        throw new Error(
+          "useTreeAdapter: every row must have an id or provide getRowId",
+        );
+      }
+      return String(value);
+    }),
     [options.getRowId],
   );
 
@@ -203,8 +212,11 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           url.searchParams.set("page", String(params.page));
           url.searchParams.set("pageSize", String(params.pageSize));
           if (params.search) url.searchParams.set("search", params.search);
+          else url.searchParams.delete("search");
           if (params.sort) url.searchParams.set("sort", params.sort);
+          else url.searchParams.delete("sort");
           if (params.sortOrder) url.searchParams.set("sortOrder", params.sortOrder);
+          else url.searchParams.delete("sortOrder");
           const res = await fetch(url.toString(), { signal });
           if (!res.ok) {
             throw new Error(`useTreeAdapter list: HTTP ${res.status}`);
@@ -222,11 +234,12 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           data: result.data.map((row) => mergeChildren(row, 0)),
         };
       },
+      queryByIds: options.queryByIds,
     }),
     // mergeChildren closes over cacheRef.current at call time, so version
     // is what we actually depend on for re-runs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version, list.url, list.fetch, mergeChildren],
+    [version, list.url, list.fetch, mergeChildren, options.queryByIds],
   );
 
   const onRowExpand = useCallback<

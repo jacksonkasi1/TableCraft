@@ -16,6 +16,14 @@ const SORT = {
 };
 
 type Dir = 'asc' | 'desc';
+type MixedSortKey = 'name' | 'totalSales' | 'revenue' | 'avgRating';
+
+const MIXED_SORT_KEYS = new Set<MixedSortKey>([
+  'name',
+  'totalSales',
+  'revenue',
+  'avgRating',
+]);
 
 /** Resolve a sort column from a whitelist + direction into a Drizzle ORDER BY clause. */
 function order<T extends Record<string, unknown>>(map: T, key: string, fallback: T[keyof T], dir: Dir) {
@@ -58,7 +66,11 @@ app.get('/tree', async (c) => {
   // ── Deep search mode ────────────────────────────────────────────────────
   if (search) {
     const term = `%${search}%`;
-    const safeSortKey = sortKey in SORT.region ? sortKey : 'name';
+    // `stores` is region-only and therefore cannot define a consistent mixed
+    // ordering. Mixed search falls back to name for it and for invalid keys.
+    const safeSortKey: MixedSortKey = MIXED_SORT_KEYS.has(sortKey as MixedSortKey)
+      ? sortKey as MixedSortKey
+      : 'name';
     const windowSize = offset + pageSize;
     const direction = sortDir === 'asc' ? 1 : -1;
 
@@ -158,7 +170,10 @@ app.get('/tree/:id/children', async (c) => {
   if (region) {
     const rows = await db.select().from(schema.retailStores)
       .where(eq(schema.retailStores.regionId, id))
-      .orderBy(order(SORT.store, sortKey, schema.retailStores.name, sortDir));
+      .orderBy(
+        order(SORT.store, sortKey, schema.retailStores.name, sortDir),
+        asc(schema.retailStores.id),
+      );
     return c.json(rows.map(s => ({ ...s, type: 'Store' as const, stores: null, breadcrumb: null, children: undefined })));
   }
 
@@ -167,7 +182,10 @@ app.get('/tree/:id/children', async (c) => {
   if (store) {
     const rows = await db.select().from(schema.retailProducts)
       .where(eq(schema.retailProducts.storeId, id))
-      .orderBy(order(SORT.product, sortKey, schema.retailProducts.name, sortDir));
+      .orderBy(
+        order(SORT.product, sortKey, schema.retailProducts.name, sortDir),
+        asc(schema.retailProducts.id),
+      );
     return c.json(rows.map(p => ({ ...p, type: 'Product' as const, stores: null, breadcrumb: null, children: [] })));
   }
 

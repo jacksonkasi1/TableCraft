@@ -19,7 +19,7 @@
   "scripts": {
     "build": "bun run --bun tsc",
     "dev": "bun run --bun tsc --watch",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {

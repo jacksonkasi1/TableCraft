@@ -23,7 +23,10 @@ export function ExpandIcon<TData>({
 
   return (
     <button
-      onClick={row.getToggleExpandedHandler()}
+      onClick={(event) => {
+        event.stopPropagation();
+        row.toggleExpanded();
+      }}
       className={cn(
         "inline-flex items-center justify-center",
         "h-6 w-6 cursor-pointer transition-all",

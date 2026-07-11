@@ -6,6 +6,7 @@
   "scripts": {
     "build": "bun run --filter '*' build",
     "test": "bun run --filter '*' test",
+    "test:integration": "bun run --filter hono-example test:integration && bun run --filter sveltekit-example test:integration",
     "typecheck": "bun run --filter '*' typecheck"
   },
   "workspaces": [

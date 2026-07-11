@@ -8,8 +8,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // ** import utils
 import { useTreeAdapter, type UseTreeAdapterReturn } from "../src/auto/use-tree-adapter";
 
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
 interface NodeRow extends Record<string, unknown> {
-  id: string;
+  id?: unknown;
   children?: NodeRow[];
 }
 
@@ -23,12 +25,14 @@ afterEach(() => {
 function mountHook(
   childrenFetch: (parentId: string, signal: AbortSignal) => Promise<NodeRow[]>,
   listUrl = "https://example.test/tree?tenant=acme",
+  getRowId?: (row: NodeRow) => string,
 ) {
   let current: UseTreeAdapterReturn<NodeRow> | undefined;
   function Harness() {
     current = useTreeAdapter<NodeRow>({
       list: { url: listUrl },
       children: { fetch: childrenFetch },
+      getRowId,
     });
     return null;
   }
@@ -62,6 +66,33 @@ describe("useTreeAdapter", () => {
     fetchSpy.mockRestore();
   });
 
+  it("removes stale controlled query parameters when table state is empty", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ data: [], meta: { total: 0, page: 1, pageSize: 10, totalPages: 0 } })),
+    );
+    const hook = mountHook(
+      async () => [],
+      "https://example.test/tree?tenant=acme&search=old&sort=name&sortOrder=desc",
+    );
+
+    await hook().adapter.query({
+      page: 1,
+      pageSize: 10,
+      search: "",
+      sort: "",
+      sortOrder: "" as "asc",
+      filters: {},
+      dateRange: { from: "", to: "" },
+    });
+
+    const url = new URL(String(fetchSpy.mock.calls[0][0]));
+    expect(url.searchParams.get("tenant")).toBe("acme");
+    expect(url.searchParams.has("search")).toBe(false);
+    expect(url.searchParams.has("sort")).toBe(false);
+    expect(url.searchParams.has("sortOrder")).toBe(false);
+    fetchSpy.mockRestore();
+  });
+
   it("aborts active child requests on collapse, invalidation, and unmount", () => {
     const signals: AbortSignal[] = [];
     const hook = mountHook((_id, signal) => {
@@ -70,15 +101,15 @@ describe("useTreeAdapter", () => {
     });
     const row = { id: "parent" };
 
-    act(() => hook().treeProps.onRowExpand({ row, rowId: row.id, depth: 0, isExpanded: true }));
-    act(() => hook().treeProps.onRowExpand({ row, rowId: row.id, depth: 0, isExpanded: false }));
+    act(() => hook().treeProps.onRowExpand({ row, rowId: String(row.id), depth: 0, isExpanded: true }));
+    act(() => hook().treeProps.onRowExpand({ row, rowId: String(row.id), depth: 0, isExpanded: false }));
     expect(signals[0].aborted).toBe(true);
 
-    act(() => hook().treeProps.onRowExpand({ row, rowId: row.id, depth: 0, isExpanded: true }));
-    act(() => hook().invalidateChildren(row.id));
+    act(() => hook().treeProps.onRowExpand({ row, rowId: String(row.id), depth: 0, isExpanded: true }));
+    act(() => hook().invalidateChildren(String(row.id)));
     expect(signals[1].aborted).toBe(true);
 
-    act(() => hook().treeProps.onRowExpand({ row, rowId: row.id, depth: 0, isExpanded: true }));
+    act(() => hook().treeProps.onRowExpand({ row, rowId: String(row.id), depth: 0, isExpanded: true }));
     act(() => root?.unmount());
     root = undefined;
     expect(signals[2].aborted).toBe(true);
@@ -91,11 +122,37 @@ describe("useTreeAdapter", () => {
     const hook = mountHook(fetchChildren);
     const row = { id: "parent" };
 
-    act(() => hook().treeProps.onRowExpand({ row, rowId: row.id, depth: 0, isExpanded: true }));
+    act(() => hook().treeProps.onRowExpand({ row, rowId: String(row.id), depth: 0, isExpanded: true }));
     await act(async () => Promise.resolve());
-    act(() => hook().treeProps.onRowExpand({ row, rowId: row.id, depth: 0, isExpanded: true }));
+    act(() => hook().treeProps.onRowExpand({ row, rowId: String(row.id), depth: 0, isExpanded: true }));
     await act(async () => Promise.resolve());
 
     expect(fetchChildren).toHaveBeenCalledTimes(2);
+  });
+
+  it("normalizes numeric and zero IDs before loading children", () => {
+    const fetchChildren = vi.fn(() => new Promise<NodeRow[]>(() => undefined));
+    const hook = mountHook(fetchChildren);
+
+    act(() => hook().treeProps.onRowExpand({
+      row: { id: 0 }, rowId: "0", depth: 0, isExpanded: true,
+    }));
+    expect(fetchChildren).toHaveBeenCalledWith("0", expect.any(AbortSignal));
+  });
+
+  it("rejects missing IDs and supports a custom resolver", () => {
+    const missing = mountHook(async () => []);
+    expect(() => missing().treeProps.onRowExpand({
+      row: {}, rowId: "", depth: 0, isExpanded: true,
+    })).toThrow("every row must have an id");
+
+    act(() => root?.unmount());
+    root = undefined;
+    const fetchChildren = vi.fn(() => new Promise<NodeRow[]>(() => undefined));
+    const custom = mountHook(fetchChildren, undefined, (row) => String(row.key));
+    act(() => custom().treeProps.onRowExpand({
+      row: { key: 42 }, rowId: "42", depth: 0, isExpanded: true,
+    }));
+    expect(fetchChildren).toHaveBeenCalledWith("42", expect.any(AbortSignal));
   });
 });
