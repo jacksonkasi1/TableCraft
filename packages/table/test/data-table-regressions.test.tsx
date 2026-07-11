@@ -10,7 +10,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // ** import components
-import { DataTable } from "../src/data-table";
+import { DataTable, validateSelectedRows } from "../src/data-table";
 
 // ** import utils
 import { createStaticAdapter } from "../src/auto/static-adapter";
@@ -57,6 +57,17 @@ async function renderTable(node: React.ReactNode): Promise<HTMLDivElement> {
 }
 
 describe("DataTable regressions", () => {
+  it("rejects missing, unexpected, duplicate, and wrong selected IDs", () => {
+    const selected = new Set(["1", "2"]);
+    expect(validateSelectedRows(ROWS, selected, "id")).toBe(ROWS);
+    expect(() => validateSelectedRows([ROWS[0]], selected, "id"))
+      .toThrow("Missing IDs: 2");
+    expect(() => validateSelectedRows([
+      ROWS[0], { ...ROWS[1], id: "3" },
+    ], selected, "id")).toThrow("unexpected IDs: 3");
+    expect(() => validateSelectedRows([ROWS[0], ROWS[0]], selected, "id"))
+      .toThrow("duplicate IDs: 1");
+  });
   it("does not expose group rows to selection or actions", async () => {
     const actions = vi.fn(({ row }: { row: TestRow }) => <span>{row.name}</span>);
     const container = await renderTable(
@@ -123,5 +134,53 @@ describe("DataTable regressions", () => {
     await act(async () => root?.render(<DataTable {...props} groupingRef={second} />));
     expect(first.current).toBeNull();
     expect(second.current).not.toBeNull();
+  });
+
+  it("ignores interactive controls before click-to-select and onRowClick", async () => {
+    const onRowClick = vi.fn();
+    const interactiveColumns: ColumnDef<TestRow>[] = [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: () => (
+          <div>
+            <button type="button" data-interactive>Button</button>
+            <a href="#target" data-interactive>Link</a>
+            <input aria-label="Cell input" data-interactive />
+            <span>Plain text</span>
+          </div>
+        ),
+      },
+      { accessorKey: "group", header: "Group" },
+    ];
+    const container = await renderTable(
+      <DataTable
+        adapter={createStaticAdapter([ROWS[0]])}
+        columns={interactiveColumns}
+        onRowClick={onRowClick}
+        columnOverrides={{
+          group: ({ value }) => <button type="button" data-interactive>
+            Override {String(value)}
+          </button>,
+        }}
+        config={{
+          enableClickRowSelect: true,
+          enablePagination: false,
+          enableToolbar: false,
+        }}
+      />,
+    );
+    const dataRow = container.querySelector("tbody tr") as HTMLTableRowElement;
+    for (const target of container.querySelectorAll("[data-interactive]")) {
+      act(() => (target as HTMLElement).click());
+      expect(dataRow.dataset.state).toBeUndefined();
+      expect(onRowClick).not.toHaveBeenCalled();
+    }
+
+    const plainText = [...container.querySelectorAll("span")]
+      .find((element) => element.textContent === "Plain text") as HTMLElement;
+    act(() => plainText.click());
+    expect(dataRow.dataset.state).toBe("selected");
+    expect(onRowClick).toHaveBeenCalledOnce();
   });
 });

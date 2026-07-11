@@ -155,4 +155,51 @@ describe("useTreeAdapter", () => {
     }));
     expect(fetchChildren).toHaveBeenCalledWith("42", expect.any(AbortSignal));
   });
+
+  it("remaps child cache updates without refetching the root list", async () => {
+    let resolveChildren: ((rows: NodeRow[]) => void) | undefined;
+    const listFetch = vi.fn(async () => ({
+      data: [{ id: "root" }],
+      meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+    }));
+    const childrenFetch = vi.fn(() => new Promise<NodeRow[]>((resolve) => {
+      resolveChildren = resolve;
+    }));
+    let current: UseTreeAdapterReturn<NodeRow> | undefined;
+    function Harness() {
+      current = useTreeAdapter<NodeRow>({
+        list: { fetch: listFetch },
+        children: { fetch: childrenFetch },
+      });
+      return null;
+    }
+    const container = document.createElement("div");
+    root = createRoot(container);
+    act(() => root?.render(<Harness />));
+    const params = {
+      page: 1, pageSize: 10, search: "", sort: "", sortOrder: "asc" as const,
+      filters: {}, dateRange: { from: "", to: "" },
+    };
+    let rendered = await current!.adapter.query(params);
+    const refresh = vi.fn(async () => {
+      rendered = await current!.adapter.query(params);
+    });
+    const unsubscribe = current!.adapter.subscribe?.(refresh);
+
+    act(() => current!.treeProps.onRowExpand({
+      row: { id: "root" }, rowId: "root", depth: 0, isExpanded: true,
+    }));
+    expect(childrenFetch).toHaveBeenCalledOnce();
+    expect(listFetch).toHaveBeenCalledOnce();
+
+    await act(async () => resolveChildren?.([{ id: "child" }]));
+    await vi.waitFor(() => {
+      expect(rendered.data[0].children).toEqual([{ id: "child" }]);
+    });
+    expect(listFetch).toHaveBeenCalledOnce();
+
+    await current!.adapter.query({ ...params, page: 2, search: "new", sort: "name" });
+    expect(listFetch).toHaveBeenCalledTimes(2);
+    unsubscribe?.();
+  });
 });

@@ -19,17 +19,13 @@ function captureDownload() {
 	const filenames: string[] = [];
 
 	const origCreate = document.createElement.bind(document);
-	const createSpy = vi
-		.spyOn(document, "createElement")
-		.mockImplementation((tag: string) => {
-			if (tag === "a") {
-				const a = origCreate("a");
-				// Override click to prevent actual navigation
-				a.click = vi.fn();
-				return a;
-			}
-			return origCreate(tag);
-		});
+	document.createElement = ((tag: string, options?: ElementCreationOptions) => {
+		const element = origCreate(tag, options);
+		if (tag === "a") {
+			(element as HTMLAnchorElement).click = vi.fn();
+		}
+		return element;
+	}) as typeof document.createElement;
 
 	const origCreateObjectURL = URL.createObjectURL;
 	URL.createObjectURL = (blob: Blob) => {
@@ -61,7 +57,7 @@ function captureDownload() {
 		blobs,
 		filenames,
 		restore() {
-			createSpy.mockRestore();
+			document.createElement = origCreate;
 			URL.createObjectURL = origCreateObjectURL;
 			URL.revokeObjectURL = origRevokeObjectURL;
 			document.body.appendChild = origAppendChild;

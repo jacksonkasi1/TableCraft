@@ -41,6 +41,32 @@ import {
   cleanupColumnResizing,
 } from "./utils/column-sizing";
 
+/** Validate that an adapter returned exactly the selected row IDs. */
+export function validateSelectedRows<T extends Record<string, unknown>>(
+  rows: T[],
+  selectedIds: ReadonlySet<string>,
+  idField: keyof T,
+): T[] {
+  const returnedIds = rows.map((row) => String(row[idField]));
+  const returnedIdSet = new Set(returnedIds);
+  const missingIds = [...selectedIds].filter((id) => !returnedIdSet.has(id));
+  const unexpectedIds = [...returnedIdSet].filter((id) => !selectedIds.has(id));
+  const counts = new Map<string, number>();
+  for (const id of returnedIds) counts.set(id, (counts.get(id) ?? 0) + 1);
+  const duplicateIds = [...counts]
+    .filter(([, count]) => count > 1)
+    .map(([id]) => id);
+  if (missingIds.length || unexpectedIds.length || duplicateIds.length) {
+    throw new Error(
+      "Adapter returned an invalid selected-row set. " +
+      `Missing IDs: ${missingIds.join(", ") || "none"}; ` +
+      `unexpected IDs: ${unexpectedIds.join(", ") || "none"}; ` +
+      `duplicate IDs: ${duplicateIds.join(", ") || "none"}`,
+    );
+  }
+  return rows;
+}
+
 export function DataTable<T extends Record<string, unknown>>({
   adapter,
   columns: manualColumns,
@@ -492,13 +518,8 @@ export function DataTable<T extends Record<string, unknown>>({
 
     // Cross-page export: fetch ALL selected IDs sorted via the backend.
     const fetchedAllSorted = await adapter.queryByIds([...selectedIds], { sortBy, sortOrder });
-    if (fetchedAllSorted.length !== selectedIds.size) {
-      throw new Error(
-        `Adapter returned ${fetchedAllSorted.length} of ${selectedIds.size} selected rows`,
-      );
-    }
-    return fetchedAllSorted;
-  }, [data, rowSelection, totalSelectedItems, adapter, idField, sortBy, sortOrder, flattenTree, getSubRows]);
+    return validateSelectedRows(fetchedAllSorted, selectedIds, idField);
+  }, [data, rowSelection, totalSelectedItems, adapter, idField, sortBy, sortOrder, flattenTree]);
 
   const getAllItems = useCallback((): T[] => flattenTree(data), [data, flattenTree]);
 
@@ -612,7 +633,8 @@ export function DataTable<T extends Record<string, unknown>>({
       const target = event.target as HTMLElement;
       if (
         target.closest(
-          'button, a, input, select, textarea, [role="button"], [role="link"]'
+          'button, a, input, select, textarea, [role="button"], [role="link"], ' +
+          '[contenteditable="true"]'
         )
       ) {
         return;
@@ -621,6 +643,12 @@ export function DataTable<T extends Record<string, unknown>>({
     },
     [onRowClick]
   );
+
+  const isInteractiveTarget = useCallback((target: EventTarget | null) =>
+    target instanceof HTMLElement && !!target.closest(
+      'button, a, input, select, textarea, [role="button"], [role="link"], ' +
+      '[contenteditable="true"]'
+    ), []);
 
   // ─── Table container ref ───
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -1250,6 +1278,9 @@ export function DataTable<T extends Record<string, unknown>>({
                         )}
                         onClick={(event) => {
                           if (isGroupRow) {
+                            return;
+                          }
+                          if (isInteractiveTarget(event.target)) {
                             return;
                           }
                           if (tableConfig.enableClickRowSelect) {

@@ -94,8 +94,14 @@ export function useTableData<T extends Record<string, unknown>>(
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [result, setResult] = useState<QueryResult<T> | null>(null);
+  const [adapterRevision, setAdapterRevision] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!adapter.subscribe) return;
+    return adapter.subscribe(() => setAdapterRevision((revision) => revision + 1));
+  }, [adapter]);
 
   // ─── Build query params ───
   const queryParams = useMemo<QueryParams>(
@@ -156,7 +162,7 @@ export function useTableData<T extends Record<string, unknown>>(
         abortRef.current = null;
       }
     };
-  }, [adapter, queryParams]);
+  }, [adapter, adapterRevision, queryParams]);
 
   // ─── Validate page when total pages changes ───
   useEffect(() => {

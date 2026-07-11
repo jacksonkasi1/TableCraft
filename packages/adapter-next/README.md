@@ -2,6 +2,12 @@
 
 Next.js App Router adapter for TableCraft — build powerful data APIs in your Next.js application.
 
+## Next.js compatibility
+
+Supported Next.js versions are `>=15.5.16 <16` and `>=16.2.5`. Older
+releases are intentionally rejected because Next.js 13.0.0 through 15.5.15
+are affected by [GHSA-gx5p-jg67-6x7h](https://github.com/advisories/GHSA-gx5p-jg67-6x7h).
+
 ## Links
 
 - [GitHub](https://github.com/jacksonkasi1/TableCraft)

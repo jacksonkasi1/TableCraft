@@ -304,6 +304,8 @@ export interface DataAdapter<T = Record<string, unknown>> {
   ): Promise<QueryResult<T>>;
   /** Fetch items by IDs (for cross-page selection/export) */
   queryByIds?(ids: (string | number)[], options?: { sortBy?: string; sortOrder?: "asc" | "desc" }): Promise<T[]>;
+  /** Subscribe to cache-only data revisions that should repaint without a network refetch. */
+  subscribe?(listener: () => void): () => void;
   /** Fetch table metadata (enables auto-column generation) */
   meta?(): Promise<TableMetadata>;
   /** Export data in a format */

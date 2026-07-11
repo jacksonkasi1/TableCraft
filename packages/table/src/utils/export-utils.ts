@@ -78,12 +78,7 @@ function convertToCSV<T extends ExportableData>(
  */
 function downloadFile(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
-  // Use createElementNS to avoid conflicts with vi.spyOn(document, "createElement")
-  // in test environments where nested spies on the same property cause infinite recursion.
-  const link = document.createElementNS(
-    "http://www.w3.org/1999/xhtml",
-    "a"
-  ) as HTMLAnchorElement;
+  const link = document.createElement("a");
 
   link.setAttribute("href", url);
   link.setAttribute("download", filename);

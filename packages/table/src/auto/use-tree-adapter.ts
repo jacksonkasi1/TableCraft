@@ -99,7 +99,8 @@ export interface UseTreeAdapterReturn<T> {
   isLoadingRow: (row: T) => boolean;
   /**
    * Drop cached children for one parent (or all parents when called
-   * with no argument). Triggers a re-merge and a top-level refetch.
+   * with no argument). This is cache-only: retained root rows are remapped
+   * immediately and the root endpoint is not refetched.
    */
   invalidateChildren: (parentId?: string) => void;
 }
@@ -120,26 +121,20 @@ type RowWithChildren<T> = T & { children?: T[] };
 export function useTreeAdapter<T extends Record<string, unknown>>(
   options: UseTreeAdapterOptions<T>,
 ): UseTreeAdapterReturn<T> {
-  const {
-    list,
-    children,
-    loadingRow,
-    maxDepth = 50,
-    onChildrenError,
-  } = options;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
-  const getRowId = useMemo(
-    () => options.getRowId ?? ((row: T) => {
-      const value = (row as { id?: unknown }).id;
-      if (value === null || value === undefined) {
-        throw new Error(
-          "useTreeAdapter: every row must have an id or provide getRowId",
-        );
-      }
-      return String(value);
-    }),
-    [options.getRowId],
-  );
+  const getRowId = useCallback((row: T): string => {
+    const resolver = optionsRef.current.getRowId;
+    if (resolver) return String(resolver(row));
+    const value = (row as { id?: unknown }).id;
+    if (value === null || value === undefined) {
+      throw new Error(
+        "useTreeAdapter: every row must have an id or provide getRowId",
+      );
+    }
+    return String(value);
+  }, []);
 
   // Children cache: parentId → children array (loaded), null (loading), or absent (untouched).
   const cacheRef = useRef<Record<string, T[] | null>>({});
@@ -148,10 +143,18 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
   // Incremented whenever a cache entry is invalidated so a response that
   // ignores AbortSignal cannot repopulate stale data.
   const generationRef = useRef<Record<string, number>>({});
-  // Bumped whenever the cache mutates. Forces the memoised adapter to be
-  // recreated, which makes useTableData re-run its query effect and re-merge.
-  const [version, setVersion] = useState(0);
-  const bumpVersion = useCallback(() => setVersion((v) => v + 1), []);
+  const subscribersRef = useRef(new Set<() => void>());
+  const rawResultRef = useRef<{
+    key: string;
+    result: QueryResult<T>;
+  } | null>(null);
+  // Bumped whenever the cache mutates so hook consumers repaint. Subscribers
+  // receive the same cache-only revision while the adapter identity stays stable.
+  const [, setVersion] = useState(0);
+  const bumpVersion = useCallback(() => {
+    setVersion((value) => value + 1);
+    for (const listener of subscribersRef.current) listener();
+  }, []);
 
   const isLoadingRow = useCallback(
     (row: T) => isTreeLoadingRow(row, getRowId),
@@ -161,6 +164,7 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
   // Recursive merge of cached children into the row tree, depth-bounded.
   const mergeChildren = useCallback(
     (node: T, depth: number, ancestors: ReadonlySet<string> = new Set()): T => {
+      const { loadingRow, maxDepth = 50 } = optionsRef.current;
       if (depth >= maxDepth) return node;
       const id = getRowId(node);
       if (ancestors.has(id)) return node;
@@ -188,17 +192,29 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           .map((child) => mergeChildren(child, depth + 1, nextAncestors)),
       } as T;
     },
-    [getRowId, loadingRow, maxDepth],
+    [getRowId],
   );
+  const mergeChildrenRef = useRef(mergeChildren);
+  mergeChildrenRef.current = mergeChildren;
 
   const adapter = useMemo<DataAdapter<T>>(
-    () => ({
-      async query(params, options) {
+    () => {
+      const stableAdapter: DataAdapter<T> = {
+        async query(params, options) {
         // Prefer the upstream signal from useTableData so a stale list
         // response can be cancelled by the table's own AbortController
         // (param change, unmount). Fall back to a never-aborted signal
         // so adapters that pass it straight through still typecheck.
         const signal = options?.signal ?? new AbortController().signal;
+        const key = JSON.stringify(params);
+        const cached = rawResultRef.current;
+        if (cached?.key === key) {
+          return {
+            ...cached.result,
+            data: cached.result.data.map((row) => mergeChildrenRef.current(row, 0)),
+          };
+        }
+        const list = optionsRef.current.list;
         let result: QueryResult<T>;
         if (list.fetch) {
           result = await list.fetch(params, signal);
@@ -229,17 +245,24 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
         if (signal.aborted) {
           throw Object.assign(new Error("Aborted"), { name: "AbortError" });
         }
+        rawResultRef.current = { key, result };
         return {
           ...result,
-          data: result.data.map((row) => mergeChildren(row, 0)),
+          data: result.data.map((row) => mergeChildrenRef.current(row, 0)),
         };
-      },
-      queryByIds: options.queryByIds,
-    }),
-    // mergeChildren closes over cacheRef.current at call time, so version
-    // is what we actually depend on for re-runs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [version, list.url, list.fetch, mergeChildren, options.queryByIds],
+        },
+        subscribe(listener) {
+          subscribersRef.current.add(listener);
+          return () => subscribersRef.current.delete(listener);
+        },
+      };
+      if (optionsRef.current.queryByIds) {
+        stableAdapter.queryByIds = (ids, lookupOptions) =>
+          optionsRef.current.queryByIds!(ids, lookupOptions);
+      }
+      return stableAdapter;
+    },
+    [],
   );
 
   const onRowExpand = useCallback<
@@ -271,15 +294,16 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
       cacheRef.current[id] = null;
       bumpVersion();
 
-      const fetchPromise: Promise<T[]> = children.fetch
-        ? children.fetch(id, ctrl.signal)
+      const childrenSource = optionsRef.current.children;
+      const fetchPromise: Promise<T[]> = childrenSource.fetch
+        ? childrenSource.fetch(id, ctrl.signal)
         : (async () => {
-            if (!children.url) {
+            if (!childrenSource.url) {
               throw new Error(
                 "useTreeAdapter: `children.url` or `children.fetch` is required",
               );
             }
-            const res = await fetch(children.url(id), { signal: ctrl.signal });
+            const res = await fetch(childrenSource.url(id), { signal: ctrl.signal });
             if (!res.ok) {
               throw new Error(`useTreeAdapter children: HTTP ${res.status}`);
             }
@@ -301,7 +325,7 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           }
           delete cacheRef.current[id];
           bumpVersion();
-          onChildrenError?.(
+          optionsRef.current.onChildrenError?.(
             err instanceof Error ? err : new Error(String(err)),
             id,
           );
@@ -310,7 +334,7 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           if (abortRef.current[id] === ctrl) delete abortRef.current[id];
         });
     },
-    [bumpVersion, children, getRowId, isLoadingRow, onChildrenError],
+    [bumpVersion, getRowId, isLoadingRow],
   );
 
   const getSubRows = useCallback(

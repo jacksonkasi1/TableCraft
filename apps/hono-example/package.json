@@ -9,7 +9,7 @@
     "seed": "bun run src/db/seed.ts",
     "seed:retail": "bun run src/db/seed-retail.ts",
     "test": "vitest run --passWithNoTests --exclude 'test/**'",
-    "test:integration": "bun test test",
+    "test:integration": "vitest run test/retail.integration.test.ts",
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "dependencies": {

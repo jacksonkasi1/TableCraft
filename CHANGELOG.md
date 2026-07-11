@@ -5,6 +5,11 @@ All notable changes to TableCraft will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- **Security:** `@tablecraft/adapter-next` now requires Next.js 15.5.16+ or
+  16.2.5+, excluding releases affected by GHSA-gx5p-jg67-6x7h.
+
 ## [0.1.1] - 2026-04-30
 
 ### Security

@@ -12,6 +12,22 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tablecraft
+          POSTGRES_PASSWORD: tablecraft
+          POSTGRES_DB: tablecraft_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tablecraft -d tablecraft_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://tablecraft:tablecraft@localhost:5432/tablecraft_test
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -27,4 +43,5 @@ jobs:
           bun run --filter @tablecraft/adapter-hono build
       - run: bun run typecheck
       - run: bun run test
+      - run: bun run --filter hono-example test:integration
       - run: bun run build
