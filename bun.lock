@@ -168,7 +168,7 @@
     },
     "packages/adapter-next": {
       "name": "@tablecraft/adapter-next",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "devDependencies": {
         "@tablecraft/engine": "workspace:*",
         "@types/node": "^25.2.2",
@@ -262,7 +262,7 @@
     },
     "packages/table": {
       "name": "@tablecraft/table",
-      "version": "0.2.26",
+      "version": "0.2.27",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/modifiers": "^9.0.0",
