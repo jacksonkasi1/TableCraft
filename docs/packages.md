@@ -1,8 +1,8 @@
 # Packages Overview
 
 > **Next.js compatibility:** `@tablecraft/adapter-next` requires Next.js
-> `>=15.5.16 <16` or `>=16.2.5`. Next.js 14 and earlier Next.js 15 releases
-> are excluded due to GHSA-gx5p-jg67-6x7h.
+> `>=15.5.18 <16` or `>=16.2.6`. Earlier releases are excluded due to
+> GHSA-gx5p-jg67-6x7h and GHSA-26hh-7cqf-hhc6.
 
 TableCraft is a monorepo with multiple packages for different use cases.
 

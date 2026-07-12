@@ -406,7 +406,11 @@ list. Lazy adapters omit `queryByIds` by default because they cannot guarantee
 cross-page lookup. Provide the optional `queryByIds` callback
 when selections can span root pages. Without it, attempting to export unloaded
 selected IDs fails explicitly instead of exporting fewer rows than the selected
-count.
+count. When `list.fetch` captures tenant, account, or authentication context,
+pass a matching stable `sourceKey` and change it with that context. A source-key
+change aborts the old root request, clears root and child caches, and performs
+one fresh root query. URL-backed lists use `list.url` as their default source
+identity.
 
 Use `rowGrouping` for client-side grouping, `rowGroupingConfig` for aggregates,
 custom group labels, and initial expansion, and `groupingRef` for imperative

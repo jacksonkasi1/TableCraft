@@ -7,8 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-- **Security:** `@tablecraft/adapter-next` now requires Next.js 15.5.16+ or
-  16.2.5+, excluding releases affected by GHSA-gx5p-jg67-6x7h.
+- **Security:** `@tablecraft/adapter-next` now requires Next.js 15.5.18+ or
+  16.2.6+, excluding releases affected by GHSA-gx5p-jg67-6x7h and
+  GHSA-26hh-7cqf-hhc6.
 
 ## [0.1.1] - 2026-04-30
 

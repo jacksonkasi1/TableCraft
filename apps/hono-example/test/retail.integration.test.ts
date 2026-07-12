@@ -18,7 +18,12 @@ interface RetailRow {
 
 interface RetailResponse {
   data: RetailRow[];
-  meta: { total: number; totalPages: number };
+  meta: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 async function request(path: string): Promise<RetailResponse> {

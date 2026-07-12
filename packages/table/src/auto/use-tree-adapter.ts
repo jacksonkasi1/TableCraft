@@ -54,6 +54,12 @@ export interface UseTreeAdapterChildrenSource<T> {
 export interface UseTreeAdapterOptions<T> {
   list: UseTreeAdapterListSource<T>;
   children: UseTreeAdapterChildrenSource<T>;
+  /**
+   * Stable identity for the root data source (for example a tenant or account
+   * ID). Change it whenever an inline `list.fetch` starts targeting a different
+   * source. URL-based lists automatically use `list.url` when this is omitted.
+   */
+  sourceKey?: string | number;
   /** Returns the row's id. Defaults to `row.id`. */
   getRowId?: (row: T) => string;
   /** Optional lookup used for cross-page selection and export. */
@@ -144,6 +150,7 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
   // ignores AbortSignal cannot repopulate stale data.
   const generationRef = useRef<Record<string, number>>({});
   const subscribersRef = useRef(new Set<() => void>());
+  const activeRootControllerRef = useRef<AbortController | null>(null);
   const rawResultRef = useRef<{
     key: string;
     result: QueryResult<T>;
@@ -155,6 +162,8 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
     setVersion((value) => value + 1);
     for (const listener of subscribersRef.current) listener();
   }, []);
+  const effectiveSourceKey = options.sourceKey ?? options.list.url ?? "__default__";
+  const sourceKeyRef = useRef<string | number>(effectiveSourceKey);
 
   const isLoadingRow = useCallback(
     (row: T) => isTreeLoadingRow(row, getRowId),
@@ -205,10 +214,21 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
         // response can be cancelled by the table's own AbortController
         // (param change, unmount). Fall back to a never-aborted signal
         // so adapters that pass it straight through still typecheck.
-        const signal = options?.signal ?? new AbortController().signal;
+        activeRootControllerRef.current?.abort();
+        const rootController = new AbortController();
+        activeRootControllerRef.current = rootController;
+        const upstreamSignal = options?.signal;
+        const abortFromUpstream = () => rootController.abort();
+        upstreamSignal?.addEventListener("abort", abortFromUpstream, { once: true });
+        if (upstreamSignal?.aborted) rootController.abort();
+        const signal = rootController.signal;
         const key = JSON.stringify(params);
         const cached = rawResultRef.current;
         if (cached?.key === key) {
+          upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+          if (activeRootControllerRef.current === rootController) {
+            activeRootControllerRef.current = null;
+          }
           return {
             ...cached.result,
             data: cached.result.data.map((row) => mergeChildrenRef.current(row, 0)),
@@ -246,6 +266,10 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           throw Object.assign(new Error("Aborted"), { name: "AbortError" });
         }
         rawResultRef.current = { key, result };
+        upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+        if (activeRootControllerRef.current === rootController) {
+          activeRootControllerRef.current = null;
+        }
         return {
           ...result,
           data: result.data.map((row) => mergeChildrenRef.current(row, 0)),
@@ -256,10 +280,21 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
           return () => subscribersRef.current.delete(listener);
         },
       };
-      if (optionsRef.current.queryByIds) {
-        stableAdapter.queryByIds = (ids, lookupOptions) =>
-          optionsRef.current.queryByIds!(ids, lookupOptions);
-      }
+      const queryByIds = (ids: (string | number)[], lookupOptions?: {
+        sortBy?: string;
+        sortOrder?: "asc" | "desc";
+      }) => {
+        const lookup = optionsRef.current.queryByIds;
+        if (!lookup) {
+          throw new Error("useTreeAdapter: queryByIds is not supported by this source");
+        }
+        return lookup(ids, lookupOptions);
+      };
+      Object.defineProperty(stableAdapter, "queryByIds", {
+        configurable: false,
+        enumerable: true,
+        get: () => optionsRef.current.queryByIds ? queryByIds : undefined,
+      });
       return stableAdapter;
     },
     [],
@@ -363,10 +398,25 @@ export function useTreeAdapter<T extends Record<string, unknown>>(
     [bumpVersion],
   );
 
+  useEffect(() => {
+    if (sourceKeyRef.current === effectiveSourceKey) return;
+    sourceKeyRef.current = effectiveSourceKey;
+    activeRootControllerRef.current?.abort();
+    activeRootControllerRef.current = null;
+    rawResultRef.current = null;
+    cacheRef.current = {};
+    generationRef.current = {};
+    for (const controller of Object.values(abortRef.current)) controller.abort();
+    abortRef.current = {};
+    bumpVersion();
+  }, [bumpVersion, effectiveSourceKey]);
+
   // Abort any pending children fetches when the consumer unmounts.
   useEffect(() => {
     return () => {
       for (const ctrl of Object.values(abortRef.current)) ctrl.abort();
+      activeRootControllerRef.current?.abort();
+      activeRootControllerRef.current = null;
       abortRef.current = {};
     };
   }, []);

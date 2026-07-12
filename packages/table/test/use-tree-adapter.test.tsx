@@ -6,7 +6,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // ** import utils
-import { useTreeAdapter, type UseTreeAdapterReturn } from "../src/auto/use-tree-adapter";
+import {
+  useTreeAdapter,
+  type UseTreeAdapterOptions,
+  type UseTreeAdapterReturn,
+} from "../src/auto/use-tree-adapter";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -201,5 +205,125 @@ describe("useTreeAdapter", () => {
     await current!.adapter.query({ ...params, page: 2, search: "new", sort: "name" });
     expect(listFetch).toHaveBeenCalledTimes(2);
     unsubscribe?.();
+  });
+
+  it("refetches once and clears old data when sourceKey changes", async () => {
+    let currentTenant = "tenant-a";
+    const listFetch = vi.fn(async (_params: unknown, _signal: AbortSignal) => ({
+      data: [{ id: currentTenant }],
+      meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+    }));
+    let setTenant: React.Dispatch<React.SetStateAction<string>> | undefined;
+    let current: UseTreeAdapterReturn<NodeRow> | undefined;
+    const params = {
+      page: 1, pageSize: 10, search: "", sort: "", sortOrder: "asc" as const,
+      filters: {}, dateRange: { from: "", to: "" },
+    };
+    let rendered: NodeRow[] = [];
+    function Harness() {
+      const [tenant, updateTenant] = React.useState("tenant-a");
+      currentTenant = tenant;
+      setTenant = updateTenant;
+      current = useTreeAdapter<NodeRow>({
+        sourceKey: tenant,
+        list: { fetch: listFetch },
+        children: { fetch: async () => [] },
+      });
+      return null;
+    }
+    const container = document.createElement("div");
+    root = createRoot(container);
+    act(() => root?.render(<Harness />));
+    const adapter = current!.adapter;
+    rendered = (await adapter.query(params)).data;
+    const unsubscribe = adapter.subscribe?.(() => {
+      void adapter.query(params).then((result) => { rendered = result.data; });
+    });
+
+    act(() => setTenant?.("tenant-b"));
+    await vi.waitFor(() => expect(rendered).toEqual([{ id: "tenant-b" }]));
+    expect(current!.adapter).toBe(adapter);
+    expect(listFetch).toHaveBeenCalledTimes(2);
+    unsubscribe?.();
+  });
+
+  it("aborts an in-flight root request when sourceKey changes", async () => {
+    const signals: AbortSignal[] = [];
+    let tenant = "tenant-a";
+    let setTenant: React.Dispatch<React.SetStateAction<string>> | undefined;
+    let current: UseTreeAdapterReturn<NodeRow> | undefined;
+    const listFetch = vi.fn((_params: unknown, signal: AbortSignal) => {
+      signals.push(signal);
+      if (tenant === "tenant-b") {
+        return Promise.resolve({
+          data: [{ id: "tenant-b" }],
+          meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+        });
+      }
+      return new Promise<never>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(
+          Object.assign(new Error("Aborted"), { name: "AbortError" }),
+        ), { once: true });
+      });
+    });
+    function Harness() {
+      const [sourceKey, updateTenant] = React.useState("tenant-a");
+      tenant = sourceKey;
+      setTenant = updateTenant;
+      current = useTreeAdapter<NodeRow>({
+        sourceKey,
+        list: { fetch: listFetch },
+        children: { fetch: async () => [] },
+      });
+      return null;
+    }
+    const container = document.createElement("div");
+    root = createRoot(container);
+    act(() => root?.render(<Harness />));
+    const params = {
+      page: 1, pageSize: 10, search: "", sort: "", sortOrder: "asc" as const,
+      filters: {}, dateRange: { from: "", to: "" },
+    };
+    const adapter = current!.adapter;
+    void adapter.query(params).catch(() => undefined);
+    const refresh = vi.fn(() => adapter.query(params));
+    const unsubscribe = adapter.subscribe?.(() => { void refresh(); });
+
+    act(() => setTenant?.("tenant-b"));
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledOnce());
+    expect(signals[0].aborted).toBe(true);
+    expect(listFetch).toHaveBeenCalledTimes(2);
+    unsubscribe?.();
+  });
+
+  it("reconciles queryByIds when the capability is added or removed", async () => {
+    type Lookup = NonNullable<UseTreeAdapterOptions<NodeRow>["queryByIds"]>;
+    let setLookup: React.Dispatch<React.SetStateAction<Lookup | undefined>> | undefined;
+    let current: UseTreeAdapterReturn<NodeRow> | undefined;
+    function Harness() {
+      const [lookup, updateLookup] = React.useState<Lookup>();
+      setLookup = updateLookup;
+      current = useTreeAdapter<NodeRow>({
+        sourceKey: "stable",
+        list: { fetch: async () => ({
+          data: [], meta: { total: 0, page: 1, pageSize: 10, totalPages: 0 },
+        }) },
+        children: { fetch: async () => [] },
+        queryByIds: lookup,
+      });
+      return null;
+    }
+    const container = document.createElement("div");
+    root = createRoot(container);
+    act(() => root?.render(<Harness />));
+    const adapter = current!.adapter;
+    expect(adapter.queryByIds).toBeUndefined();
+
+    const lookup = vi.fn(async () => [{ id: "row" }]);
+    act(() => setLookup?.(() => lookup));
+    expect(await adapter.queryByIds?.(["row"])).toEqual([{ id: "row" }]);
+
+    act(() => setLookup?.(undefined));
+    expect(adapter.queryByIds).toBeUndefined();
   });
 });
