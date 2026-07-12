@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tablecraft
+          POSTGRES_PASSWORD: tablecraft
+          POSTGRES_DB: tablecraft_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tablecraft -d tablecraft_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://tablecraft:tablecraft@localhost:5432/tablecraft_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      # Workspace packages publish types from dist. Build the foundational
+      # packages first so a clean checkout can typecheck downstream packages.
+      - name: Bootstrap workspace types
+        run: |
+          bun run --filter @tablecraft/engine build
+          bun run --filter @tablecraft/client build
+          bun run --filter @tablecraft/adapter-hono build
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run --filter hono-example test:integration
+      - run: bun run build

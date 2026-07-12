@@ -12,16 +12,17 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "seed": "bun run src/lib/server/db/seed.ts",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests --exclude test-api.test.ts",
+    "test:integration": "vitest run test-api.test.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.1",
-    "@sveltejs/kit": "^2.58.0",
+    "@sveltejs/kit": "^2.60.1",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "svelte": "^5.0.0",
+    "svelte": "^5.55.7",
     "svelte-check": "^4.1.4",
     "typescript": "^5.9.3",
-    "vite": "^6.4.2",
+    "vite": "^6.4.3",
     "drizzle-kit": "^0.31.10",
     "vitest": "^4.1.5"
   },

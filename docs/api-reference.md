@@ -374,6 +374,9 @@ import type { OrdersRow, OrdersColumn } from './generated';
 
 TableCraft supports rendering nested sub-tables or any React component inside an expandable row. When you provide the `renderSubRow` prop, TableCraft automatically injects an `__expand` column with an arrow toggle button.
 
+Expansion remains explicit: ordinary row clicks still invoke `onRowClick` and
+`enableClickRowSelect`; only the expand button opens master-detail content.
+
 ```tsx
 <DataTable
   adapter={parentAdapter}
@@ -386,6 +389,49 @@ TableCraft supports rendering nested sub-tables or any React component inside an
   }}
 />
 ```
+
+### Tree Rows and Grouping
+
+Static trees only need `getSubRows`. A row is expandable when that function
+returns a non-empty child array; an empty array is a leaf. Supply
+`getRowCanExpand` only when the data needs an explicit override. `onRowExpand`
+receives individual tree expansion changes.
+
+For lazy trees, `useTreeAdapter` returns an adapter plus `treeProps`. It preserves
+existing query parameters in list URLs, cancels child requests on collapse,
+invalidation, and unmount, rejects stale responses, and permits retry after an
+error. `invalidateChildren(id)` clears one branch; calling it without an ID
+clears every branch. Invalidation is cache-only and never refetches the root
+list. Lazy adapters omit `queryByIds` by default because they cannot guarantee
+cross-page lookup. Provide the optional `queryByIds` callback
+when selections can span root pages. Without it, attempting to export unloaded
+selected IDs fails explicitly instead of exporting fewer rows than the selected
+count. When `list.fetch` captures tenant, account, or authentication context,
+pass a matching stable `sourceKey` and change it with that context. A source-key
+change aborts the old root request, clears root and child caches, and performs
+one fresh root query. URL-backed lists use `list.url` as their default source
+identity.
+
+Use `rowGrouping` for client-side grouping, `rowGroupingConfig` for aggregates,
+custom group labels, and initial expansion, and `groupingRef` for imperative
+expand/collapse operations. Changing `rowGrouping` clears obsolete group
+expansion state. Group headers are synthetic: they are never selectable or
+passed to `actions`; selection, toolbar counts, and exports contain data rows
+only. With server pagination, grouping applies to the current page, so groups
+split across pages are partial rather than global.
+
+Selection persists across page and page-size changes. When the adapter supports
+`queryByIds`, selected rows from multiple pages are fetched together for export.
+Changing search text clears selection to avoid carrying IDs into a different
+result set.
+
+### Toolbar Slots
+
+`startToolbarContent` supports `before-search`, `after-search`, and `after-date`.
+`endToolbarContent` supports positions around grouping, export, view, and
+settings. `before-export` aliases `after-grouping`, `before-view` aliases
+`after-export`, and `before-settings` aliases `after-view`; aliases preserve the
+same ordering even when the adjacent built-in control is disabled.
 
 If you want a child table to appear seamlessly without drawing a second "card" border inside the parent, configure the child's `<DataTable>` with `removeOuterBorder: true`.
 

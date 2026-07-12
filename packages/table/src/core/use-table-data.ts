@@ -94,8 +94,14 @@ export function useTableData<T extends Record<string, unknown>>(
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [result, setResult] = useState<QueryResult<T> | null>(null);
+  const [adapterRevision, setAdapterRevision] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!adapter.subscribe) return;
+    return adapter.subscribe(() => setAdapterRevision((revision) => revision + 1));
+  }, [adapter]);
 
   // ─── Build query params ───
   const queryParams = useMemo<QueryParams>(
@@ -117,30 +123,46 @@ export function useTableData<T extends Record<string, unknown>>(
   // ─── Fetch data on param change ───
   useEffect(() => {
     abortRef.current?.abort();
-    abortRef.current = new AbortController();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
-        const data = await adapter.query(queryParams);
+        // When keepPreviousData is on and we already have rows, skip the
+        // skeleton flash — render the prior data until the new query resolves.
+        if (!(config.keepPreviousData && result)) {
+          setIsLoading(true);
+        }
+        const data = await adapter.query(queryParams, { signal: controller.signal });
+        // Stale-response guard: if this effect was superseded (param changed,
+        // unmount, etc.) while the await was pending, drop the result so it
+        // can't overwrite newer table state. Adapters that honour the signal
+        // will already have thrown AbortError; this catches the rest.
+        if (controller.signal.aborted) return;
         setResult(data);
         setIsError(false);
         setError(null);
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
+        if (controller.signal.aborted) return;
         setIsError(true);
         setError(err instanceof Error ? err : new Error("Unknown error"));
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchData();
 
     return () => {
-      abortRef.current?.abort();
+      controller.abort();
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
     };
-  }, [adapter, queryParams]);
+  }, [adapter, adapterRevision, queryParams]);
 
   // ─── Validate page when total pages changes ───
   useEffect(() => {

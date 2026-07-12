@@ -19,17 +19,13 @@ function captureDownload() {
 	const filenames: string[] = [];
 
 	const origCreate = document.createElement.bind(document);
-	const createSpy = vi
-		.spyOn(document, "createElement")
-		.mockImplementation((tag: string) => {
-			if (tag === "a") {
-				const a = origCreate("a");
-				// Override click to prevent actual navigation
-				a.click = vi.fn();
-				return a;
-			}
-			return origCreate(tag);
-		});
+	document.createElement = ((tag: string, options?: ElementCreationOptions) => {
+		const element = origCreate(tag, options);
+		if (tag === "a") {
+			(element as HTMLAnchorElement).click = vi.fn();
+		}
+		return element;
+	}) as typeof document.createElement;
 
 	const origCreateObjectURL = URL.createObjectURL;
 	URL.createObjectURL = (blob: Blob) => {
@@ -61,7 +57,7 @@ function captureDownload() {
 		blobs,
 		filenames,
 		restore() {
-			createSpy.mockRestore();
+			document.createElement = origCreate;
 			URL.createObjectURL = origCreateObjectURL;
 			URL.revokeObjectURL = origRevokeObjectURL;
 			document.body.appendChild = origAppendChild;
@@ -174,6 +170,32 @@ describe("exportToCSV — basic", () => {
 		cap6.restore();
 	});
 
+	it("neutralizes CSV-formula-injection prefixes (=, +, -, @, tab, CR)", async () => {
+		const cap = captureDownload();
+		const data = [
+			{ a: "=cmd|' /C calc'!A1", b: "+SUM(1)", c: "-2+3", d: "@SUM(1)", e: "\thidden", f: "\rsneaky" },
+		];
+		exportToCSV(data, "injection", ["a", "b", "c", "d", "e", "f"]);
+		const text = await cap.blobs[0].text();
+		// Each dangerous value must be prefixed with a single quote so
+		// spreadsheet apps treat it as plain text rather than a formula.
+		expect(text).toContain("'=cmd|' /C calc'!A1");
+		expect(text).toContain("'+SUM(1)");
+		expect(text).toContain("'-2+3");
+		expect(text).toContain("'@SUM(1)");
+		expect(text).toContain("'\thidden");
+		expect(text).toContain("'\rsneaky");
+		// And benign values are *not* prefixed:
+		const benign = [{ a: "hello", b: "world" }];
+		const cap2 = captureDownload();
+		exportToCSV(benign, "benign", ["a", "b"]);
+		const text2 = await cap2.blobs[0].text();
+		expect(text2).toContain("hello,world");
+		expect(text2).not.toContain("'hello");
+		cap.restore();
+		cap2.restore();
+	});
+
 	it("renders null/undefined cells as empty strings", async () => {
 		const cap7 = captureDownload();
 		const data = [{ id: 1, name: null, extra: undefined }] as unknown as Array<
@@ -186,6 +208,113 @@ describe("exportToCSV — basic", () => {
 		// Row should be "1,,"
 		expect(text).toContain("1,,");
 		cap7.restore();
+	});
+
+	it("escapes LF (\\n) in cell values with double-quotes", async () => {
+		const cap = captureDownload();
+		const data = [{ id: 1, note: "line1\nline2" }];
+		exportToCSV(data, "lf", ["id", "note"]);
+
+		const text = await cap.blobs[0].text();
+		expect(text).toContain('"line1\nline2"');
+		cap.restore();
+	});
+
+	it("escapes CR (\\r) in cell values with double-quotes", async () => {
+		const cap = captureDownload();
+		const data = [{ id: 1, note: "line1\rline2" }];
+		exportToCSV(data, "cr", ["id", "note"]);
+
+		const text = await cap.blobs[0].text();
+		expect(text).toContain('"line1\rline2"');
+		cap.restore();
+	});
+
+	it("escapes CRLF (\\r\\n) in cell values with double-quotes", async () => {
+		const cap = captureDownload();
+		const data = [{ id: 1, note: "line1\r\nline2" }];
+		exportToCSV(data, "crlf", ["id", "note"]);
+
+		const text = await cap.blobs[0].text();
+		expect(text).toContain('"line1\r\nline2"');
+		cap.restore();
+	});
+
+	it("escapes newlines in column-mapping header names", async () => {
+		const cap = captureDownload();
+		const data = [{ id: 1, label: "x" }];
+		exportToCSV(
+			data,
+			"header-newline",
+			["id", "label"],
+			{ id: "id", label: "label\nwith\nnewline" },
+		);
+
+		const text = await cap.blobs[0].text();
+		expect(text.startsWith("id,\"label\nwith\nnewline\"\n")).toBe(true);
+		cap.restore();
+	});
+
+	it("neutralizes formula-injection prefix that bypasses via leading space", async () => {
+		const cap = captureDownload();
+		const data = [{ formula: " =SUM(1)" }];
+		exportToCSV(data, "leading-space", ["formula"]);
+
+		const text = await cap.blobs[0].text();
+		// After sanitization, the value must start with a single quote so
+		// spreadsheet apps treat it as plain text, not a formula. The original
+		// leading whitespace is preserved in the written cell.
+		expect(text).toContain("' =SUM(1)");
+		cap.restore();
+	});
+
+	it("neutralizes formula injection in raw and mapped headers", async () => {
+		const raw = captureDownload();
+		exportToCSV([{ "=raw": "value" }], "raw-header", ["=raw"]);
+		expect(await raw.blobs[0].text()).toBe("'=raw\nvalue\n");
+
+		const mapped = captureDownload();
+		exportToCSV(
+			[{ safe: "value", other: "value" }],
+			"mapped-header",
+			["safe", "other"],
+			{ safe: "  @mapped", other: "\tformula" },
+		);
+		const text = await mapped.blobs[0].text();
+		expect(text.startsWith("'  @mapped,'\tformula\n")).toBe(true);
+		raw.restore();
+		mapped.restore();
+	});
+
+	it("preserves tab characters within cell values", async () => {
+		const cap = captureDownload();
+		const data = [{ id: 1, note: "hello\tworld" }];
+		exportToCSV(data, "tab", ["id", "note"]);
+
+		const text = await cap.blobs[0].text();
+		// The first char is 'h' (not a formula trigger), and tab is not in
+		// the RFC 4180 escape rule (only CR/LF/quote/comma are). The tab is
+		// preserved verbatim. Sanitize only acts on the leading char.
+		expect(text).toContain("hello\tworld");
+		// And the row is written as-is (no double-quote wrap):
+		expect(text).toContain("1,hello\tworld\n");
+		cap.restore();
+	});
+
+	it("keeps a multi-line cell as one logical CSV row", async () => {
+		const cap = captureDownload();
+		const data = [{ id: 1, body: "para one\n\npara two" }];
+		exportToCSV(data, "multiline", ["id", "body"]);
+
+		const text = await cap.blobs[0].text();
+		// The cell contains embedded \n, so the escape rule wraps the cell
+		// in double-quotes. The embedded newlines are preserved verbatim
+		// inside the quoted cell — the parser sees ONE logical row.
+		expect(text).toContain('"para one\n\npara two"');
+		// The header row is followed by a single data row, terminated by a
+		// single trailing \n (the only unquoted row separator at the end).
+		expect(text).toBe('id,body\n1,"para one\n\npara two"\n');
+		cap.restore();
 	});
 });
 

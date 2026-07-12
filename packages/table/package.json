@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/table",
-  "version": "0.2.26",
+  "version": "0.2.27",
   "description": "Schema-driven data table for React — built on TanStack Table + Shadcn UI with native TableCraft engine support",
   "type": "module",
   "main": "dist/index.js",
@@ -21,7 +21,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {

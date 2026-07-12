@@ -1,6 +1,48 @@
 import type { ExportableData, DataTransformFunction } from "../types";
 
 /**
+ * Neutralize CSV-formula-injection vectors. Spreadsheet apps (Excel, Sheets,
+ * LibreOffice) evaluate any cell whose first character is `=`, `+`, `-`, `@`,
+ * `\t` or `\r` as a formula — letting an attacker who controls cell values
+ * exfiltrate data, fetch URLs, or run DDE commands when a victim opens the
+ * exported file. Prefixing such values with a single quote forces the
+ * spreadsheet to treat them as plain text. (OWASP CSV Injection guidance.)
+ *
+ * Leading whitespace is trimmed before the prefix check, so a value like
+ * `" =SUM(1)"` (with a leading space) cannot bypass the check — some
+ * spreadsheet apps ignore leading whitespace when evaluating formulas.
+ * The original whitespace is preserved in the returned value.
+ */
+function sanitizeCsvCell(value: string): string {
+  if (value.length === 0) return value;
+  // Trim leading spaces (not tabs/CRs — those are themselves formula triggers
+  // and must remain in the value so the prefix check can detect them).
+  const trimmed = value.replace(/^ +/, "");
+  if (trimmed.length === 0) return value;
+  const first = trimmed.charCodeAt(0);
+  // 0x3D '='  0x2B '+'  0x2D '-'  0x40 '@'  0x09 TAB  0x0D CR
+  if (
+    first === 0x3d ||
+    first === 0x2b ||
+    first === 0x2d ||
+    first === 0x40 ||
+    first === 0x09 ||
+    first === 0x0d
+  ) {
+    return `'${value}`;  // preserve the original (including leading whitespace)
+  }
+  return value;
+}
+
+/** Quote one sanitized CSV field according to RFC 4180. */
+function escapeCsvField(value: string): string {
+  const sanitized = sanitizeCsvCell(value);
+  return /[",\n\r]/.test(sanitized)
+    ? `"${sanitized.replace(/"/g, '""')}"`
+    : sanitized;
+}
+
+/**
  * Convert array of objects to CSV string.
  */
 function convertToCSV<T extends ExportableData>(
@@ -14,27 +56,16 @@ function convertToCSV<T extends ExportableData>(
 
   let csvContent = "";
 
-  if (columnMapping) {
-    const headerRow = headers.map((header) => {
-      const mappedHeader = columnMapping[header] || header;
-      return mappedHeader.includes(",") || mappedHeader.includes('"')
-        ? `"${mappedHeader.replace(/"/g, '""')}"`
-        : mappedHeader;
-    });
-    csvContent = `${headerRow.join(",")}\n`;
-  } else {
-    csvContent = `${headers.join(",")}\n`;
-  }
+  const headerRow = headers.map((header) =>
+    escapeCsvField(columnMapping?.[header] ?? header)
+  );
+  csvContent = `${headerRow.join(",")}\n`;
 
   for (const item of data) {
     const row = headers.map((header) => {
       const value = item[header];
-      const cellValue = value === null || value === undefined ? "" : String(value);
-      const escapedValue =
-        cellValue.includes(",") || cellValue.includes('"')
-          ? `"${cellValue.replace(/"/g, '""')}"`
-          : cellValue;
-      return escapedValue;
+      const rawCell = value === null || value === undefined ? "" : String(value);
+      return escapeCsvField(rawCell);
     });
     csvContent += `${row.join(",")}\n`;
   }
@@ -46,8 +77,8 @@ function convertToCSV<T extends ExportableData>(
  * Download blob as file.
  */
 function downloadFile(blob: Blob, filename: string) {
-  const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
 
   link.setAttribute("href", url);
   link.setAttribute("download", filename);

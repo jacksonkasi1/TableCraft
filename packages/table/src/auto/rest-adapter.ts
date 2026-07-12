@@ -1,8 +1,17 @@
 import type { DataAdapter, QueryParams, QueryResult, TableMetadata } from "../types";
 
 export interface RestAdapterOptions<T> {
-  /** Function that fetches data given table params */
-  queryFn: (params: QueryParams) => Promise<QueryResult<T>>;
+  /**
+   * Function that fetches data given table params.
+   *
+   * Receives an optional second argument carrying the table's
+   * `AbortSignal`; implementations SHOULD pass it through to
+   * `fetch` so stale requests are cancelled when params change.
+   */
+  queryFn: (
+    params: QueryParams,
+    options?: { signal?: AbortSignal },
+  ) => Promise<QueryResult<T>>;
   /** Function to fetch specific items by IDs (for cross-page export) */
   queryByIdsFn?: (ids: (string | number)[], options?: { sortBy?: string; sortOrder?: "asc" | "desc" }) => Promise<T[]>;
   /** Function to fetch table metadata (enables auto-columns) */

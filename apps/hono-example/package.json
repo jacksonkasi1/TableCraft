@@ -7,11 +7,13 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "seed": "bun run src/db/seed.ts",
-    "test": "bun test",
+    "seed:retail": "bun run src/db/seed-retail.ts",
+    "test": "vitest run --passWithNoTests --exclude 'test/**'",
+    "test:integration": "vitest run test/retail.integration.test.ts",
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.12.14",
+    "hono": "^4.12.18",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",
     "dotenv": "^17.4.2",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "vitest": "^4.1.5"
   }
 }

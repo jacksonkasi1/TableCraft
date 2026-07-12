@@ -19,16 +19,16 @@
   "scripts": {
     "build": "bun run --bun tsc",
     "dev": "bun run --bun tsc --watch",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
     "@tablecraft/engine": ">=0.1.0",
-    "hono": ">=4.12.14"
+    "hono": ">=4.12.18"
   },
   "devDependencies": {
     "@tablecraft/engine": "workspace:*",
-    "hono": "^4.12.14",
+    "hono": "^4.12.18",
     "typescript": "^5.9.3",
     "vitest": "^4.1.5"
   },

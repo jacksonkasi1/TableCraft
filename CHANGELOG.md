@@ -5,6 +5,55 @@ All notable changes to TableCraft will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## [0.2.27] - 2026-07-12
+
+### Added
+
+- Row grouping with controlled and imperative expansion APIs.
+- Static and lazy tree adapters backed by `useTreeAdapter` and `useStaticAdapter`.
+- Lazy-tree `sourceKey` lifecycle handling for safe source-switch refetches.
+- Cross-page selection and export support across paginated views.
+- Custom static-tree ID and child resolvers for arbitrary client hierarchies.
+- Toolbar placement APIs (`toolbar` and `toolbarPlacement` options).
+- Retail hierarchy demonstration and PostgreSQL integration coverage for the
+  end-to-end Hono example.
+
+### Changed
+
+- Stable lazy-tree adapter identity without unnecessary root refetches on
+  re-render.
+- Deterministic retail sorting and pagination in the integration demo.
+- Exact selected-ID validation when persisting tree selection state.
+- Improved grouping callback consistency for controlled and uncontrolled
+  group expansion.
+- Patched Next.js peer dependency floors to `>=15.5.18 <16` or `>=16.2.6`.
+
+### Fixed
+
+- Interactive cell controls no longer select or click rows on click or focus.
+- Group rows are excluded from selection and row-action handlers.
+- Stale tree requests and source-switch data are safely cancelled on unmount
+  and re-source.
+- CSV formula injection protection by prefixing dangerous cells with a tab.
+- CSV download test harness behavior aligned with the production export flow.
+- Tree URL query parameter cleanup when a tree adapter unmounts.
+- Duplicate and cyclic tree handling in the static adapter.
+
+### Security
+
+- `@tablecraft/adapter-next` now requires Next.js `>=15.5.18 <16` or
+  `>=16.2.6`, excluding releases affected by
+  [GHSA-gx5p-jg67-6x7h](https://github.com/advisories/GHSA-gx5p-jg67-6x7h) and
+  [GHSA-26hh-7cqf-hhc6](https://github.com/advisories/GHSA-26hh-7cqf-hhc6).
+- Prevented unsafe CSV formula execution by neutralizing `=`, `+`, `-`, `@`,
+  tab, and carriage-return prefixes.
+- Disabled persisted checkout credentials in the CI checkout step.
+
+See [#38](https://github.com/jacksonkasi1/TableCraft/pull/38) for the full
+release pull request.
+
 ## [0.1.1] - 2026-04-30
 
 ### Security

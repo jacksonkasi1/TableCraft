@@ -77,6 +77,50 @@ describe("createStaticAdapter — structure", () => {
 	});
 });
 
+describe("createStaticAdapter — nested ID lookup", () => {
+	it("recursively finds nested rows and ignores duplicate/cyclic references", async () => {
+		interface TreeRow extends Record<string, unknown> {
+			id: number;
+			children?: TreeRow[];
+		}
+		const child: TreeRow = { id: 2 };
+		const root: TreeRow = { id: 1, children: [child, child] };
+		child.children = [root];
+		const adapter = createStaticAdapter([root]);
+
+		const result = await adapter.queryByIds?.([2, 1], {
+			sortBy: "id",
+			sortOrder: "desc",
+		});
+		expect(result?.map((row) => row.id)).toEqual([2, 1]);
+	});
+
+	it("supports consumer-defined IDs and child containers", async () => {
+		interface CustomTreeRow extends Record<string, unknown> {
+			uuid: string;
+			label: string;
+			nodes?: CustomTreeRow[];
+		}
+		const nested: CustomTreeRow = { uuid: "child-2", label: "B" };
+		const root: CustomTreeRow = {
+			uuid: "root-1",
+			label: "A",
+			nodes: [nested, nested],
+		};
+		nested.nodes = [root];
+		const adapter = createStaticAdapter([root], {
+			getRowId: (row) => row.uuid,
+			getSubRows: (row) => row.nodes,
+		});
+
+		const result = await adapter.queryByIds?.(["child-2", "root-1"], {
+			sortBy: "label",
+			sortOrder: "desc",
+		});
+		expect(result?.map((row) => row.uuid)).toEqual(["child-2", "root-1"]);
+	});
+});
+
 describe("createStaticAdapter — pagination", () => {
 	it("returns first page with correct meta", async () => {
 		const adapter = createStaticAdapter(ITEMS);

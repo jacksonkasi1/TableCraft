@@ -27,11 +27,13 @@
   "scripts": {
     "build": "bun run --bun tsc",
     "dev": "bun run --bun tsc --watch",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "typecheck": "bun run --bun tsc --noEmit"
   },
   "peerDependencies": {
-    "@tablecraft/engine": ">=0.1.0 <1"
+    "@tablecraft/engine": ">=0.1.0 <1",
+    "@upstash/redis": "*",
+    "ioredis": "*"
   },
   "peerDependenciesMeta": {
     "ioredis": { "optional": true },

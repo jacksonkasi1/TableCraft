@@ -1,8 +1,12 @@
 import type { DataAdapter, QueryParams, QueryResult } from "../types";
 
-export interface StaticAdapterOptions {
+export interface StaticAdapterOptions<T> {
   /** Page size override (default: uses params.pageSize) */
   defaultPageSize?: number;
+  /** Resolve a row ID. Defaults to `id`, `ID`, then `_id`. */
+  getRowId?: (row: T) => string | number;
+  /** Resolve nested rows. Defaults to the `children` property. */
+  getSubRows?: (row: T) => T[] | undefined;
 }
 
 /**
@@ -21,10 +25,14 @@ export interface StaticAdapterOptions {
  */
 export function createStaticAdapter<T extends Record<string, unknown>>(
   data: T[],
-  options?: StaticAdapterOptions
+  options?: StaticAdapterOptions<T>
 ): DataAdapter<T> {
   return {
-    async query(params: QueryParams): Promise<QueryResult<T>> {
+    async query(
+      params: QueryParams,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      _options?: { signal?: AbortSignal },
+    ): Promise<QueryResult<T>> {
       let filtered = [...data];
 
       // Search
@@ -122,12 +130,53 @@ export function createStaticAdapter<T extends Record<string, unknown>>(
       };
     },
 
-    async queryByIds(ids: (string | number)[]): Promise<T[]> {
+    async queryByIds(ids, lookupOptions): Promise<T[]> {
       const idStrings = new Set(ids.map(String));
-      return data.filter((row) => {
-        const id = row.id ?? row.ID ?? row._id;
-        return id !== undefined && idStrings.has(String(id));
-      });
+      const matches: T[] = [];
+      const visited = new Set<T>();
+      const matchedIds = new Set<string>();
+      const resolveId = (row: T): string | undefined => {
+        const value = options?.getRowId
+          ? options.getRowId(row)
+          : row.id ?? row.ID ?? row._id;
+        return value === undefined || value === null ? undefined : String(value);
+      };
+      const resolveChildren = (row: T): T[] | undefined => {
+        if (options?.getSubRows) return options.getSubRows(row);
+        return Array.isArray(row.children) ? row.children as T[] : undefined;
+      };
+      const visit = (rows: T[]) => {
+        for (const row of rows) {
+          if (visited.has(row)) continue;
+          visited.add(row);
+          const normalizedId = resolveId(row);
+          if (normalizedId && idStrings.has(normalizedId) && !matchedIds.has(normalizedId)) {
+            matches.push(row);
+            matchedIds.add(normalizedId);
+          }
+          const children = resolveChildren(row);
+          if (children) visit(children);
+        }
+      };
+      visit(data);
+      if (lookupOptions?.sortBy) {
+        const sortBy = lookupOptions.sortBy;
+        const direction = lookupOptions.sortOrder === "desc" ? -1 : 1;
+        matches.sort((left, right) => {
+          const leftValue = left[sortBy];
+          const rightValue = right[sortBy];
+          if (leftValue === rightValue) {
+            return (resolveId(left) ?? "").localeCompare(resolveId(right) ?? "");
+          }
+          if (leftValue === null || leftValue === undefined) return 1;
+          if (rightValue === null || rightValue === undefined) return -1;
+          const comparison = typeof leftValue === "string" && typeof rightValue === "string"
+            ? leftValue.localeCompare(rightValue)
+            : leftValue > rightValue ? 1 : -1;
+          return comparison * direction;
+        });
+      }
+      return matches;
     },
   };
 }
