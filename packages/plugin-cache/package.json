@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/plugin-cache",
-  "version": "0.1.0-beta.6",
+  "version": "0.2.0",
   "description": "Caching plugin for TableCraft — memory, Redis, or bring your own",
   "type": "module",
   "main": "dist/index.js",
