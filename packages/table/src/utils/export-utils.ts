@@ -25,6 +25,7 @@ export function createTimezoneExportTransform<T extends ExportableData>(
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+      timeZoneName: "shortOffset",
     });
   } catch {
     throw new RangeError(`Invalid export timeZone or locale: ${timeZone}`);
