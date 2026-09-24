@@ -1,5 +1,54 @@
 import type { ExportableData, DataTransformFunction } from "../types";
 
+const UTC_TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+
+/**
+ * Creates an export transform that formats UTC timestamps in an IANA timezone.
+ * Calendar-only dates are deliberately preserved to avoid shifting their day.
+ * A supplied custom transform runs first and receives the original row.
+ */
+export function createTimezoneExportTransform<T extends ExportableData>(
+  timeZone?: string,
+  locale?: string,
+  transformFunction?: DataTransformFunction<T>,
+): DataTransformFunction<T> | undefined {
+  if (!timeZone) return transformFunction;
+
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat(locale, {
+      timeZone,
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZoneName: "shortOffset",
+    });
+  } catch {
+    throw new RangeError(`Invalid export timeZone or locale: ${timeZone}`);
+  }
+
+  return (row) => {
+    const transformedRow = transformFunction ? transformFunction(row) : row;
+
+    return Object.fromEntries(
+      Object.entries(transformedRow).map(([key, value]) => {
+        if (typeof value !== "string" || !UTC_TIMESTAMP_PATTERN.test(value)) {
+          return [key, value];
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return [key, value];
+
+        return [key, formatter.format(date)];
+      }),
+    ) as Record<string, unknown>;
+  };
+}
+
 /**
  * Neutralize CSV-formula-injection vectors. Spreadsheet apps (Excel, Sheets,
  * LibreOffice) evaluate any cell whose first character is `=`, `+`, `-`, `@`,

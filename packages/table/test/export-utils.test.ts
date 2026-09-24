@@ -9,7 +9,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { exportData, exportToCSV } from "../src/utils/export-utils";
+import {
+	createTimezoneExportTransform,
+	exportData,
+	exportToCSV,
+} from "../src/utils/export-utils";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -315,6 +319,59 @@ describe("exportToCSV — basic", () => {
 		// single trailing \n (the only unquoted row separator at the end).
 		expect(text).toBe('id,body\n1,"para one\n\npara two"\n');
 		cap.restore();
+	});
+});
+
+describe("createTimezoneExportTransform", () => {
+	it("formats UTC timestamps in the supplied timezone", () => {
+		const transform = createTimezoneExportTransform("Asia/Kolkata", "en-US");
+		const row = transform?.({ createdAt: "2026-01-01T00:00:00Z" });
+
+		expect(row?.createdAt).toContain("5:30 AM");
+		expect(row?.createdAt).toContain("GMT+5:30");
+	});
+
+	it("includes offsets that distinguish repeated daylight-saving local times", () => {
+		const transform = createTimezoneExportTransform("America/Los_Angeles", "en-US");
+		const row = transform?.({
+			beforeFallback: "2026-11-01T08:30:00Z",
+			afterFallback: "2026-11-01T09:30:00Z",
+		});
+
+		expect(row?.beforeFallback).toContain("GMT-7");
+		expect(row?.afterFallback).toContain("GMT-8");
+	});
+
+	it("preserves date-only and ordinary string values", () => {
+		const transform = createTimezoneExportTransform("Asia/Kolkata", "en-US");
+		const row = transform?.({ date: "2026-01-01", name: "Alice" });
+
+		expect(row).toEqual({ date: "2026-01-01", name: "Alice" });
+	});
+
+	it("throws before export when the timezone or locale is invalid", () => {
+		expect(() => createTimezoneExportTransform("Not/A-Timezone")).toThrow(
+			"Invalid export timeZone or locale",
+		);
+		expect(() => createTimezoneExportTransform("Asia/Kolkata", "not_a_locale")).toThrow(
+			"Invalid export timeZone or locale",
+		);
+	});
+
+	it("runs a custom transform with original timestamps before formatting", () => {
+		const rawTimestamp = "2026-01-01T00:00:00Z";
+		const transform = createTimezoneExportTransform(
+			"Asia/Kolkata",
+			"en-US",
+			(row) => ({
+				...row,
+				customTransformSaw: row.createdAt === rawTimestamp ? "raw" : "formatted",
+			}),
+		);
+		const row = transform?.({ createdAt: rawTimestamp });
+
+		expect(row?.customTransformSaw).toBe("raw");
+		expect(row?.createdAt).toContain("5:30 AM");
 	});
 });
 
