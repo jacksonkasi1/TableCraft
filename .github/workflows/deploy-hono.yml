@@ -15,14 +15,16 @@ jobs:
   deploy:
     name: Deploy App
     runs-on: ubuntu-latest
+    # Skip cleanly instead of failing every push when Fly.io is not configured.
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    if: ${{ vars.ENABLE_FLY_DEPLOY == 'true' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only --config apps/hono-example/fly.toml --dockerfile apps/hono-example/Dockerfile
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
