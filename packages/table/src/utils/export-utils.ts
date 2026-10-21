@@ -1,12 +1,27 @@
 import type { ExportableData, DataTransformFunction } from "../types";
 
-const UTC_TIMESTAMP_PATTERN =
+const ISO_TIMESTAMP_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})$/;
 
 /**
- * Creates an export transform that formats UTC timestamps in an IANA timezone.
- * Calendar-only dates are deliberately preserved to avoid shifting their day.
+ * Parse an ISO-8601 timestamp that carries an explicit offset (`Z` or `±hh:mm`).
+ * Offsets without a colon (`+0530`) are normalized first because some engines
+ * (Safari) reject them.
+ */
+function parseIsoTimestamp(value: string): Date | null {
+  if (!ISO_TIMESTAMP_PATTERN.test(value)) return null;
+  const normalized = value.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Creates an export transform that formats timestamps in an IANA timezone.
+ * ISO timestamps with an explicit offset and `Date` instances are formatted;
+ * calendar-only dates are deliberately preserved to avoid shifting their day.
  * A supplied custom transform runs first and receives the original row.
+ *
+ * @throws {RangeError} When `timeZone` or `locale` is not supported.
  */
 export function createTimezoneExportTransform<T extends ExportableData>(
   timeZone?: string,
@@ -28,7 +43,9 @@ export function createTimezoneExportTransform<T extends ExportableData>(
       timeZoneName: "shortOffset",
     });
   } catch {
-    throw new RangeError(`Invalid export timeZone or locale: ${timeZone}`);
+    throw new RangeError(
+      `Invalid export timeZone or locale: timeZone=${timeZone}, locale=${locale ?? "default"}`,
+    );
   }
 
   return (row) => {
@@ -36,14 +53,13 @@ export function createTimezoneExportTransform<T extends ExportableData>(
 
     return Object.fromEntries(
       Object.entries(transformedRow).map(([key, value]) => {
-        if (typeof value !== "string" || !UTC_TIMESTAMP_PATTERN.test(value)) {
-          return [key, value];
+        if (value instanceof Date) {
+          return [key, Number.isNaN(value.getTime()) ? value : formatter.format(value)];
         }
+        if (typeof value !== "string") return [key, value];
 
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return [key, value];
-
-        return [key, formatter.format(date)];
+        const date = parseIsoTimestamp(value);
+        return [key, date ? formatter.format(date) : value];
       }),
     ) as Record<string, unknown>;
   };
@@ -271,6 +287,10 @@ export async function exportData<T extends ExportableData>(
     columnWidths?: Array<{ wch: number }>;
     entityName?: string;
     transformFunction?: DataTransformFunction<T>;
+    /** IANA timezone used to format timestamps (see `createTimezoneExportTransform`). */
+    timeZone?: string;
+    /** Locale used with `timeZone` when formatting timestamps. */
+    locale?: string;
   }
 ): Promise<boolean> {
   try {
@@ -285,6 +305,11 @@ export async function exportData<T extends ExportableData>(
     const entityName = options?.entityName || "items";
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const filename = `${entityName}-export-${timestamp}`;
+    const transformFunction = createTimezoneExportTransform(
+      options?.timeZone,
+      options?.locale,
+      options?.transformFunction,
+    );
 
     let success = false;
     if (type === "csv") {
@@ -293,7 +318,7 @@ export async function exportData<T extends ExportableData>(
         filename,
         options?.headers,
         options?.columnMapping,
-        options?.transformFunction
+        transformFunction
       );
     } else {
       success = await exportToExcel(
@@ -302,7 +327,7 @@ export async function exportData<T extends ExportableData>(
         options?.columnMapping,
         options?.columnWidths,
         options?.headers,
-        options?.transformFunction
+        transformFunction
       );
     }
 

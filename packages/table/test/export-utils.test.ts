@@ -373,6 +373,37 @@ describe("createTimezoneExportTransform", () => {
 		expect(row?.customTransformSaw).toBe("raw");
 		expect(row?.createdAt).toContain("5:30 AM");
 	});
+
+	it("formats Date instances returned by a custom transform", () => {
+		const transform = createTimezoneExportTransform(
+			"Asia/Kolkata",
+			"en-US",
+			(row) => ({ ...row, createdAt: new Date(String(row.createdAt)) }),
+		);
+		const row = transform?.({ createdAt: "2026-01-01T00:00:00Z" });
+
+		expect(row?.createdAt).toContain("5:30 AM");
+		expect(row?.createdAt).toContain("GMT+5:30");
+	});
+
+	it("parses offsets written without a colon", () => {
+		const transform = createTimezoneExportTransform("UTC", "en-US");
+		const row = transform?.({ createdAt: "2026-01-01T05:30:00+0530" });
+
+		expect(row?.createdAt).toContain("12:00 AM");
+	});
+
+	it("reports the invalid locale in the error message", () => {
+		expect(() => createTimezoneExportTransform("Asia/Kolkata", "not_a_locale")).toThrow(
+			"locale=not_a_locale",
+		);
+	});
+
+	it("returns the custom transform unchanged when no timezone is set", () => {
+		const custom = (row: Record<string, unknown>) => row;
+		expect(createTimezoneExportTransform(undefined, "en-US", custom)).toBe(custom);
+		expect(createTimezoneExportTransform()).toBeUndefined();
+	});
 });
 
 describe("exportData — csv wrapper", () => {
@@ -427,6 +458,21 @@ describe("exportData — csv wrapper", () => {
 		});
 		expect(cap8.filenames[0]).toMatch(/^orders-export-/);
 		cap8.restore();
+	});
+
+	it("applies timeZone and locale options to timestamps", async () => {
+		const cap10 = captureDownload();
+		await exportData(
+			"csv",
+			async () => [{ id: 1, createdAt: "2026-01-01T00:00:00Z" }],
+			undefined,
+			undefined,
+			{ timeZone: "Asia/Kolkata", locale: "en-US" },
+		);
+		const text = await cap10.blobs[0].text();
+		expect(text).toContain("5:30 AM");
+		expect(text).toContain("GMT+5:30");
+		cap10.restore();
 	});
 
 	it('uses "items" as default entityName when not provided', async () => {
