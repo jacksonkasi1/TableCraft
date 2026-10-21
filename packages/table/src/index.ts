@@ -63,7 +63,12 @@ export {
 export { cn } from "./utils/cn";
 export { preprocessSearch } from "./utils/search";
 export { isDeepEqual, debounce, resetUrlState } from "./utils/deep-utils";
-export { exportToCSV, exportToExcel, exportData } from "./utils/export-utils";
+export {
+  createTimezoneExportTransform,
+  exportToCSV,
+  exportToExcel,
+  exportData,
+} from "./utils/export-utils";
 export { formatDate, validateDateString, parseDateFromUrl } from "./utils/date-format";
 export {
   extractDefaultColumnSizes,

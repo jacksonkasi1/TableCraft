@@ -86,6 +86,29 @@ const exportConfig = defineExportConfig<OrdersRow>()({
 
 ---
 
+## Timezone-Aware Timestamps (`timeZone`, `locale`)
+
+Format timestamps in a specific IANA timezone instead of exporting raw UTC strings:
+
+```tsx
+const exportConfig = defineExportConfig<OrdersRow>()({
+  entityName: 'orders',
+  timeZone: 'Asia/Kolkata',
+  locale: 'en-IN', // optional, defaults to the browser locale
+});
+// "2026-01-01T00:00:00Z" → "1 Jan 2026, 5:30:00 am GMT+5:30"
+```
+
+- Only ISO timestamps with an explicit offset (`Z`, `+05:30`, `+0530`) and `Date` values are converted.
+- Date-only values such as `2026-01-01` are left unchanged so the calendar day never shifts.
+- `transformFunction` runs first and receives the original values; timestamps it returns are then formatted.
+- A malformed `timeZone` or `locale` makes the export fail with an error toast. A well-formed but unsupported locale falls back to the runtime default.
+- Impossible dates (e.g. `2026-02-30T00:00:00Z`) are left unchanged.
+
+The same options are available on the `exportData()` helper, and `createTimezoneExportTransform()` is exported for custom export flows.
+
+---
+
 ## CSV / Excel Toggle
 
 ```tsx

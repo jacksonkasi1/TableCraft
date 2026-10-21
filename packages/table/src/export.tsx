@@ -3,7 +3,11 @@ import type { Table } from "@tanstack/react-table";
 import { DownloadIcon, Loader2, FileJson, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import type { ExportableData, DataTransformFunction, ExportConfig, TableConfig } from "./types";
-import { exportToCSV, exportToExcel } from "./utils/export-utils";
+import {
+  createTimezoneExportTransform,
+  exportToCSV,
+  exportToExcel,
+} from "./utils/export-utils";
 import { cn } from "./utils/cn";
 import {
   Popover,
@@ -114,6 +118,11 @@ export function DataTableExport<TData extends ExportableData>({
         getExportMeta();
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       const filename = `${entityName}-export-${timestamp}`;
+      const transformFunction = createTimezoneExportTransform(
+        exportConfig?.timeZone,
+        exportConfig?.locale,
+        exportConfig?.transformFunction as DataTransformFunction<ExportableData> | undefined,
+      );
 
       let success = false;
       if (type === "csv") {
@@ -122,7 +131,7 @@ export function DataTableExport<TData extends ExportableData>({
           filename,
           exportHeaders,
           exportColumnMapping,
-          exportConfig?.transformFunction as DataTransformFunction<ExportableData> | undefined
+          transformFunction,
         );
       } else {
         success = await exportToExcel(
@@ -131,7 +140,7 @@ export function DataTableExport<TData extends ExportableData>({
           exportColumnMapping,
           exportColumnWidths,
           exportHeaders,
-          exportConfig?.transformFunction as DataTransformFunction<ExportableData> | undefined
+          transformFunction,
         );
       }
 

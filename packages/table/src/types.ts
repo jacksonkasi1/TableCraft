@@ -560,6 +560,14 @@ export interface ExportConfig<T = Record<string, unknown>> {
   /** Display name used in filenames and toast messages (e.g. "orders") */
   entityName: string;
   /**
+   * IANA timezone used to format UTC timestamps in CSV and XLSX exports.
+   * Date-only values are preserved because they represent calendar dates.
+   * @example "Asia/Kolkata"
+   */
+  timeZone?: string;
+  /** Optional locale used with `timeZone` when formatting export timestamps. */
+  locale?: string;
+  /**
    * Map column keys to human-readable header names for the export file.
    * Independent from removeHeaders — you can rename any column.
    * @example { createdAt: 'Order Date', vatAmount: 'VAT (₹)' }

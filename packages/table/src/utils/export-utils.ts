@@ -1,5 +1,82 @@
 import type { ExportableData, DataTransformFunction } from "../types";
 
+const ISO_TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+
+/**
+ * Parse an ISO-8601 timestamp that carries an explicit offset (`Z` or `±hh:mm`).
+ * Offsets without a colon (`+0530`) are normalized first because some engines
+ * (Safari) reject them.
+ */
+function parseIsoTimestamp(value: string): Date | null {
+  if (!ISO_TIMESTAMP_PATTERN.test(value)) return null;
+
+  // Reject impossible calendar days (e.g. 2026-02-30) that engines would
+  // otherwise silently roll over into the next month.
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const calendarDay = new Date(Date.UTC(year, month - 1, day));
+  if (calendarDay.getUTCMonth() !== month - 1 || calendarDay.getUTCDate() !== day) {
+    return null;
+  }
+
+  const normalized = value.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Creates an export transform that formats timestamps in an IANA timezone.
+ * ISO timestamps with an explicit offset and `Date` instances are formatted;
+ * calendar-only dates are deliberately preserved to avoid shifting their day.
+ * A supplied custom transform runs first and receives the original row.
+ *
+ * @throws {RangeError} When `timeZone` or `locale` is not supported.
+ */
+export function createTimezoneExportTransform<T extends ExportableData>(
+  timeZone?: string,
+  locale?: string,
+  transformFunction?: DataTransformFunction<T>,
+): DataTransformFunction<T> | undefined {
+  if (!timeZone) return transformFunction;
+
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat(locale, {
+      timeZone,
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+      timeZoneName: "shortOffset",
+    });
+  } catch {
+    throw new RangeError(
+      `Invalid export timeZone or locale: timeZone=${timeZone}, locale=${locale ?? "default"}`,
+    );
+  }
+
+  return (row) => {
+    const transformedRow = transformFunction ? transformFunction(row) : row;
+
+    return Object.fromEntries(
+      Object.entries(transformedRow).map(([key, value]) => {
+        if (value instanceof Date) {
+          return [key, Number.isNaN(value.getTime()) ? value : formatter.format(value)];
+        }
+        if (typeof value !== "string") return [key, value];
+
+        const date = parseIsoTimestamp(value);
+        return [key, date ? formatter.format(date) : value];
+      }),
+    ) as Record<string, unknown>;
+  };
+}
+
 /**
  * Neutralize CSV-formula-injection vectors. Spreadsheet apps (Excel, Sheets,
  * LibreOffice) evaluate any cell whose first character is `=`, `+`, `-`, `@`,
@@ -222,6 +299,10 @@ export async function exportData<T extends ExportableData>(
     columnWidths?: Array<{ wch: number }>;
     entityName?: string;
     transformFunction?: DataTransformFunction<T>;
+    /** IANA timezone used to format timestamps (see `createTimezoneExportTransform`). */
+    timeZone?: string;
+    /** Locale used with `timeZone` when formatting timestamps. */
+    locale?: string;
   }
 ): Promise<boolean> {
   try {
@@ -236,6 +317,11 @@ export async function exportData<T extends ExportableData>(
     const entityName = options?.entityName || "items";
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const filename = `${entityName}-export-${timestamp}`;
+    const transformFunction = createTimezoneExportTransform(
+      options?.timeZone,
+      options?.locale,
+      options?.transformFunction,
+    );
 
     let success = false;
     if (type === "csv") {
@@ -244,7 +330,7 @@ export async function exportData<T extends ExportableData>(
         filename,
         options?.headers,
         options?.columnMapping,
-        options?.transformFunction
+        transformFunction
       );
     } else {
       success = await exportToExcel(
@@ -253,7 +339,7 @@ export async function exportData<T extends ExportableData>(
         options?.columnMapping,
         options?.columnWidths,
         options?.headers,
-        options?.transformFunction
+        transformFunction
       );
     }
 

@@ -9,7 +9,11 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { exportData, exportToCSV } from "../src/utils/export-utils";
+import {
+	createTimezoneExportTransform,
+	exportData,
+	exportToCSV,
+} from "../src/utils/export-utils";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -318,6 +322,108 @@ describe("exportToCSV — basic", () => {
 	});
 });
 
+describe("createTimezoneExportTransform", () => {
+	it("formats UTC timestamps in the supplied timezone", () => {
+		const transform = createTimezoneExportTransform("Asia/Kolkata", "en-US");
+		const row = transform?.({ createdAt: "2026-01-01T00:00:00Z" });
+
+		expect(row?.createdAt).toContain("5:30:00 AM");
+		expect(row?.createdAt).toContain("GMT+5:30");
+	});
+
+	it("includes offsets that distinguish repeated daylight-saving local times", () => {
+		const transform = createTimezoneExportTransform("America/Los_Angeles", "en-US");
+		const row = transform?.({
+			beforeFallback: "2026-11-01T08:30:00Z",
+			afterFallback: "2026-11-01T09:30:00Z",
+		});
+
+		expect(row?.beforeFallback).toContain("GMT-7");
+		expect(row?.afterFallback).toContain("GMT-8");
+	});
+
+	it("preserves date-only and ordinary string values", () => {
+		const transform = createTimezoneExportTransform("Asia/Kolkata", "en-US");
+		const row = transform?.({ date: "2026-01-01", name: "Alice" });
+
+		expect(row).toEqual({ date: "2026-01-01", name: "Alice" });
+	});
+
+	it("throws before export when the timezone or locale is invalid", () => {
+		expect(() => createTimezoneExportTransform("Not/A-Timezone")).toThrow(
+			"Invalid export timeZone or locale",
+		);
+		expect(() => createTimezoneExportTransform("Asia/Kolkata", "not_a_locale")).toThrow(
+			"Invalid export timeZone or locale",
+		);
+	});
+
+	it("runs a custom transform with original timestamps before formatting", () => {
+		const rawTimestamp = "2026-01-01T00:00:00Z";
+		const transform = createTimezoneExportTransform(
+			"Asia/Kolkata",
+			"en-US",
+			(row) => ({
+				...row,
+				customTransformSaw: row.createdAt === rawTimestamp ? "raw" : "formatted",
+			}),
+		);
+		const row = transform?.({ createdAt: rawTimestamp });
+
+		expect(row?.customTransformSaw).toBe("raw");
+		expect(row?.createdAt).toContain("5:30:00 AM");
+	});
+
+	it("formats Date instances returned by a custom transform", () => {
+		const transform = createTimezoneExportTransform(
+			"Asia/Kolkata",
+			"en-US",
+			(row) => ({ ...row, createdAt: new Date(String(row.createdAt)) }),
+		);
+		const row = transform?.({ createdAt: "2026-01-01T00:00:00Z" });
+
+		expect(row?.createdAt).toContain("5:30:00 AM");
+		expect(row?.createdAt).toContain("GMT+5:30");
+	});
+
+	it("parses offsets written without a colon", () => {
+		const transform = createTimezoneExportTransform("UTC", "en-US");
+		const row = transform?.({ createdAt: "2026-01-01T05:30:00+0530" });
+
+		expect(row?.createdAt).toContain("12:00:00 AM");
+	});
+
+	it("keeps seconds so events within the same minute stay distinct", () => {
+		const transform = createTimezoneExportTransform("UTC", "en-US");
+		const row = transform?.({
+			first: "2026-01-01T00:00:01Z",
+			last: "2026-01-01T00:00:59Z",
+		});
+
+		expect(row?.first).toContain("12:00:01 AM");
+		expect(row?.last).toContain("12:00:59 AM");
+	});
+
+	it("preserves impossible calendar dates instead of rolling them over", () => {
+		const transform = createTimezoneExportTransform("UTC", "en-US");
+		const row = transform?.({ createdAt: "2026-02-30T00:00:00Z" });
+
+		expect(row?.createdAt).toBe("2026-02-30T00:00:00Z");
+	});
+
+	it("reports the invalid locale in the error message", () => {
+		expect(() => createTimezoneExportTransform("Asia/Kolkata", "not_a_locale")).toThrow(
+			"locale=not_a_locale",
+		);
+	});
+
+	it("returns the custom transform unchanged when no timezone is set", () => {
+		const custom = (row: Record<string, unknown>) => row;
+		expect(createTimezoneExportTransform(undefined, "en-US", custom)).toBe(custom);
+		expect(createTimezoneExportTransform()).toBeUndefined();
+	});
+});
+
 describe("exportData — csv wrapper", () => {
 	let restore: () => void;
 
@@ -370,6 +476,21 @@ describe("exportData — csv wrapper", () => {
 		});
 		expect(cap8.filenames[0]).toMatch(/^orders-export-/);
 		cap8.restore();
+	});
+
+	it("applies timeZone and locale options to timestamps", async () => {
+		const cap10 = captureDownload();
+		await exportData(
+			"csv",
+			async () => [{ id: 1, createdAt: "2026-01-01T00:00:00Z" }],
+			undefined,
+			undefined,
+			{ timeZone: "Asia/Kolkata", locale: "en-US" },
+		);
+		const text = await cap10.blobs[0].text();
+		expect(text).toContain("5:30:00 AM");
+		expect(text).toContain("GMT+5:30");
+		cap10.restore();
 	});
 
 	it('uses "items" as default entityName when not provided', async () => {
