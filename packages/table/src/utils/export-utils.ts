@@ -10,6 +10,17 @@ const ISO_TIMESTAMP_PATTERN =
  */
 function parseIsoTimestamp(value: string): Date | null {
   if (!ISO_TIMESTAMP_PATTERN.test(value)) return null;
+
+  // Reject impossible calendar days (e.g. 2026-02-30) that engines would
+  // otherwise silently roll over into the next month.
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(5, 7));
+  const day = Number(value.slice(8, 10));
+  const calendarDay = new Date(Date.UTC(year, month - 1, day));
+  if (calendarDay.getUTCMonth() !== month - 1 || calendarDay.getUTCDate() !== day) {
+    return null;
+  }
+
   const normalized = value.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -39,6 +50,7 @@ export function createTimezoneExportTransform<T extends ExportableData>(
       year: "numeric",
       hour: "numeric",
       minute: "2-digit",
+      second: "2-digit",
       hour12: true,
       timeZoneName: "shortOffset",
     });

@@ -327,7 +327,7 @@ describe("createTimezoneExportTransform", () => {
 		const transform = createTimezoneExportTransform("Asia/Kolkata", "en-US");
 		const row = transform?.({ createdAt: "2026-01-01T00:00:00Z" });
 
-		expect(row?.createdAt).toContain("5:30 AM");
+		expect(row?.createdAt).toContain("5:30:00 AM");
 		expect(row?.createdAt).toContain("GMT+5:30");
 	});
 
@@ -371,7 +371,7 @@ describe("createTimezoneExportTransform", () => {
 		const row = transform?.({ createdAt: rawTimestamp });
 
 		expect(row?.customTransformSaw).toBe("raw");
-		expect(row?.createdAt).toContain("5:30 AM");
+		expect(row?.createdAt).toContain("5:30:00 AM");
 	});
 
 	it("formats Date instances returned by a custom transform", () => {
@@ -382,7 +382,7 @@ describe("createTimezoneExportTransform", () => {
 		);
 		const row = transform?.({ createdAt: "2026-01-01T00:00:00Z" });
 
-		expect(row?.createdAt).toContain("5:30 AM");
+		expect(row?.createdAt).toContain("5:30:00 AM");
 		expect(row?.createdAt).toContain("GMT+5:30");
 	});
 
@@ -390,7 +390,25 @@ describe("createTimezoneExportTransform", () => {
 		const transform = createTimezoneExportTransform("UTC", "en-US");
 		const row = transform?.({ createdAt: "2026-01-01T05:30:00+0530" });
 
-		expect(row?.createdAt).toContain("12:00 AM");
+		expect(row?.createdAt).toContain("12:00:00 AM");
+	});
+
+	it("keeps seconds so events within the same minute stay distinct", () => {
+		const transform = createTimezoneExportTransform("UTC", "en-US");
+		const row = transform?.({
+			first: "2026-01-01T00:00:01Z",
+			last: "2026-01-01T00:00:59Z",
+		});
+
+		expect(row?.first).toContain("12:00:01 AM");
+		expect(row?.last).toContain("12:00:59 AM");
+	});
+
+	it("preserves impossible calendar dates instead of rolling them over", () => {
+		const transform = createTimezoneExportTransform("UTC", "en-US");
+		const row = transform?.({ createdAt: "2026-02-30T00:00:00Z" });
+
+		expect(row?.createdAt).toBe("2026-02-30T00:00:00Z");
 	});
 
 	it("reports the invalid locale in the error message", () => {
@@ -470,7 +488,7 @@ describe("exportData — csv wrapper", () => {
 			{ timeZone: "Asia/Kolkata", locale: "en-US" },
 		);
 		const text = await cap10.blobs[0].text();
-		expect(text).toContain("5:30 AM");
+		expect(text).toContain("5:30:00 AM");
 		expect(text).toContain("GMT+5:30");
 		cap10.restore();
 	});
