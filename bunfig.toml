@@ -1,4 +1,0 @@
-[install]
-# Keep the hoisted node_modules layout the workspace packages rely on for
-# shared type definitions (Bun 1.3 defaults fresh lockfiles to "isolated").
-linker = "hoisted"
