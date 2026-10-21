@@ -31,7 +31,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^25.2.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   },
   "keywords": [
     "tablecraft",

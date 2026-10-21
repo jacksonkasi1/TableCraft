@@ -30,7 +30,7 @@
     "@tablecraft/engine": "workspace:*",
     "hono": "^4.12.18",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.11"
   },
   "keywords": [
     "tablecraft",

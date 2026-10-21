@@ -15,9 +15,13 @@ jobs:
   deploy:
     name: Deploy App
     runs-on: ubuntu-latest
+    # Skip cleanly instead of failing every push when Fly.io is not configured.
+    if: ${{ vars.ENABLE_FLY_DEPLOY == 'true' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
 
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
