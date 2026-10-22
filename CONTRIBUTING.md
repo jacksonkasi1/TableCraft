@@ -26,7 +26,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 ### Prerequisites
 
 - [Bun](https://bun.sh/) >= 1.0.0
-- Node.js >= 18 (for compatibility)
+- Node.js >= 24.15 (or >= 22.22) for the dev tooling (Vitest, jsdom, tsup, SvelteKit)
 - Git
 
 ### Getting Started

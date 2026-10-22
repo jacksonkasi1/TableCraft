@@ -306,6 +306,17 @@ describe('@tablecraft/adapter-sveltekit', () => {
     expect(apiResponse.status).toBe(200);
     expect(usersEngine.query).toHaveBeenCalledOnce();
     expect(resolve).not.toHaveBeenCalled();
+
+    // SvelteKit counts the trailing slash as a segment ('../../'), matching URL resolution
+    mockState.resolvedRoot = '../../';
+    const slashResponse = await handle({
+      event: createEvent('https://example.test/myapp/api/users/'),
+      resolve,
+    } as any);
+
+    expect(slashResponse.status).toBe(200);
+    expect(usersEngine.query).toHaveBeenCalledTimes(2);
+    expect(resolve).not.toHaveBeenCalled();
   });
 
   it('does not strip base path if it is a prefix of another folder', async () => {

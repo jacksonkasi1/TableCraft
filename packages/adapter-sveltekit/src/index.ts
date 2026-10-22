@@ -24,7 +24,7 @@ import {
  */
 export type Handle = (input: {
   event: RequestEvent;
-  resolve: (event: RequestEvent) => Promise<Response>;
+  resolve: (event: RequestEvent) => Response | Promise<Response>;
 }) => Promise<Response>;
 
 /**
