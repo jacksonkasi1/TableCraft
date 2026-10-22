@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [0.2.28] - 2026-10-22
+
+Also releases `@tablecraft/adapter-sveltekit` 0.3.0.
+
+### Added
+
+- Timezone-aware CSV and XLSX exports via `timeZone` and `locale` on export
+  config and `exportData()`, plus `createTimezoneExportTransform`.
+- `@tablecraft/adapter-sveltekit`: SvelteKit 3 support (SvelteKit 2.57.1+ still
+  supported) and an exported `Handle` type.
+
+### Changed
+
+- `react-day-picker` dependency upgraded to v10.
+- Dev tooling upgraded to the latest majors: TypeScript 7 (TypeScript 6 for
+  tools that need the compiler API), Vitest 5, Vite 8, ESLint 10, jsdom 30,
+  tsup 9 and SvelteKit 3 in the examples. Local development needs Node.js
+  24.15+ (or 22.22+).
+
+### Fixed
+
+- `@tablecraft/adapter-sveltekit` no longer imports `base` from `$app/paths`,
+  which SvelteKit 3 removed; the base path is now derived from `resolve()`.
+
 ## [0.2.27] - 2026-07-12
 
 ### Added
