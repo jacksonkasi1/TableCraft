@@ -25,7 +25,7 @@ const {
     defaultCheckAccess: vi.fn(),
     getExportMeta: vi.fn(),
     MockTableCraftError,
-    mockState: { base: '' }
+    mockState: { base: '', resolvedRoot: undefined as string | undefined }
   };
 });
 
@@ -38,8 +38,10 @@ vi.mock('@tablecraft/engine', () => ({
   TableCraftError: MockTableCraftError,
 }));
 
+// Emulates SvelteKit's `resolve('/')`: absolute `${base}/` by default, or a
+// path relative to the current URL when `paths.relative` is in effect.
 vi.mock('$app/paths', () => ({
-  get base() { return mockState.base; }
+  resolve: () => mockState.resolvedRoot ?? `${mockState.base}/`,
 }));
 
 import {
@@ -62,6 +64,7 @@ describe('@tablecraft/adapter-sveltekit', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockState.base = '';
+    mockState.resolvedRoot = undefined;
     parseRequest.mockReturnValue({ page: 1 });
     defaultCheckAccess.mockReturnValue(true);
     getExportMeta.mockReturnValue({
@@ -267,6 +270,52 @@ describe('@tablecraft/adapter-sveltekit', () => {
       data: [{ id: 8 }],
       meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
     });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('strips base path when resolve returns a relative path', async () => {
+    mockState.resolvedRoot = '../';
+
+    const usersEngine = {
+      getConfig: vi.fn(() => ({ name: 'users' })),
+      query: vi.fn(async () => ({
+        data: [{ id: 8 }],
+        meta: { total: 1, page: 1, pageSize: 10, totalPages: 1 },
+      })),
+      exportData: vi.fn(),
+      getMetadata: vi.fn(),
+    };
+
+    createEngines.mockReturnValue({ users: usersEngine });
+
+    const handle = createSvelteKitHandle({
+      db: {},
+      schema: {},
+      configs: [],
+      prefix: '/api',
+    });
+
+    const resolve = vi.fn(async () => new Response('resolved', { status: 200 }));
+
+    // '../' resolved against /myapp/api/users gives the base path /myapp/
+    const apiResponse = await handle({
+      event: createEvent('https://example.test/myapp/api/users'),
+      resolve,
+    } as any);
+
+    expect(apiResponse.status).toBe(200);
+    expect(usersEngine.query).toHaveBeenCalledOnce();
+    expect(resolve).not.toHaveBeenCalled();
+
+    // SvelteKit counts the trailing slash as a segment ('../../'), matching URL resolution
+    mockState.resolvedRoot = '../../';
+    const slashResponse = await handle({
+      event: createEvent('https://example.test/myapp/api/users/'),
+      resolve,
+    } as any);
+
+    expect(slashResponse.status).toBe(200);
+    expect(usersEngine.query).toHaveBeenCalledTimes(2);
     expect(resolve).not.toHaveBeenCalled();
   });
 

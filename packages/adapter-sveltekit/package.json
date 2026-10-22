@@ -1,6 +1,6 @@
 {
   "name": "@tablecraft/adapter-sveltekit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "SvelteKit adapter for TableCraft",
   "type": "module",
   "main": "dist/index.js",
@@ -28,9 +28,9 @@
   },
   "devDependencies": {
     "@tablecraft/engine": "workspace:*",
-    "@types/node": "^25.2.2",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   },
   "keywords": [
     "tablecraft",

@@ -1,3 +1,3 @@
 declare module '$app/paths' {
-  export const base: string;
+  export function resolve(id: string): string;
 }

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -16,21 +19,21 @@
     "test:integration": "vitest run test-api.test.ts"
   },
   "devDependencies": {
-    "@sveltejs/adapter-auto": "^7.0.1",
-    "@sveltejs/kit": "^2.60.1",
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "svelte": "^5.55.7",
+    "@sveltejs/adapter-auto": "^8.0.0",
+    "@sveltejs/kit": "^3.1.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte": "^5.57.1",
     "svelte-check": "^4.1.4",
-    "typescript": "^5.9.3",
-    "vite": "^6.4.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5",
     "drizzle-kit": "^0.31.10",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.5"
   },
   "dependencies": {
     "@tablecraft/engine": "workspace:*",
     "@tablecraft/adapter-sveltekit": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.9",
-    "dotenv": "^17.4.2"
+    "dotenv": "^18.0.8"
   }
 }
