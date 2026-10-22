@@ -13,14 +13,14 @@ export function useDebouncedUrlNumber(key: string, defaultValue: number = 0, del
     return () => clearTimeout(handler);
   }, [localValue, setUrlValue, delayMs]);
 
-  // Sync URL -> local (when URL changes externally)
-  useEffect(() => {
-    const currentNum = Number(localValue) || 0;
-    if (currentNum !== urlValue) {
+  // Sync URL -> local (when URL changes externally), adjusted during render
+  const [prevUrlValue, setPrevUrlValue] = useState(urlValue);
+  if (urlValue !== prevUrlValue) {
+    setPrevUrlValue(urlValue);
+    if ((Number(localValue) || 0) !== urlValue) {
       setLocalValue(urlValue > 0 ? String(urlValue) : '');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlValue]); // localValue intentionally omitted to prevent loops
+  }
 
   return [urlValue, localValue, setLocalValue] as const;
 }

@@ -27,10 +27,11 @@
     "hono": ">=4.12.18"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@tablecraft/engine": "workspace:*",
     "hono": "^4.12.18",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   },
   "keywords": [
     "tablecraft",

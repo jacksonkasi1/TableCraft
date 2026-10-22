@@ -29,8 +29,8 @@
   "devDependencies": {
     "@tablecraft/engine": "workspace:*",
     "elysia": "^1.4.28",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   },
   "keywords": [
     "tablecraft",

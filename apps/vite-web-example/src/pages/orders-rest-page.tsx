@@ -146,7 +146,7 @@ async function fetchOrders(
 	try {
 		res = await fetch(url.toString());
 	} catch (err) {
-		throw new Error(`Network error: unable to fetch orders. ${err}`);
+		throw new Error(`Network error: unable to fetch orders. ${err}`, { cause: err });
 	}
 	if (!res.ok) {
 		const text = await res.text().catch(() => "");

@@ -1,9 +1,9 @@
-import type { Handle } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit/hooks';
 import { sequence } from '@sveltejs/kit/hooks';
 import { createSvelteKitHandle } from '@tablecraft/adapter-sveltekit';
-import { db } from '$lib/server/db';
-import * as schema from '$lib/server/db/schema';
-import { configs } from '$lib/server/tablecraft.config';
+import { db } from '#lib/server/db/index.js';
+import * as schema from '#lib/server/db/schema.js';
+import { configs } from '#lib/server/tablecraft.config.js';
 
 const authHandle: Handle = async ({ event, resolve }) => {
 	// Simulate basic authentication

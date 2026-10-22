@@ -1,8 +1,8 @@
 // ** import types
-import type { Handle, RequestEvent, RequestHandler } from '@sveltejs/kit';
+import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
 
 // ** import core packages
-import { base } from '$app/paths';
+import { resolve as resolvePath } from '$app/paths';
 
 // ** import apis
 import {
@@ -16,6 +16,16 @@ import {
   EngineContext,
   TableCraftError,
 } from '@tablecraft/engine';
+
+/**
+ * SvelteKit `handle` hook signature. Declared locally because SvelteKit 3 moved
+ * `Handle` from `@sveltejs/kit` to `@sveltejs/kit/hooks`; this shape is
+ * assignable to the `Handle` type of both SvelteKit 2 and 3.
+ */
+export type Handle = (input: {
+  event: RequestEvent;
+  resolve: (event: RequestEvent) => Promise<Response>;
+}) => Promise<Response>;
 
 /**
  * Options for configuring SvelteKit route-based handlers.
@@ -198,14 +208,27 @@ async function hasTableAccess(
 }
 
 /**
- * Strips the configured prefix from a pathname, returning the remaining segment.
+ * Returns SvelteKit's configured base path (e.g. '/myapp', or '' when unset).
+ * `base` was removed from `$app/paths` in SvelteKit 3, so it is derived from
+ * `resolve('/')`, which exists in SvelteKit 2 and 3. During a request `resolve`
+ * may return a path relative to the current URL, so it is resolved against it.
+ * @param url - The current request URL
+ * @returns The base path without a trailing slash
+ */
+function getBasePath(url: URL): string {
+  return new URL(resolvePath('/'), url).pathname.replace(/\/$/, '');
+}
+
+/**
+ * Strips the configured prefix from a URL's pathname, returning the remaining segment.
  * If running inside SvelteKit, attempts to strip the base path if configured.
- * @param pathname - The full URL pathname
+ * @param url - The request URL
  * @param prefix - The normalized prefix string
  * @returns The remaining path segment (e.g., 'table/_meta') or null if it doesn't match the prefix
  */
-function stripPrefix(pathname: string, prefix: string): string | null {
-  let cleanPathname = pathname;
+function stripPrefix(url: URL, prefix: string): string | null {
+  const base = getBasePath(url);
+  let cleanPathname = url.pathname;
   if (base && cleanPathname.startsWith(base)) {
     const nextChar = cleanPathname[base.length];
     if (nextChar === undefined || nextChar === '/') {
@@ -526,7 +549,7 @@ export function createSvelteKitHandle(
   const prefix = normalizePathPrefix(options.prefix ?? DEFAULT_PREFIX);
 
   return async ({ event, resolve }) => {
-    let rawTableParam = stripPrefix(event.url.pathname, prefix);
+    let rawTableParam = stripPrefix(event.url, prefix);
 
     if (rawTableParam === null) {
       return resolve(event);

@@ -28,10 +28,11 @@
     "yargs": "^18.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.5",
     "@types/yargs": "^17.0.32",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "tsup": "^9.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
   },
   "keywords": [
     "tablecraft",
