@@ -7,8 +7,8 @@ import {
   asc,
   desc,
 } from 'drizzle-orm';
-import { IncludeConfig, TableConfig } from '../types/table';
-import { applyOperator } from '../utils/operators';
+import { IncludeConfig, TableConfig } from '../types/table.js';
+import { applyOperator } from '../utils/operators.js';
 
 export class RelationBuilder {
   constructor(private schema: Record<string, unknown>) {}

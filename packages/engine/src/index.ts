@@ -1,47 +1,47 @@
 // Types
-export * from './types/table';
-export * from './types/engine';
+export * from './types/table.js';
+export * from './types/engine.js';
 
 // Errors
-export * from './errors';
+export * from './errors.js';
 
 // Main API
-export { defineTable, TableDefinitionBuilder } from './define';
-export type { QuickOptions, RuntimeExtensions } from './define';
+export { defineTable, TableDefinitionBuilder } from './define.js';
+export type { QuickOptions, RuntimeExtensions } from './define.js';
 
 // Engine factory
-export { createTableEngine, createEngines } from './engine';
-export type { ConfigInput } from './engine';
+export { createTableEngine, createEngines } from './engine.js';
+export type { ConfigInput } from './engine.js';
 
 // Core builders
-export * from './core/validator';
-export * from './core/inputValidator';
-export * from './core/queryBuilder';
-export * from './core/filterBuilder';
-export * from './core/filterGroupBuilder';
-export * from './core/searchBuilder';
-export * from './core/sortBuilder';
-export * from './core/paginationBuilder';
-export * from './core/cursorPagination';
-export * from './core/aggregationBuilder';
-export * from './core/subqueryBuilder';
-export * from './core/softDelete';
-export * from './core/groupByBuilder';
-export * from './core/relationBuilder';
-export * from './core/recursiveBuilder';
-export * from './core/fieldSelector';
-export * from './core/dialect';
-export * from './core/datePresets';
-export * from './core/metadataBuilder';
-export * from './core/roleFilter';
+export * from './core/validator.js';
+export * from './core/inputValidator.js';
+export * from './core/queryBuilder.js';
+export * from './core/filterBuilder.js';
+export * from './core/filterGroupBuilder.js';
+export * from './core/searchBuilder.js';
+export * from './core/sortBuilder.js';
+export * from './core/paginationBuilder.js';
+export * from './core/cursorPagination.js';
+export * from './core/aggregationBuilder.js';
+export * from './core/subqueryBuilder.js';
+export * from './core/softDelete.js';
+export * from './core/groupByBuilder.js';
+export * from './core/relationBuilder.js';
+export * from './core/recursiveBuilder.js';
+export * from './core/fieldSelector.js';
+export * from './core/dialect.js';
+export * from './core/datePresets.js';
+export * from './core/metadataBuilder.js';
+export * from './core/roleFilter.js';
 
 // Utilities
-export * from './utils/operators';
-export * from './utils/requestParser';
-export * from './utils/responseFormatter';
-export * from './utils/export';
-export * from './utils/codegen';
-export * from './utils/openapi';
-export * from './utils/adapterUtils';
-export * from './utils/introspect';
-export * from './utils/typedSql';
+export * from './utils/operators.js';
+export * from './utils/requestParser.js';
+export * from './utils/responseFormatter.js';
+export * from './utils/export.js';
+export * from './utils/codegen.js';
+export * from './utils/openapi.js';
+export * from './utils/adapterUtils.js';
+export * from './utils/introspect.js';
+export * from './utils/typedSql.js';

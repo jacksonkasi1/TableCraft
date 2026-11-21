@@ -1,7 +1,7 @@
 "use client";
 
 // ** import types
-import type { Table, Column } from "@tanstack/react-table";
+import type { Table, Column } from "@tanstack/react-table-v8";
 
 // ** import core packages
 import { useCallback, useState } from "react";

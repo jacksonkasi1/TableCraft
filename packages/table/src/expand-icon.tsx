@@ -1,4 +1,4 @@
-import type { Row } from "@tanstack/react-table";
+import type { Row } from "@tanstack/react-table-v8";
 import { ChevronRight } from "lucide-react";
 import { cn } from "./utils/cn";
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table-v8";
 import type { DataAdapter, TableMetadata, CellRenderer } from "../types";
 import { generateColumns } from "./auto-columns";
 

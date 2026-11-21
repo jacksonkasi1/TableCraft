@@ -1,5 +1,5 @@
-import { TableConfig } from '../types/table';
-import { EngineMeta } from '../types/engine';
+import { TableConfig } from '../types/table.js';
+import { EngineMeta } from '../types/engine.js';
 
 export interface PaginationResult {
   limit: number;

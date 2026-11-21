@@ -8,7 +8,7 @@ import {
   min,
   max,
 } from 'drizzle-orm';
-import { TableConfig } from '../types/table';
+import { TableConfig } from '../types/table.js';
 
 export class AggregationBuilder {
   constructor(private schema: Record<string, unknown>) {}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ColumnSizingState } from "@tanstack/react-table";
+import type { ColumnSizingState } from "@tanstack/react-table-v8";
 
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);

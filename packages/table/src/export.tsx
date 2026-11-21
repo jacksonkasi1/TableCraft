@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table-v8";
 import { DownloadIcon, Loader2, FileJson, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import type { ExportableData, DataTransformFunction, ExportConfig, TableConfig } from "./types";

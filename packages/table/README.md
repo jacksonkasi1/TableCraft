@@ -22,7 +22,36 @@ pnpm add @tablecraft/table
 ## Peer Dependencies
 
 ```bash
-bun add @tanstack/react-table react react-dom
+bun add @tanstack/react-table@^8 react react-dom
+```
+
+The default `@tablecraft/table` import continues to use TanStack Table v8.
+
+### TanStack Table v9
+
+Use `@tanstack/react-table` 9.3.1 or later in the v9 series, then import
+`DataTable` from `@tablecraft/table/v9`. The v9 entry point uses TanStack’s
+`useLegacyTable` adapter and exports its `ColumnDef` type for manual columns.
+The other TableCraft props, data adapters, and CSS import stay the same.
+See the [TanStack compatibility guide](https://github.com/jacksonkasi1/TableCraft/blob/main/docs/tanstack-compatibility.md)
+for supported versions and migration details.
+
+```sh
+bun add @tablecraft/table @tanstack/react-table@^9.3.1 react react-dom
+```
+
+```tsx
+import { createStaticAdapter } from "@tablecraft/table";
+import { DataTable, type ColumnDef } from "@tablecraft/table/v9";
+
+type User = { id: string; name: string };
+
+const columns: ColumnDef<User>[] = [{ accessorKey: "name", header: "Name" }];
+const adapter = createStaticAdapter<User>([{ id: "1", name: "Erkka" }]);
+
+export function UsersTable() {
+  return <DataTable adapter={adapter} columns={columns} />;
+}
 ```
 
 ## Optional Dependencies

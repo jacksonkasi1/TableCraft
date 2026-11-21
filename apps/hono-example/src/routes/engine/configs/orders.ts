@@ -7,7 +7,7 @@ export const orders = defineTable(s.orders)
   .as('orders')
   // Join with Users
   .join(s.users, {
-    on: 'orders.user_id = users.id',
+    on: 'orders.user_id = customer.id',
     alias: 'customer',
     columns: ['email', 'role'] // Only select these from joined table
   })

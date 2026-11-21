@@ -82,14 +82,22 @@ If you join the same table twice (e.g., `creator` and `assignee` are both Users)
 .join(users, {
   alias: 'creator',
   on: 'tasks.creator_id = creator.id',
-  columns: ['name'],
 })
 .join(users, {
   alias: 'assignee',
   on: 'tasks.assignee_id = assignee.id',
-  columns: ['name'],
 })
 ```
+
+Use the alias in the ON condition. For a typed Drizzle ON condition, reference a Drizzle table
+created with the same alias. If an existing aliased join refers to the original table name
+in its ON condition, update that reference to the alias. For example, with
+`alias: 'customer'`, use `orders.user_id = customer.id`.
+
+To select the same column from both joins, give the result fields
+distinct names in your table config, such as `{ name: 'creatorName', field: 'creator.name',
+type: 'string' }` and `{ name: 'assigneeName', field: 'assignee.name', type: 'string' }`.
+
 {% endtab %}
 
 {% tab title="Complex Conditions" %}

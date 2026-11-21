@@ -1,4 +1,4 @@
-import { Operator, TableConfig } from './table';
+import { Operator, TableConfig } from './table.js';
 
 // --- Request Params ---
 
@@ -86,7 +86,7 @@ export interface QueryDebugInfo {
   timestamp: number;
 }
 
-import { TableMetadata } from '../core/metadataBuilder';
+import { TableMetadata } from '../core/metadataBuilder.js';
 
 // --- Count Mode ---
 

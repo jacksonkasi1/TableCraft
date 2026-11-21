@@ -4,7 +4,7 @@ import {
   getTableColumns,
   isNull,
 } from 'drizzle-orm';
-import { TableConfig } from '../types/table';
+import { TableConfig } from '../types/table.js';
 
 export class SoftDeleteHandler {
   constructor(private schema: Record<string, unknown>) {}

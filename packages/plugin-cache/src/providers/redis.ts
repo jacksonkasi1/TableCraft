@@ -1,4 +1,4 @@
-import type { CacheProvider } from '../types';
+import type { CacheProvider } from '../types.js';
 
 /**
  * Redis cache provider using ioredis.

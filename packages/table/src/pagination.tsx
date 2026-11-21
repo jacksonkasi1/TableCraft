@@ -4,7 +4,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
-import type { Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table-v8";
 import { cn } from "./utils/cn";
 import {
   Select,

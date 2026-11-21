@@ -1,5 +1,8 @@
-import { TableConfigSchema, TableConfig } from '../types/table';
+import { TableConfigSchema, TableConfig } from '../types/table.js';
 import { getTableColumns, Table } from 'drizzle-orm';
+
+// ** import utils
+import { findJoin } from '../utils/joinUtils.js';
 
 /**
  * Validates a raw configuration object against the Zod schema.
@@ -50,7 +53,8 @@ export function validateAgainstSchema(
         // Handle joined columns "table.column"
         if (dbField.includes('.')) {
           const [tableName, colName] = dbField.split('.');
-          const joinedTable = drizzleSchema[tableName] as Table;
+          const join = findJoin(config.joins ?? [], tableName);
+          const joinedTable = drizzleSchema[join?.table ?? tableName] as Table;
           
           if (!joinedTable) {
              throw new Error(`Table '${tableName}' referenced in column '${col.name}' not found in schema.`);

@@ -1,4 +1,4 @@
-import { TableConfig } from '../types/table';
+import { TableConfig } from '../types/table.js';
 
 /**
  * Generates an OpenAPI 3.0 spec object from a TableConfig.

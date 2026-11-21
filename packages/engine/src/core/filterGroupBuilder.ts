@@ -6,8 +6,8 @@ import {
   and,
   or,
 } from 'drizzle-orm';
-import { FilterExpression, FilterCondition, TableConfig } from '../types/table';
-import { applyOperator } from '../utils/operators';
+import { FilterExpression, FilterCondition, TableConfig } from '../types/table.js';
+import { applyOperator } from '../utils/operators.js';
 
 export class FilterGroupBuilder {
   constructor(private schema: Record<string, unknown>) {}

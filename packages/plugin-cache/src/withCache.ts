@@ -1,6 +1,6 @@
 import type { TableEngine, EngineParams, EngineContext, EngineResult, GroupedResult, QueryDebugInfo, TableMetadata } from '@tablecraft/engine';
-import type { CacheOptions, CacheProvider } from './types';
-import { memoryProvider } from './providers/memory';
+import type { CacheOptions, CacheProvider } from './types.js';
+import { memoryProvider } from './providers/memory.js';
 
 /**
  * Default cache key builder.

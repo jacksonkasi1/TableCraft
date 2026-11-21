@@ -1,5 +1,5 @@
-import { TableConfig } from '../types/table';
-import { EngineContext } from '../types/engine';
+import { TableConfig } from '../types/table.js';
+import { EngineContext } from '../types/engine.js';
 
 /**
  * Checks if the requesting user has access based on config roles/permissions.

@@ -1,5 +1,5 @@
-import { EngineParams, FilterParam, SortParam } from '../types/engine';
-import { Operator, OperatorSchema } from '../types/table';
+import { EngineParams, FilterParam, SortParam } from '../types/engine.js';
+import { Operator, OperatorSchema } from '../types/table.js';
 
 // ── Operator shape contracts ────────────────────────────────────────────────
 // These sets are the single source of truth for which operators expect which

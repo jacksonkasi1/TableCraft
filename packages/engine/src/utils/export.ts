@@ -1,4 +1,4 @@
-import { TableConfig } from '../types/table';
+import { TableConfig } from '../types/table.js';
 
 /**
  * Converts an array of data rows to a CSV string.

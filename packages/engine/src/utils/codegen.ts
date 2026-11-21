@@ -1,4 +1,4 @@
-import { TableConfig } from '../types/table';
+import { TableConfig } from '../types/table.js';
 
 /**
  * Generates a standalone Drizzle TypeScript query file from a TableConfig.

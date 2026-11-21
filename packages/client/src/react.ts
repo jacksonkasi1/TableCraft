@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { TableClient, QueryParams, QueryResult, TableMetadata } from './types';
+import type { TableClient, QueryParams, QueryResult, TableMetadata } from './types.js';
 
 /**
  * React hook for fetching table data.

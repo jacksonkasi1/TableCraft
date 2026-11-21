@@ -1,7 +1,7 @@
-import { TableConfig, ColumnConfig } from '../types/table';
-import { EngineParams, FilterParam } from '../types/engine';
-import { ValidationError, FieldError } from '../errors';
-import { collectSortableJoinFields, collectSelectableJoinFields } from '../utils/joinUtils';
+import { TableConfig, ColumnConfig } from '../types/table.js';
+import { EngineParams, FilterParam } from '../types/engine.js';
+import { ValidationError, FieldError } from '../errors.js';
+import { collectSortableJoinFields, collectSelectableJoinFields } from '../utils/joinUtils.js';
 
 /**
  * Validates request params against the table config BEFORE hitting the database.

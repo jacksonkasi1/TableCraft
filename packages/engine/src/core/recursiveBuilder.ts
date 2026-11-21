@@ -5,8 +5,8 @@ import {
   getTableColumns,
   getTableName,
 } from 'drizzle-orm';
-import { TableConfig } from '../types/table';
-import { applyOperator } from '../utils/operators';
+import { TableConfig } from '../types/table.js';
+import { applyOperator } from '../utils/operators.js';
 
 export class RecursiveBuilder {
   constructor(private schema: Record<string, unknown>) {}

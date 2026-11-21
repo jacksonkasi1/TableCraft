@@ -4,7 +4,7 @@ import {
   getTableColumns,
   getTableName,
 } from 'drizzle-orm';
-import { TableConfig, ColumnConfig } from '../types/table';
+import { TableConfig, ColumnConfig } from '../types/table.js';
 
 /**
  * Maps a Drizzle column's internal dataType/columnType to our simplified type system.
