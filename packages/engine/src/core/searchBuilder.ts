@@ -90,7 +90,9 @@ export class SearchBuilder {
     if (fieldName.includes('.')) {
       const [tableName, colName] = fieldName.split('.');
       const join = findJoin(config.joins ?? [], tableName);
-      const joinedTable = join ? getJoinTable(this.schema, join) : this.schema[tableName] as Table;
+      const joinedTable = join
+        ? getJoinTable(this.schema, join)
+        : (this.schema[tableName] as Table | undefined);
       if (!joinedTable) return undefined;
       const cols = getTableColumns(joinedTable);
       return cols[colName];

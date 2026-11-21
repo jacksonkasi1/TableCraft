@@ -32,7 +32,9 @@ export class QueryBuilder {
         // Joined column: "table.column"
         const [tableName, colName] = dbField.split('.');
         const join = findJoin(config.joins ?? [], tableName);
-        const joinedTable = join ? getJoinTable(this.schema, join) : this.schema[tableName] as Table;
+        const joinedTable = join
+          ? getJoinTable(this.schema, join)
+          : (this.schema[tableName] as Table | undefined);
         if (joinedTable) {
           col = getTableColumns(joinedTable)[colName];
         }

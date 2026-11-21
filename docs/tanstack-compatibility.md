@@ -54,6 +54,9 @@ use the same CSS import, `@tablecraft/table/styles.css`.
 
 The v9 entry point runs TanStack v9 through `useLegacyTable`. TanStack marks that hook
 deprecated and loads all table features through it. This can increase bundle size compared
-with a native v9 setup that selects its features. The v8 entry point does not load the v9 hook.
-Check the [TanStack v9 migration guide](https://tanstack.com/table/latest/docs/framework/react/guide/migrating)
+with a native v9 setup that selects its features. In the same minimal Vite app, the main
+JavaScript bundle was about 201 kB gzipped on the v8 entry point and 221 kB on v9.
+The v8 entry point does not load the v9 hook. See the [TanStack v9 migration guide][migration]
 for changes to custom column and table APIs.
+
+[migration]: https://tanstack.com/table/latest/docs/framework/react/guide/migrating

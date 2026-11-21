@@ -143,7 +143,7 @@ const nestedJoinConfig: TableConfig = {
           table: 'tenants',
           alias: 'tenant',
           type: 'left',
-          on: 'customer.tenant_id = tenants.id',
+          on: 'customer.tenant_id = tenant.id',
           columns: [
             { name: 'plan', type: 'string', filterable: true, hidden: false, sortable: true },
             { name: 'active', type: 'boolean', filterable: true, hidden: false, sortable: true },

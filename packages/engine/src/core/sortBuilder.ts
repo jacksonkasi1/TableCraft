@@ -70,7 +70,9 @@ export class SortBuilder {
       if (dbFieldName.includes('.')) {
         const [tableName, colName] = dbFieldName.split('.');
         const join = findJoin(config.joins ?? [], tableName);
-        const joinedTable = join ? getJoinTable(this.schema, join) : this.schema[tableName] as Table;
+        const joinedTable = join
+          ? getJoinTable(this.schema, join)
+          : (this.schema[tableName] as Table | undefined);
         if (joinedTable) {
           col = getTableColumns(joinedTable)[colName];
         }

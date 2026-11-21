@@ -33,8 +33,10 @@ Use `@tanstack/react-table` 9.3.1 or later in the v9 series, then import
 `DataTable` from `@tablecraft/table/v9`. The v9 entry point uses TanStack’s
 `useLegacyTable` adapter and exports its `ColumnDef` type for manual columns.
 The other TableCraft props, data adapters, and CSS import stay the same.
-See the [TanStack compatibility guide](https://github.com/jacksonkasi1/TableCraft/blob/main/docs/tanstack-compatibility.md)
-for supported versions and migration details.
+See the [TanStack compatibility guide][guide] for supported versions and
+migration details.
+
+[guide]: https://github.com/jacksonkasi1/TableCraft/blob/main/docs/tanstack-compatibility.md
 
 ```sh
 bun add @tablecraft/table @tanstack/react-table@^9.3.1 react react-dom

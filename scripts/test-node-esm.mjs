@@ -15,4 +15,6 @@ assert.equal(typeof memoryProvider, 'function');
 assert.equal(typeof redisProvider, 'function');
 assert.equal(typeof upstashProvider, 'function');
 
-console.log(`Node ${process.version} loaded the engine, Express adapter, client, and cache exports`);
+console.log(
+  `Node ${process.version} loaded the engine, Express adapter, client, and cache exports`,
+);
