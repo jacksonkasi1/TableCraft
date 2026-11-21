@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
 // ** import types
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table-v8";
 import type { TableGroupingAPI } from "../src/types";
+import type { ColumnDef as V9ColumnDef } from "../src/v9";
 
 // ** import core packages
 import React, { act, createRef } from "react";
@@ -10,7 +11,9 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // ** import components
-import { DataTable, validateSelectedRows } from "../src/data-table";
+import { DataTableColumnHeader } from "../src/column-header";
+import { DataTable as V8DataTable, validateSelectedRows } from "../src/data-table";
+import { DataTable as V9DataTable } from "../src/v9";
 
 // ** import utils
 import { createStaticAdapter } from "../src/auto/static-adapter";
@@ -24,10 +27,10 @@ interface TestRow extends Record<string, unknown> {
   children?: TestRow[];
 }
 
-const COLUMNS: ColumnDef<TestRow>[] = [
+const COLUMNS = [
   { accessorKey: "group", header: "Group" },
   { accessorKey: "name", header: "Name" },
-];
+] satisfies ColumnDef<TestRow>[];
 
 const ROWS: TestRow[] = [
   { id: "1", group: "A", name: "One" },
@@ -56,7 +59,10 @@ async function renderTable(node: React.ReactNode): Promise<HTMLDivElement> {
   return container;
 }
 
-describe("DataTable regressions", () => {
+describe.each([
+  ["v8", V8DataTable],
+  ["v9", V9DataTable],
+] as const)("DataTable %s regressions", (_version, DataTable) => {
   it("rejects missing, unexpected, duplicate, and wrong selected IDs", () => {
     const selected = new Set(["1", "2"]);
     expect(validateSelectedRows(ROWS, selected, "id")).toBe(ROWS);
@@ -138,7 +144,7 @@ describe("DataTable regressions", () => {
 
   it("ignores interactive controls before click-to-select and onRowClick", async () => {
     const onRowClick = vi.fn();
-    const interactiveColumns: ColumnDef<TestRow>[] = [
+    const interactiveColumns = [
       {
         accessorKey: "name",
         header: "Name",
@@ -152,7 +158,7 @@ describe("DataTable regressions", () => {
         ),
       },
       { accessorKey: "group", header: "Group" },
-    ];
+    ] satisfies ColumnDef<TestRow>[];
     const container = await renderTable(
       <DataTable
         adapter={createStaticAdapter([ROWS[0]])}
@@ -183,4 +189,41 @@ describe("DataTable regressions", () => {
     expect(dataRow.dataset.state).toBe("selected");
     expect(onRowClick).toHaveBeenCalledOnce();
   });
+});
+
+it("renders v9 column callbacks and updates pagination through the v9 store", async () => {
+  const columns: V9ColumnDef<TestRow>[] = [{
+    accessorKey: "name",
+    header: ({ column, table }) => (
+      <DataTableColumnHeader
+        column={column}
+        title={`Name (page ${table.store.state.pagination.pageIndex + 1})`}
+      />
+    ),
+    cell: ({ row }) => `Employee: ${row.original.name}`,
+  }];
+  const container = await renderTable(
+    <V9DataTable
+      adapter={createStaticAdapter(ROWS)}
+      columns={columns}
+      config={{
+        defaultPageSize: 1,
+        enableToolbar: false,
+        enableUrlState: false,
+        pageSizeOptions: [1],
+      }}
+    />,
+  );
+
+  expect(container.textContent).toContain("Name (page 1)");
+  expect(container.textContent).toContain("Employee: One");
+  expect(container.textContent).not.toContain("Employee: Two");
+
+  await act(async () => {
+    container.querySelector<HTMLButtonElement>('[aria-label="Go to next page"]')?.click();
+  });
+
+  expect(container.textContent).toContain("Name (page 2)");
+  expect(container.textContent).toContain("Employee: Two");
+  expect(container.textContent).not.toContain("Employee: One");
 });

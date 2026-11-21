@@ -1,6 +1,6 @@
 import { Column, SQL } from 'drizzle-orm';
-import { TableConfig } from '../types/table';
-import { collectSelectableJoinFields } from '../utils/joinUtils';
+import { TableConfig } from '../types/table.js';
+import { collectSelectableJoinFields } from '../utils/joinUtils.js';
 
 /**
  * Filters the selection to only include requested fields.

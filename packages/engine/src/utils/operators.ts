@@ -16,7 +16,7 @@ import {
   isNotNull,
   sql,
 } from 'drizzle-orm';
-import { Operator } from '../types/table';
+import { Operator } from '../types/table.js';
 
 function isDateString(value: unknown): value is string {
   if (typeof value !== 'string') return false;

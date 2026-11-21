@@ -1,13 +1,17 @@
 "use client";
 
+// ** import types
+import type { Column } from "@tanstack/react-table-v8";
+
+// ** import core packages
 import {
   ArrowDown,
   ArrowUp,
   ChevronsUpDown,
   EyeOff,
 } from "lucide-react";
-import type { Column } from "@tanstack/react-table";
 
+// ** import utils
 import { cn } from "./utils/cn";
 import {
   DropdownMenu,
@@ -19,10 +23,14 @@ import {
 
 interface DataTableColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
-  column: Column<TData, TValue>;
+  column: Pick<
+    Column<TData, TValue>,
+    "getCanSort" | "getIsSorted" | "toggleSorting" | "toggleVisibility"
+  >;
   title: string;
 }
 
+/** Render sorting and visibility controls for a TanStack Table column. */
 export function DataTableColumnHeader<TData, TValue>({
   column,
   title,

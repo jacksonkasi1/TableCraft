@@ -10,37 +10,45 @@ import {
   count as drizzleCount,
   getTableName,
 } from 'drizzle-orm';
-import { TableConfig } from './types/table';
-import { EngineParams, EngineContext, EngineResult, GroupedResult, TableEngine, CountMode, QueryDebugInfo } from './types/engine';
-import { validateConfig, validateAgainstSchema } from './core/validator';
-import { validateInput } from './core/inputValidator';
-import { QueryBuilder } from './core/queryBuilder';
-import { FilterBuilder } from './core/filterBuilder';
-import { FilterGroupBuilder } from './core/filterGroupBuilder';
-import { SearchBuilder } from './core/searchBuilder';
-import { SortBuilder } from './core/sortBuilder';
-import { PaginationBuilder } from './core/paginationBuilder';
-import { CursorPaginationBuilder } from './core/cursorPagination';
-import { AggregationBuilder } from './core/aggregationBuilder';
-import { SubqueryBuilder } from './core/subqueryBuilder';
-import { SoftDeleteHandler } from './core/softDelete';
-import { GroupByBuilder } from './core/groupByBuilder';
-import { RelationBuilder } from './core/relationBuilder';
-import { RecursiveBuilder } from './core/recursiveBuilder';
-import { FieldSelector } from './core/fieldSelector';
-import { detectDialect, supportsFeature, Dialect } from './core/dialect';
-import { formatResponse, applyJsTransforms } from './utils/responseFormatter';
-import { exportData } from './utils/export';
+import { TableConfig } from './types/table.js';
+import {
+  EngineParams,
+  EngineContext,
+  EngineResult,
+  GroupedResult,
+  TableEngine,
+  CountMode,
+  QueryDebugInfo,
+} from './types/engine.js';
+import { validateConfig, validateAgainstSchema } from './core/validator.js';
+import { validateInput } from './core/inputValidator.js';
+import { QueryBuilder } from './core/queryBuilder.js';
+import { FilterBuilder } from './core/filterBuilder.js';
+import { FilterGroupBuilder } from './core/filterGroupBuilder.js';
+import { SearchBuilder } from './core/searchBuilder.js';
+import { SortBuilder } from './core/sortBuilder.js';
+import { PaginationBuilder } from './core/paginationBuilder.js';
+import { CursorPaginationBuilder } from './core/cursorPagination.js';
+import { AggregationBuilder } from './core/aggregationBuilder.js';
+import { SubqueryBuilder } from './core/subqueryBuilder.js';
+import { SoftDeleteHandler } from './core/softDelete.js';
+import { GroupByBuilder } from './core/groupByBuilder.js';
+import { RelationBuilder } from './core/relationBuilder.js';
+import { RecursiveBuilder } from './core/recursiveBuilder.js';
+import { FieldSelector } from './core/fieldSelector.js';
+import { detectDialect, supportsFeature, Dialect } from './core/dialect.js';
+import { formatResponse, applyJsTransforms } from './utils/responseFormatter.js';
+import { exportData } from './utils/export.js';
 import {
   TableDefinitionBuilder,
   RuntimeExtensions,
   TABLECRAFT_EXTENSIONS_KEY,
   drizzleOperators,
   emptyExtensions,
-} from './define';
-import { TableCraftError, QueryError, DialectError } from './errors';
-import { applyRoleBasedVisibility } from './core/roleFilter';
-import { buildMetadata } from './core/metadataBuilder';
+} from './define.js';
+import { TableCraftError, QueryError, DialectError } from './errors.js';
+import { applyRoleBasedVisibility } from './core/roleFilter.js';
+import { buildMetadata } from './core/metadataBuilder.js';
 
 // ── Config Resolution ──
 

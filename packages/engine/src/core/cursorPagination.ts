@@ -1,6 +1,6 @@
 import { Table, SQL, getTableColumns, gt, lt, eq, and, or, asc, desc } from 'drizzle-orm';
-import { TableConfig, SortConfig } from '../types/table';
-import { FieldError } from '../errors';
+import { TableConfig, SortConfig } from '../types/table.js';
+import { FieldError } from '../errors.js';
 
 export interface CursorResult {
   whereCondition: SQL | undefined;

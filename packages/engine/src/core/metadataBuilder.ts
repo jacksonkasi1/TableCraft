@@ -1,5 +1,5 @@
-import { TableConfig, ColumnConfig, JoinConfig } from '../types/table';
-import { EngineContext } from '../types/engine';
+import { TableConfig, ColumnConfig, JoinConfig } from '../types/table.js';
+import { EngineContext } from '../types/engine.js';
 
 /**
  * The metadata response that describes a table's schema to the frontend.

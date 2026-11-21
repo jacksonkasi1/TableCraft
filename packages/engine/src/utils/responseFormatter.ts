@@ -1,5 +1,5 @@
-import { TableConfig } from '../types/table';
-import { EngineResult, EngineMeta } from '../types/engine';
+import { TableConfig } from '../types/table.js';
+import { EngineResult, EngineMeta } from '../types/engine.js';
 
 // ---- Built-in JS transforms ----
 

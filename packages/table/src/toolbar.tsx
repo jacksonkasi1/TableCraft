@@ -1,4 +1,4 @@
-import type { Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table-v8";
 import { useEffect, useState, useRef } from "react";
 import { X, Settings, Undo2, CheckSquare, MoveHorizontal, EyeOff, Search, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import type { TableConfig, ExportConfig, ExportableData, StartToolbarPlacement, EndToolbarPlacement } from "./types";

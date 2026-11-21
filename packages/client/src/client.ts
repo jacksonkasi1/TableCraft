@@ -5,9 +5,9 @@ import type {
   QueryParams,
   QueryResult,
   TableMetadata,
-} from './types';
-import { createAxiosFetchAdapter, isAxiosInstance } from './axios-adapter';
-import type { MinimalResponse } from './axios-adapter';
+} from './types.js';
+import { createAxiosFetchAdapter, isAxiosInstance } from './axios-adapter.js';
+import type { MinimalResponse } from './axios-adapter.js';
 
 /**
  * Creates a type-safe client for TableCraft APIs.

@@ -1,4 +1,4 @@
-import type { AxiosLike } from "./types";
+import type { AxiosLike } from "./types.js";
 
 /**
  * Type guard to check if a given value is an Axios-like instance.

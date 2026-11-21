@@ -7,8 +7,10 @@ import {
   or,
   ilike,
 } from 'drizzle-orm';
-import { TableConfig } from '../types/table';
-import { escapeLikePattern } from '../utils/operators';
+import { TableConfig } from '../types/table.js';
+// ** import utils
+import { findJoin, getJoinTable } from '../utils/joinUtils.js';
+import { escapeLikePattern } from '../utils/operators.js';
 
 export class SearchBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -41,7 +43,7 @@ export class SearchBuilder {
     const conditions: SQL[] = [];
 
     for (const fieldName of searchFields) {
-      const col = this.resolveColumn(baseColumns, fieldName);
+      const col = this.resolveColumn(config, baseColumns, fieldName);
       if (!col) continue;
 
       conditions.push(ilike(col, `%${escaped}%`));
@@ -78,6 +80,7 @@ export class SearchBuilder {
   }
 
   private resolveColumn(
+    config: TableConfig,
     baseColumns: Record<string, Column>,
     fieldName: string
   ): Column | undefined {
@@ -86,7 +89,10 @@ export class SearchBuilder {
     // Joined table column: "table.column"
     if (fieldName.includes('.')) {
       const [tableName, colName] = fieldName.split('.');
-      const joinedTable = this.schema[tableName] as Table | undefined;
+      const join = findJoin(config.joins ?? [], tableName);
+      const joinedTable = join
+        ? getJoinTable(this.schema, join)
+        : (this.schema[tableName] as Table | undefined);
       if (!joinedTable) return undefined;
       const cols = getTableColumns(joinedTable);
       return cols[colName];

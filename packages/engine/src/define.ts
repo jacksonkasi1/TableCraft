@@ -48,7 +48,7 @@ export const drizzleOperators = {
 };
 
 // ** import types
-import type { CountMode, EngineContext, EngineParams } from "./types/engine";
+import type { CountMode, EngineContext, EngineParams } from "./types/engine.js";
 import type {
 	ColumnConfig,
 	ColumnFormat,
@@ -60,12 +60,12 @@ import type {
 	SortConfig,
 	SubqueryCondition,
 	TableConfig,
-} from "./types/table";
+} from "./types/table.js";
 import {
 	detectSensitiveColumns,
 	getSensitiveColumnNames,
 	introspectTable,
-} from "./utils/introspect";
+} from "./utils/introspect.js";
 
 export const TABLECRAFT_EXTENSIONS_KEY: unique symbol = Symbol.for("__tablecraft_ext") as any;
 
@@ -440,6 +440,9 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 
 	// ──── Joins (accepts string OR SQL) ────
 
+	/**
+	 * Joins a table, optionally under an SQL alias. Reference the alias in explicit ON conditions.
+	 */
 	join(
 		table: Table,
 		options?: {
@@ -461,7 +464,7 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 			if (typeof options.on === "string") {
 				// Shorthand: "customerId" → "base.customerId = joined.id"
 				if (!options.on.includes("=") && !options.on.includes(".")) {
-					onString = `${baseName}.${options.on} = ${joinedName}.id`;
+					onString = `${baseName}.${options.on} = ${key}.id`;
 				} else {
 					onString = options.on;
 				}
@@ -473,7 +476,7 @@ export class TableDefinitionBuilder<T extends Table = Table> {
 			}
 		} else {
 			// Default guess
-			onString = `${baseName}.${joinedName}Id = ${joinedName}.id`;
+			onString = `${baseName}.${joinedName}Id = ${key}.id`;
 		}
 
 		const joinConfig: JoinConfig = {

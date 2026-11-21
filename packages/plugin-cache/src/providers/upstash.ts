@@ -1,4 +1,4 @@
-import type { CacheProvider } from '../types';
+import type { CacheProvider } from '../types.js';
 
 /**
  * Upstash Redis provider for serverless environments.

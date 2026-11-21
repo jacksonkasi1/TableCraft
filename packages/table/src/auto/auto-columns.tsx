@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table-v8";
 import type { TableMetadata, CellRenderer, ColumnMetadataForRenderer } from "../types";
 import { resolveRenderer } from "../renderers";
 import { DataTableColumnHeader } from "../column-header";

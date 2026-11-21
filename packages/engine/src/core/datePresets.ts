@@ -1,5 +1,5 @@
 import { Column, SQL, and, gte, lt } from 'drizzle-orm';
-import { DatePreset } from '../types/table';
+import { DatePreset } from '../types/table.js';
 
 /**
  * Resolves a date preset name into a concrete date range.

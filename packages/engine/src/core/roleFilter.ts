@@ -1,5 +1,5 @@
-import { TableConfig } from '../types/table';
-import { EngineContext } from '../types/engine';
+import { TableConfig } from '../types/table.js';
+import { EngineContext } from '../types/engine.js';
 
 /**
  * Filters columns based on the requesting user's roles.

@@ -6,9 +6,15 @@ import {
   desc,
   Column,
 } from 'drizzle-orm';
-import { TableConfig, JoinConfig } from '../types/table';
-import { SortParam } from '../types/engine';
-import { isJoinColumnInJoins, collectSortableJoinFields } from '../utils/joinUtils';
+import { TableConfig, JoinConfig } from '../types/table.js';
+import { SortParam } from '../types/engine.js';
+// ** import utils
+import {
+  collectSortableJoinFields,
+  findJoin,
+  getJoinTable,
+  isJoinColumnInJoins,
+} from '../utils/joinUtils.js';
 
 export class SortBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -62,20 +68,14 @@ export class SortBuilder {
 
       // 1. Dot-syntax: "users.email" → explicit table reference
       if (dbFieldName.includes('.')) {
-         const [tableName, colName] = dbFieldName.split('.');
-         // Find actual table name if tableName is an alias
-         let actualTableName = tableName;
-         if (config.joins) {
-           const aliasedJoin = config.joins.find(j => j.alias === tableName);
-           if (aliasedJoin) {
-             actualTableName = aliasedJoin.table;
-           }
-         }
-         
-         const joinedTable = this.schema[actualTableName] as Table | undefined;
-         if (joinedTable) {
-             col = getTableColumns(joinedTable)[colName];
-         }
+        const [tableName, colName] = dbFieldName.split('.');
+        const join = findJoin(config.joins ?? [], tableName);
+        const joinedTable = join
+          ? getJoinTable(this.schema, join)
+          : (this.schema[tableName] as Table | undefined);
+        if (joinedTable) {
+          col = getTableColumns(joinedTable)[colName];
+        }
       } else {
          // 2. Try the base table first, unless it's a join field to prevent shadowing
          const isJoinField = isJoinColumnInJoins(config.joins ?? [], sp.field);
@@ -130,13 +130,13 @@ export class SortBuilder {
       );
 
       if (joinColConfig) {
-        const joinedTable = this.schema[join.table] as Table | undefined;
+        const joinedTable = getJoinTable(this.schema, join);
         if (joinedTable) {
           const joinedCols = getTableColumns(joinedTable);
           const dbCol = joinColConfig.field ?? fieldName;
           const column = joinedCols[dbCol];
           if (column) {
-            matches.push({ table: join.table, column });
+            matches.push({ table: join.alias ?? join.table, column });
           }
         }
       }

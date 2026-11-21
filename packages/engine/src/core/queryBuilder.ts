@@ -6,9 +6,12 @@ import {
   getTableColumns,
   and,
 } from 'drizzle-orm';
-import { TableConfig, JoinConfig } from '../types/table';
-import { applyOperator } from '../utils/operators';
-import { ConfigError } from '../errors';
+import type { TableConfig, JoinConfig } from '../types/table.js';
+
+// ** import utils
+import { findJoin, getJoinTable } from '../utils/joinUtils.js';
+import { applyOperator } from '../utils/operators.js';
+import { ConfigError } from '../errors.js';
 
 export class QueryBuilder {
   constructor(private schema: Record<string, unknown>) {}
@@ -28,15 +31,12 @@ export class QueryBuilder {
       if (dbField.includes('.')) {
         // Joined column: "table.column"
         const [tableName, colName] = dbField.split('.');
-        const joinedTable = this.schema[tableName] as Table;
+        const join = findJoin(config.joins ?? [], tableName);
+        const joinedTable = join
+          ? getJoinTable(this.schema, join)
+          : (this.schema[tableName] as Table | undefined);
         if (joinedTable) {
-          const joinedCols = getTableColumns(joinedTable);
-          col = joinedCols[colName];
-          if (!col) {
-             // console.warn(`[QueryBuilder] Column '${colName}' not found in joined table '${tableName}'`);
-          }
-        } else {
-             // console.warn(`[QueryBuilder] Joined table '${tableName}' not found in schema`);
+          col = getTableColumns(joinedTable)[colName];
         }
       } else {
         // Base table column
@@ -80,7 +80,7 @@ export class QueryBuilder {
   private collectJoinColumns(joins: JoinConfig[], selection: Record<string, SQL | Column>) {
     for (const join of joins) {
       if (join.columns) {
-        const joinedTable = this.schema[join.table] as Table;
+        const joinedTable = getJoinTable(this.schema, join);
         if (joinedTable) {
           const tableCols = getTableColumns(joinedTable);
           for (const colConfig of join.columns) {
@@ -140,7 +140,7 @@ export class QueryBuilder {
     join: JoinConfig,
     sqlConditions?: Map<string, SQL>
   ): any {
-    const joinedTable = this.schema[join.table] as Table;
+    const joinedTable = getJoinTable(this.schema, join);
     if (!joinedTable) {
       throw new Error(`Joined table '${join.table}' not found in schema`);
     }

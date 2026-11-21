@@ -1,7 +1,7 @@
-import type { ColumnDef, RowData } from "@tanstack/react-table";
+import type { ColumnDef, RowData } from "@tanstack/react-table-v8";
 import type { ReactNode } from "react";
 
-declare module "@tanstack/react-table" {
+declare module "@tanstack/react-table-v8" {
   interface TableMeta<TData extends RowData> {
     isLoadingColumns?: boolean;
   }

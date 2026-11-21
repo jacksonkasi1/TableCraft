@@ -8,7 +8,7 @@ import type {
   VisibilityState,
   ExpandedState,
   GroupingState,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table-v8";
 import {
   flexRender,
   getCoreRowModel,
@@ -20,7 +20,7 @@ import {
   getExpandedRowModel,
   getGroupedRowModel,
   useReactTable,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table-v8";
 import React, { Fragment, useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Checkbox } from "./components/checkbox";
@@ -67,7 +67,18 @@ export function validateSelectedRows<T extends Record<string, unknown>>(
   return rows;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+/** Render a TableCraft table with its TanStack Table v8 backend. */
+export function DataTable<T extends Record<string, unknown>>(props: DataTableProps<T>) {
+  return <DataTableView {...props} useTable={useReactTable} />;
+}
+
+interface DataTableViewProps<T extends Record<string, unknown>> extends DataTableProps<T> {
+  useTable: typeof useReactTable<T>;
+}
+
+/** Render the shared table view with the backend selected by its entry point. */
+export function DataTableView<T extends Record<string, unknown>>({
+  useTable,
   adapter,
   columns: manualColumns,
   renderers,
@@ -95,7 +106,7 @@ export function DataTable<T extends Record<string, unknown>>({
   onRowGroupExpand,
   onRowExpand,
   groupingRef,
-}: DataTableProps<T>) {
+}: DataTableViewProps<T>) {
   const tableConfig = useTableConfig(configOverrides);
 
   const tableId = tableConfig.columnResizingTableId || "tablecraft-default";
@@ -796,7 +807,7 @@ export function DataTable<T extends Record<string, unknown>>({
     ]
   );
 
-  const table = useReactTable<T>(tableOptions);
+  const table = useTable(tableOptions);
 
   // Update table ref for keyboard navigation
   tableRef.current = table;

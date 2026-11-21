@@ -3,9 +3,9 @@ import {
   SQL,
   sql,
 } from 'drizzle-orm';
-import { TableConfig, SubqueryConfig, SubqueryCondition } from '../types/table';
-import { Dialect } from './dialect';
-import { DialectError } from '../errors';
+import { TableConfig, SubqueryConfig, SubqueryCondition } from '../types/table.js';
+import { Dialect } from './dialect.js';
+import { DialectError } from '../errors.js';
 
 // Maps our operator enum to the SQL operator string
 const OP_MAP: Record<NonNullable<SubqueryCondition['op']>, string> = {

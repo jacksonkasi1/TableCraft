@@ -109,6 +109,9 @@ That's it! 🎉 No column definitions needed.
 
 ## 📚 Documentation
 
+Using TanStack Table? See the [v8 and v9 compatibility guide](./docs/tanstack-compatibility.md)
+for the install commands, imports, and migration notes.
+
 For full guides, API reference, and examples:
 
 👉 **[jacksonkasi.gitbook.io/tablecraft](https://jacksonkasi.gitbook.io/tablecraft)**

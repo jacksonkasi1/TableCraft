@@ -89,7 +89,7 @@ const joinConfig: TableConfig = {
       table: 'users',
       alias: 'customer',
       type: 'left',
-      on: 'orders.user_id = users.id',
+      on: 'orders.user_id = customer.id',
       columns: [
         { name: 'email', type: 'string', filterable: true, hidden: false, sortable: true },
         { name: 'role', type: 'string', filterable: true, hidden: false, sortable: true },
@@ -109,7 +109,7 @@ const joinConfigNotFilterable: TableConfig = {
       table: 'users',
       alias: 'customer',
       type: 'left',
-      on: 'orders.user_id = users.id',
+      on: 'orders.user_id = customer.id',
       columns: [
         { name: 'email', type: 'string', filterable: false, hidden: false, sortable: true },
         { name: 'role', type: 'string', filterable: true, hidden: false, sortable: true },
@@ -134,7 +134,7 @@ const nestedJoinConfig: TableConfig = {
       table: 'users',
       alias: 'customer',
       type: 'left',
-      on: 'orders.user_id = users.id',
+      on: 'orders.user_id = customer.id',
       columns: [
         { name: 'role', type: 'string', filterable: true, hidden: false, sortable: true },
       ],
@@ -143,7 +143,7 @@ const nestedJoinConfig: TableConfig = {
           table: 'tenants',
           alias: 'tenant',
           type: 'left',
-          on: 'users.tenant_id = tenants.id',
+          on: 'customer.tenant_id = tenant.id',
           columns: [
             { name: 'plan', type: 'string', filterable: true, hidden: false, sortable: true },
             { name: 'active', type: 'boolean', filterable: true, hidden: false, sortable: true },
@@ -271,7 +271,7 @@ describe('FilterBuilder', () => {
             table: 'users',
             alias: 'customer',
             type: 'left',
-            on: 'orders.user_id = users.id',
+            on: 'orders.user_id = customer.id',
             // columns intentionally omitted
           },
         ],
@@ -314,7 +314,7 @@ describe('FilterBuilder', () => {
      * The `orders` drizzle table has columns named `role` and `email`.
      * The join config also exposes `role` and `email` from the `users` table.
      * When a filter request arrives for "role" or "email", the filter builder
-     * must use the join column (users.role / users.email), NOT orders.role /
+     * must use the join column (customer.role / customer.email), NOT orders.role /
      * orders.email — because only the join columns are listed in config.columns
      * (orders config.columns does NOT include role/email).
      */
@@ -322,10 +322,10 @@ describe('FilterBuilder', () => {
       const params: Record<string, FilterParam> = {
         role: { operator: 'eq', value: 'admin' },
       };
-      // Should return a defined condition (users.role), not undefined
+      // Should return a defined condition (customer.role), not undefined
       const result = builderOrders.buildFilters(joinConfig, params);
       expect(result).toBeDefined();
-      expect(toSQL(result)).toContain('"users"."role"');
+      expect(toSQL(result)).toContain('"customer"."role"');
     });
 
     it('resolves "email" from the join table, not the base table', () => {
@@ -334,7 +334,7 @@ describe('FilterBuilder', () => {
       };
       const result = builderOrders.buildFilters(joinConfig, params);
       expect(result).toBeDefined();
-      expect(toSQL(result)).toContain('"users"."email"');
+      expect(toSQL(result)).toContain('"customer"."email"');
     });
 
     it('base column "status" is still resolved from base table when not in any join', () => {

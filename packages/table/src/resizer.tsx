@@ -1,4 +1,4 @@
-import type { Header, Table } from "@tanstack/react-table";
+import type { Header, Table } from "@tanstack/react-table-v8";
 import { GripVertical } from "lucide-react";
 import { cn } from "./utils/cn";
 

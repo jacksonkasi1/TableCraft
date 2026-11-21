@@ -1,4 +1,26 @@
-import { JoinConfig } from '../types/table';
+// ** import types
+import type { Table } from 'drizzle-orm';
+import type { JoinConfig } from '../types/table.js';
+
+// ** import database
+import { aliasedTable } from 'drizzle-orm';
+
+/** Resolves the Drizzle table as it appears in a configured join. */
+export function getJoinTable(schema: Record<string, unknown>, join: JoinConfig): Table | undefined {
+  const table = schema[join.table] as Table | undefined;
+  return table && join.alias ? aliasedTable(table, join.alias) : table;
+}
+
+/** Finds a table by its configured join name, including nested joins. */
+export function findJoin(joins: JoinConfig[], name: string): JoinConfig | undefined {
+  for (const join of joins) {
+    if ((join.alias ?? join.table) === name) return join;
+
+    const nested = findJoin(join.joins ?? [], name);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 /** Recursively populates `out` with sortable field names from all join configs. */
 export function collectSortableJoinFields(joins: JoinConfig[], out: Set<string>): void {

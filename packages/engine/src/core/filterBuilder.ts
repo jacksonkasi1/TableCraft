@@ -5,11 +5,17 @@ import {
   getTableColumns,
   and,
 } from 'drizzle-orm';
-import { TableConfig, JoinConfig, ColumnConfig } from '../types/table';
-import { FilterParam } from '../types/engine';
-import { applyOperator } from '../utils/operators';
-import { isDatePreset, buildDatePresetCondition } from './datePresets';
-import { collectFilterableJoinFields, isJoinColumnInJoins } from '../utils/joinUtils';
+import { TableConfig, JoinConfig, ColumnConfig } from '../types/table.js';
+import { FilterParam } from '../types/engine.js';
+import { applyOperator } from '../utils/operators.js';
+import { isDatePreset, buildDatePresetCondition } from './datePresets.js';
+// ** import utils
+import {
+  collectFilterableJoinFields,
+  findJoin,
+  getJoinTable,
+  isJoinColumnInJoins,
+} from '../utils/joinUtils.js';
 
 // Internal: resolved column reference plus the config entry it came from
 interface ResolvedColumn {
@@ -151,28 +157,21 @@ export class FilterBuilder {
     field: string,
     isJoinField: boolean
   ): ResolvedColumn | undefined {
-    // Dot-syntax takes priority regardless of join vs base — it is explicit
-    if (field.includes('.')) {
-      const [tableName, colName] = field.split('.');
-      const joinedTable = this.schema[tableName] as Table | undefined;
+    const baseColConfig = config.columns.find(c => c.name === field);
+    const dbField = baseColConfig?.field ?? field;
+    if (dbField.includes('.')) {
+      const [tableName, colName] = dbField.split('.');
+      const join = findJoin(config.joins ?? [], tableName);
+      const joinedTable = join && getJoinTable(this.schema, join);
       if (!joinedTable) return undefined;
 
-      // Verify this table is actually joined (security check)
-      const isJoined = config.joins?.some(
-        (j) => j.table === tableName || j.alias === tableName
-      );
-      if (!isJoined) return undefined;
-
-      const joinedCols = getTableColumns(joinedTable);
-      const column = joinedCols[colName];
-      return column ? { column, colConfig: undefined, fromJoin: true } : undefined;
+      const column = getTableColumns(joinedTable)[colName];
+      return column ? { column, colConfig: baseColConfig, fromJoin: true } : undefined;
     }
 
     // If this field belongs to a join, skip the base column entirely to avoid shadowing
     if (!isJoinField) {
-      const baseColConfig = config.columns.find(c => c.name === field);
-      const dbFieldName = baseColConfig?.field ?? field;
-      const column = baseColumns[dbFieldName];
+      const column = baseColumns[dbField];
       if (column) {
         return { column, colConfig: baseColConfig, fromJoin: false };
       }
@@ -193,18 +192,12 @@ export class FilterBuilder {
     if (!config.joins) return undefined;
 
     for (const join of config.joins) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const joinColConfig = (join.columns as any[] | undefined)?.find(
-        (c: ColumnConfig) => c.name === fieldName
-      ) as ColumnConfig | undefined;
+      const joinColConfig = join.columns?.find(c => c.name === fieldName);
 
       if (joinColConfig) {
-        const joinedTable = this.schema[join.table] as Table | undefined;
-        if (!joinedTable) continue;
-
-        const joinedCols = getTableColumns(joinedTable);
+        const joinedTable = getJoinTable(this.schema, join);
         const dbCol = joinColConfig.field ?? fieldName;
-        const column = joinedCols[dbCol];
+        const column = joinedTable && getTableColumns(joinedTable)[dbCol];
         if (column) return { column, colConfig: joinColConfig, fromJoin: true };
       }
 

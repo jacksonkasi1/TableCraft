@@ -1,6 +1,6 @@
-export { createClient } from './client';
-export { createAxiosFetchAdapter, isAxiosInstance } from './axios-adapter';
-export type { MinimalResponse } from './axios-adapter';
+export { createClient } from './client.js';
+export { createAxiosFetchAdapter, isAxiosInstance } from './axios-adapter.js';
+export type { MinimalResponse } from './axios-adapter.js';
 export type {
   TableCraftClient,
   ClientOptions,
@@ -12,4 +12,4 @@ export type {
   AggregationMetadata,
   IncludeMetadata,
   AxiosLike,
-} from './types';
+} from './types.js';
